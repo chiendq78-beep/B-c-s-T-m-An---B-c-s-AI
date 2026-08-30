@@ -1,0 +1,14 @@
+{
+  "name": "Bác sĩ Tâm An - Bác sĩ AI Chăm Sóc Sức Khỏe",
+  "description": "Ứng dụng y tế toàn diện với Bác sĩ AI, giải phẫu 3D, thư viện bệnh lý và cây thuốc nam.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API",
+    "AI Medical Consultation",
+    "Health Journaling",
+    "Natural Remedies Library"
+  ]
+}

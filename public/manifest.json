@@ -1,0 +1,24 @@
+{
+  "name": "Bác sĩ Tâm An - Bác sĩ AI Chăm Sóc Sức Khỏe",
+  "short_name": "Bác sĩ Tâm An",
+  "description": "Ứng dụng y tế toàn diện với Bác sĩ AI, giải phẫu 3D, thư viện bệnh lý và cây thuốc nam.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

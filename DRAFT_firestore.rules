@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Rules
+    function isValidUser(data) {
+      return data.email is string && data.email.size() < 256
+          && data.fullName is string && data.fullName.size() < 256;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) 
+          && incoming().email == existing().email; // Email immutable
+    }
+
+    // Static Content Rules (Publicly readable, Admin/No-one can write via client)
+    match /organSystems/{id} {
+      allow read: if true;
+    }
+    match /bodyParts/{id} {
+      allow read: if true;
+    }
+    match /diseases/{id} {
+      allow read: if true;
+    }
+    match /herbs/{id} {
+      allow read: if true;
+    }
+    match /exercises/{id} {
+      allow read: if true;
+    }
+
+    // Health Journals (Private per user)
+    function isValidJournal(data) {
+      return data.userId == request.auth.uid
+          && data.date is string
+          && data.mood is int && data.mood >= 1 && data.mood <= 5
+          && data.energyLevel is int && data.energyLevel >= 0 && data.energyLevel <= 100;
+    }
+
+    match /healthJournals/{journalId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidJournal(incoming());
+      allow update: if isSignedIn() && isOwner(existing().userId) && isValidJournal(incoming());
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // Chat History (Private per user)
+    function isValidChat(data) {
+      return data.userId == request.auth.uid
+          && data.content is string && data.content.size() < 10000;
+    }
+
+    match /chats/{chatId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidChat(incoming());
+    }
+  }
+}

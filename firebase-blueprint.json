@@ -1,0 +1,210 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "fullName": { "type": "string" },
+        "dateOfBirth": { "type": "string", "format": "date" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "phone": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "preferences": { "type": "object", "description": "User-specific settings and customization options" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "fullName"]
+    },
+    "OrganSystem": {
+      "title": "Organ System",
+      "description": "Biological organ systems",
+      "type": "object",
+      "properties": {
+        "name_vi": { "type": "string" },
+        "name_en": { "type": "string" },
+        "description": { "type": "string" },
+        "colorCode": { "type": "string" },
+        "icon": { "type": "string" }
+      }
+    },
+    "BodyPart": {
+      "title": "Body Part",
+      "description": "Specific parts of the human body",
+      "type": "object",
+      "properties": {
+        "name_vi": { "type": "string" },
+        "name_latin": { "type": "string" },
+        "systemId": { "type": "string" },
+        "description": { "type": "string" },
+        "function": { "type": "string" },
+        "location": { "type": "string" },
+        "model3dUrl": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Disease": {
+      "title": "Disease",
+      "description": "Medical conditions and diseases",
+      "type": "object",
+      "properties": {
+        "name_vi": { "type": "string" },
+        "name_en": { "type": "string" },
+        "icd10": { "type": "string" },
+        "bodyPartId": { "type": "string" },
+        "severity": { "type": "string", "enum": ["mild", "moderate", "severe", "critical"] },
+        "overview": { "type": "string" },
+        "detailedDescription": { "type": "string", "description": "A comprehensive overview of the disease" },
+        "causes": { "type": "array", "items": { "type": "string" } },
+        "symptoms": { "type": "array", "items": { "type": "string" } },
+        "redFlags": { "type": "array", "items": { "type": "string" } },
+        "diagnosis": { "type": "string" },
+        "treatment": { "type": "string" },
+        "prevention": { "type": "array", "items": { "type": "string" } },
+        "relatedHerbs": { "type": "array", "items": { "type": "string" } },
+        "relatedExercises": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Herb": {
+      "title": "Herb",
+      "description": "Natural medicinal plants",
+      "type": "object",
+      "properties": {
+        "name_vi": { "type": "string" },
+        "name_scientific": { "type": "string" },
+        "family": { "type": "string" },
+        "partUsed": { "type": "string" },
+        "benefits": { "type": "array", "items": { "type": "string" } },
+        "usage": { "type": "string" },
+        "dosage": { "type": "string" },
+        "contraindications": { "type": "array", "items": { "type": "string" } },
+        "images": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Exercise": {
+      "title": "Exercise",
+      "description": "Physical exercises for health",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["yoga", "meditation", "cardio", "therapy"] },
+        "level": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "duration": { "type": "integer" },
+        "description": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "targetBodyPart": { "type": "string" }
+      }
+    },
+    "HealthJournal": {
+      "title": "Health Journal",
+      "description": "Daily health logs of users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "mood": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "energyLevel": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "sleepHours": { "type": "number" },
+        "waterIntake": { "type": "integer" },
+        "notes": { "type": "string" }
+      }
+    },
+    "ChatHistory": {
+      "title": "Chat History",
+      "description": "History of AI consultations and doctor sessions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "model"] },
+              "content": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "messages"]
+    },
+    "VitalSigns": {
+      "title": "Vital Signs",
+      "description": "Biometric measurements for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "heartRate": { "type": "number", "description": "BPM" },
+        "bloodPressureSystolic": { "type": "number" },
+        "bloodPressureDiastolic": { "type": "number" },
+        "temperature": { "type": "number", "description": "Celsius" },
+        "spo2": { "type": "number", "description": "Percentage" },
+        "bloodGlucose": { "type": "number", "description": "Blood glucose level in mmol/L or mg/dL" },
+        "weight": { "type": "number", "description": "Weight in kg" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "timestamp"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Daily reminders for recording vitals",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "time": { "type": "string", "description": "Time of day in HH:MM format" },
+        "enabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "time", "enabled"]
+    },
+    "MedicationReminder": {
+      "title": "Medication & Health Metric Reminder",
+      "description": "Daily reminders for taking medication and measuring vitals (blood glucose, blood pressure, etc.)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string", "enum": ["glucose", "blood_pressure", "spo2", "temperature", "weight", "medication", "other"] },
+        "medName": { "type": "string", "description": "Name of medication or health measurement test" },
+        "dosage": { "type": "string", "description": "Dosage instructions or target normal range" },
+        "time": { "type": "string", "description": "Time of day in HH:MM format" },
+        "notes": { "type": "string", "description": "Optional notes, timing guidelines or medical instructions" },
+        "enabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "medName", "time", "enabled"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Health and medical articles/posts written by administrators",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content"]
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "User profiles" },
+    "organSystems": { "schema": "OrganSystem", "description": "Organ system static data" },
+    "bodyParts": { "schema": "BodyPart", "description": "Body part static data" },
+    "diseases": { "schema": "Disease", "description": "Disease encyclopedia" },
+    "herbs": { "schema": "Herb", "description": "Natural medicinal plants encyclopedia" },
+    "exercises": { "schema": "Exercise", "description": "Health exercises database" },
+    "healthJournals": { "schema": "HealthJournal", "description": "User daily journals" },
+    "chats": { "schema": "ChatHistory", "description": "AI conversation history" },
+    "vitals": { "schema": "VitalSigns", "description": "Biometric logs" },
+    "reminders": { "schema": "Reminder", "description": "User daily reminders to record vitals" },
+    "medicationReminders": { "schema": "MedicationReminder", "description": "User daily medication schedules and reminders" },
+    "articles": { "schema": "Article", "description": "Health and medical articles" }
+  }
+}
