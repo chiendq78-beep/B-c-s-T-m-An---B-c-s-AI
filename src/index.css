@@ -31,6 +31,10 @@
     color: #090D16 !important;
   }
   
+  .text-white-pure, .text-force-white {
+    color: #FFFFFF !important;
+  }
+  
   .text-text-dim {
     color: #334155 !important;
   }
@@ -40,8 +44,8 @@
   }
 
   /* Darken general light-toned utility text classes for sharp legibility */
-  .text-slate-400, .text-slate-500, .text-neutral-400, .text-neutral-500, .text-gray-400, .text-gray-500 {
-    color: #334155 !important;
+  .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500, .text-neutral-300, .text-neutral-400, .text-neutral-500, .text-gray-300, .text-gray-400, .text-gray-500 {
+    color: #1E293B !important;
   }
   .text-slate-600, .text-slate-700 {
     color: #1E293B !important;
@@ -80,6 +84,47 @@
   .medical-gradient p,
   .medical-gradient span,
   .medical-gradient button {
+    color: #FFFFFF !important;
+  }
+
+  /* Ensure active buttons and pills with solid teal/primary backgrounds display pure white text & icons */
+  .text-pure-white,
+  .text-pure-white *,
+  .bg-teal-600,
+  .bg-teal-600 *,
+  .bg-teal-700,
+  .bg-teal-700 *,
+  button.bg-teal-600,
+  button.bg-teal-600 *,
+  button.bg-teal-700,
+  button.bg-teal-700 * {
+    color: #FFFFFF !important;
+  }
+
+  /* Hydration Alert Toast: Nền xanh, chữ trắng */
+  .water-toast-alert,
+  .water-toast-alert * {
+    color: #FFFFFF !important;
+  }
+  .water-toast-alert {
+    background-color: #0D9488 !important;
+    border-color: rgba(94, 234, 212, 0.5) !important;
+  }
+  .water-toast-alert .btn-water-action {
+    background-color: #115E59 !important;
+    border-color: rgba(94, 234, 212, 0.4) !important;
+    color: #FFFFFF !important;
+  }
+  .water-toast-alert .btn-water-action:hover {
+    background-color: #134E4A !important;
+  }
+  .water-toast-alert .btn-water-dismiss {
+    background-color: rgba(17, 94, 89, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #FFFFFF !important;
+  }
+  .water-toast-alert .btn-water-dismiss:hover {
+    background-color: rgba(17, 94, 89, 0.8) !important;
     color: #FFFFFF !important;
   }
 
@@ -241,3 +286,18 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(13, 148, 136, 0.6);
 }
+
+/* Safe area padding utilities for mobile notch / status bar */
+.pt-safe {
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 28px) + 0.5rem);
+}
+@media (min-width: 640px) {
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.875rem);
+  }
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+}
+

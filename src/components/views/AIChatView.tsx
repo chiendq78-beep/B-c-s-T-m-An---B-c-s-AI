@@ -609,41 +609,45 @@ export default function AIChatView({
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden bg-bg rounded-3xl border border-border shadow-2xl">
+    <div className={cn(
+      "flex flex-col h-full w-full max-h-full relative overflow-hidden bg-bg",
+      isMaximized ? "rounded-none border-0 shadow-none" : "rounded-none sm:rounded-3xl border-0 sm:border sm:border-border shadow-2xl"
+    )}>
       {/* Top Header with History Navigation & Status */}
       <div 
         onPointerDown={(e) => {
-          if (dragControls && !(e.target as HTMLElement).closest('button, input, a')) {
+          if (dragControls && !isMaximized && !(e.target as HTMLElement).closest('button, input, a')) {
             dragControls.start(e);
           }
         }}
         className={cn(
-          "px-4 sm:px-5 py-3 bg-panel/90 backdrop-blur-xl border-b border-border flex items-center justify-between z-20 select-none",
+          "shrink-0 px-3 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),34px)+0.5rem)] sm:pt-3.5 pb-2.5 sm:pb-3 bg-panel/95 backdrop-blur-xl border-b border-border flex items-center justify-between z-20 select-none shadow-xs gap-2",
           dragControls && !isMaximized ? "cursor-grab active:cursor-grabbing" : ""
         )}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           {dragControls && !isMaximized && (
             <div 
-              className="p-1 text-text-dim/60 hover:text-primary transition-colors cursor-grab active:cursor-grabbing hidden sm:flex items-center"
+              className="p-1 text-text-dim/60 hover:text-teal-400 transition-colors cursor-grab active:cursor-grabbing hidden sm:flex items-center shrink-0"
               title="Nhấn giữ và kéo để di chuyển cửa sổ"
             >
               <GripHorizontal className="w-4 h-4" />
             </div>
           )}
-          <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm shrink-0">
-            <Stethoscope className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">Bác Sĩ Trực Tuyến AI</h2>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-[11px] sm:text-xs font-normal text-teal-900 uppercase tracking-wider whitespace-nowrap">
+                Bác Sĩ Trực Tuyến AI
+              </h2>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
             </div>
-            <p className="text-[10px] text-text-dim font-light">Tư vấn & tham vấn sức khỏe trực tuyến 24/7</p>
+            <p className="text-[9.5px] sm:text-[10px] text-teal-800 font-normal whitespace-nowrap mt-0.5 tracking-tight">
+              Trò chuyện sức khỏe với BS A.I
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Cloud Sync Status Pill */}
           {savingStatus && (
             <motion.div 
@@ -660,7 +664,7 @@ export default function AIChatView({
           {/* New Chat Button */}
           <button 
             onClick={startNewChat}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all active:scale-95 shadow-sm cursor-pointer"
+            className="w-8 h-8 sm:w-auto flex items-center justify-center gap-1.5 px-0 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all active:scale-95 shadow-sm cursor-pointer shrink-0"
             title="Bắt đầu cuộc tư vấn mới"
           >
             <Plus className="w-3.5 h-3.5 text-primary" />
@@ -671,17 +675,16 @@ export default function AIChatView({
           <button 
             onClick={() => setIsHistoryOpen(true)}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all active:scale-95 shadow-sm cursor-pointer",
+              "flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl border transition-all active:scale-95 shadow-xs cursor-pointer whitespace-nowrap shrink-0",
               isHistoryOpen 
-                ? "bg-primary text-bg border-primary font-bold shadow-[0_0_15px_rgba(45,212,191,0.3)]" 
-                : "bg-white/5 hover:bg-white/10 border-white/10 text-text-dim hover:text-white"
+                ? "bg-teal-600 text-force-white border-teal-600 font-bold shadow-sm" 
+                : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 hover:text-slate-900"
             )}
-            title="Xem lại lịch sử các cuộc tư vấn trong Firestore"
+            title="Xem lại lịch sử các cuộc tư vấn"
           >
-            <History className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">Lịch sử</span>
+            <span className="text-[10.5px] sm:text-xs font-semibold whitespace-nowrap">Lịch sử</span>
             {sessions.length > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-primary/20 text-primary border border-primary/30">
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200 shrink-0">
                 {sessions.length}
               </span>
             )}
@@ -691,7 +694,7 @@ export default function AIChatView({
           {onToggleMaximize && (
             <button
               onClick={onToggleMaximize}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all border border-white/10 cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all border border-white/10 cursor-pointer shrink-0"
               title={isMaximized ? "Thu nhỏ cửa sổ" : "Phóng to toàn màn hình"}
             >
               {isMaximized ? (
@@ -705,7 +708,7 @@ export default function AIChatView({
           {onClose && (
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-all border border-slate-200 cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-all border border-slate-200 cursor-pointer shrink-0"
               title="Đóng cửa sổ Bác sĩ AI"
             >
               <X className="w-4 h-4" />
@@ -942,7 +945,7 @@ export default function AIChatView({
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth overscroll-contain relative"
+        className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth overscroll-contain relative"
       >
         {/* Active Consultation Banner */}
         {activeSessionId && (
@@ -962,31 +965,6 @@ export default function AIChatView({
           </div>
         )}
 
-        {/* Previous Consultation Shortcut Banner for clean initial state */}
-        {!activeSessionId && sessions.length > 0 && messages.length <= 1 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/[0.02] border border-white/10 hover:border-primary/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors cursor-pointer"
-            onClick={() => setIsHistoryOpen(true)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <History className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white">Bạn có {sessions.length} cuộc hội thoại đã lưu trong Firestore</h4>
-                <p className="text-[11px] text-text-dim">Nhấp để xem lại các chẩn đoán và hướng dẫn dùng thuốc trước đây</p>
-              </div>
-            </div>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setIsHistoryOpen(true); }}
-              className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/30 px-3 py-1.5 rounded-xl transition-all self-end sm:self-center cursor-pointer"
-            >
-              Mở lịch sử
-            </button>
-          </motion.div>
-        )}
 
         <AnimatePresence>
           {messages.map((msg, index) => (
@@ -1075,7 +1053,7 @@ export default function AIChatView({
       </AnimatePresence>
 
       {/* Input Area */}
-      <div className="p-3.5 sm:p-5 bg-panel border-t border-border shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+      <div className="shrink-0 p-3 sm:p-4 bg-panel border-t border-border shadow-[0_-8px_25px_rgba(0,0,0,0.1)] pb-[calc(max(env(safe-area-inset-bottom,0px),8px)+0.75rem)] z-30">
         {/* Quick Suggestion Chips with horizontal scroll */}
         <AnimatePresence>
           {suggestions.length > 0 && !isTyping && (
@@ -1083,13 +1061,14 @@ export default function AIChatView({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
-              className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none max-w-full"
+              className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none max-w-full"
             >
               {suggestions.map((s, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => handleSend(s)}
-                  className="bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 hover:border-primary/40 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 whitespace-nowrap shadow-sm shrink-0 cursor-pointer"
+                  className="bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 hover:border-primary/40 px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium transition-all active:scale-95 whitespace-nowrap shadow-xs shrink-0 cursor-pointer"
                 >
                   {s}
                 </button>
@@ -1104,12 +1083,12 @@ export default function AIChatView({
             type="button"
             onClick={handleMicClick}
             className={cn(
-              "w-11 h-11 flex items-center justify-center rounded-xl transition-all border shrink-0",
+              "w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl transition-all border shrink-0 cursor-pointer",
               !speechSupported 
-                ? "bg-white/5 text-text-dim/30 cursor-not-allowed border-transparent"
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed border-transparent"
                 : isRecording
-                ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.3)] hover:bg-rose-500/30"
-                : "bg-white/5 text-text-dim hover:text-white hover:bg-white/10 border-transparent hover:border-border"
+                ? "bg-rose-500/20 text-rose-500 border-rose-500/40 animate-pulse shadow-md"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
             )}
             title={
               !speechSupported 
@@ -1119,11 +1098,11 @@ export default function AIChatView({
                 : "Nhập bằng giọng nói (Voice-to-Text)"
             }
           >
-            <Mic className={cn("w-5 h-5", isRecording && "scale-110 text-rose-400 animate-pulse")} />
+            <Mic className={cn("w-4 h-4 sm:w-5 sm:h-5", isRecording && "scale-110 text-rose-500 animate-pulse")} />
           </button>
 
           {/* Text Input */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-w-0">
             <input 
               type="text"
               value={input}
@@ -1131,27 +1110,28 @@ export default function AIChatView({
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder={isRecording ? "Đang lắng nghe giọng nói của bạn..." : "Nhập triệu chứng, câu hỏi hoặc thắc mắc y khoa..."}
               className={cn(
-                "w-full bg-white/5 border rounded-xl py-3 px-4 pr-12 text-xs sm:text-sm text-white placeholder:text-text-dim focus:outline-none focus:ring-1 focus:bg-white/10 transition-all shadow-inner",
-                isRecording ? "border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.1)] focus:ring-rose-500/30" : "border-border focus:ring-primary/40"
+                "w-full bg-slate-50 border rounded-xl py-2.5 sm:py-3 pl-3.5 pr-11 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:bg-white transition-all shadow-inner border-slate-200",
+                isRecording ? "border-rose-400 ring-2 ring-rose-400/30" : ""
               )}
             />
             <button 
+              type="button"
               onClick={() => handleSend()}
               disabled={!input.trim() || isTyping}
               className={cn(
-                "absolute right-2 top-1.5 w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                "absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer",
                 input.trim() && !isTyping 
-                  ? "bg-primary text-bg shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:scale-105 active:scale-95" 
-                  : "text-text-dim opacity-40 cursor-not-allowed"
+                  ? "bg-teal-600 hover:bg-teal-700 text-force-white shadow-sm hover:scale-105 active:scale-95" 
+                  : "text-slate-400 opacity-40 cursor-not-allowed"
               )}
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-3.5 h-3.5 fill-current" />
             </button>
           </div>
         </div>
 
-        <p className="text-[10px] text-center text-text-dim mt-2.5 uppercase tracking-wider font-medium opacity-50">
-          Thông tin chỉ mang tính chất tham khảo chuyên môn và y học cổ truyền
+        <p className="text-[9.5px] sm:text-[10px] text-center text-teal-800 mt-2 font-normal tracking-wide">
+          Trò chuyện sức khỏe với BS A.I • Thông tin mang tính chất tham khảo chuyên môn
         </p>
       </div>
     </div>

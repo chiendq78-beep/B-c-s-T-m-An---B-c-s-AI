@@ -14,7 +14,8 @@ import {
   LogOut,
   PhoneCall,
   HelpCircle,
-  ShieldAlert
+  ShieldAlert,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'motion/react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -30,7 +31,12 @@ import AIChatView from './components/views/AIChatView';
 import AuthForm from './components/AuthForm';
 import EmergencyModal from './components/EmergencyModal';
 import SupportModal from './components/SupportModal';
+import NotificationSettingsModal from './components/NotificationSettingsModal';
+import MedicationReminderModal from './components/MedicationReminderModal';
+import MenuAndSettingsDrawer from './components/MenuAndSettingsDrawer';
 import EdgeGestureHandler from './components/EdgeGestureHandler';
+import { registerModal, popTopModal } from './utils/modalManager';
+import { reminderService } from './services/reminderService';
 
 type ViewType = 'home' | 'anatomy' | 'disease' | 'health' | 'herb';
 
@@ -42,53 +48,52 @@ const viewTitles: Record<ViewType, string> = {
   health: 'Luyện tập Sức khỏe'
 };
 
-// Draggable & Resizable AI Doctor Modal
+// Full-Screen AI Doctor Modal
 function AIChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const dragControls = useDragControls();
-  const [isMaximized, setIsMaximized] = useState(false);
-  const constraintsRef = useRef<HTMLDivElement>(null);
+  const [isMaximized, setIsMaximized] = useState(true);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerModal('ai-chat-modal', onClose);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <div 
-      ref={constraintsRef} 
-      className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden"
+      className={cn(
+        "fixed inset-0 z-[100] pointer-events-auto flex items-center justify-center overflow-hidden",
+        isMaximized ? "p-0 bg-bg" : "p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm"
+      )}
     >
-      {/* Semi-transparent backdrop - clicking dismisses modal */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm pointer-events-auto cursor-pointer"
-      />
-
-      {/* Draggable & Scrollable AI Chat Window */}
-      <motion.div
-        drag={!isMaximized}
-        dragControls={dragControls}
-        dragListener={false}
-        dragConstraints={constraintsRef}
-        dragElastic={0.08}
-        dragMomentum={false}
-        initial={{ opacity: 0, scale: 0.92, y: 24 }}
+        initial={{ opacity: 0, scale: 0.98, y: 8 }}
         animate={{ 
           opacity: 1, 
           scale: 1, 
           y: 0,
-          width: isMaximized ? '96vw' : '100%',
-          height: isMaximized ? '94vh' : '88vh',
-          maxWidth: isMaximized ? '1350px' : '680px',
-          maxHeight: isMaximized ? '96vh' : '820px'
+          width: '100%',
+          height: '100%',
+          maxWidth: isMaximized ? '100%' : '840px',
+          maxHeight: isMaximized ? '100%' : '94dvh'
         }}
-        exit={{ opacity: 0, scale: 0.92, y: 24 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        className="pointer-events-auto relative rounded-3xl shadow-2xl overflow-hidden z-10 flex flex-col border border-border"
+        exit={{ opacity: 0, scale: 0.98, y: 8 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className={cn(
+          "w-full h-full flex flex-col overflow-hidden bg-bg shadow-2xl",
+          isMaximized ? "rounded-none border-0" : "sm:rounded-3xl sm:border sm:border-slate-200"
+        )}
       >
         <AIChatView 
           onClose={onClose} 
-          dragControls={dragControls}
           isMaximized={isMaximized}
           onToggleMaximize={() => setIsMaximized(prev => !prev)}
         />
@@ -105,11 +110,39 @@ function AppContent() {
   const [isAIChatPopupOpen, setIsAIChatPopupOpen] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isMedicationReminderOpen, setIsMedicationReminderOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user, profile, loading, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuInitialTab, setMenuInitialTab] = useState<'navigation' | 'settings'>('navigation');
 
   const isAnonymousUser = !user || user.isAnonymous;
+  const [showPermissionBanner, setShowPermissionBanner] = useState<boolean>(false);
+
+  // Initialize Background Reminders Service for Mobile, Tablet & Desktop
+  useEffect(() => {
+    reminderService.init(user?.uid);
+
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        const dismissed = localStorage.getItem('tam_an_notification_banner_dismissed');
+        if (!dismissed) {
+          setShowPermissionBanner(true);
+        }
+      }
+    }
+  }, [user]);
+
+  const handleEnableNotifications = async () => {
+    await reminderService.requestNotificationPermission();
+    setShowPermissionBanner(false);
+  };
+
+  const handleDismissBanner = () => {
+    setShowPermissionBanner(false);
+    localStorage.setItem('tam_an_notification_banner_dismissed', 'true');
+  };
 
   // Listen for global open AI chat event with optional prompt
   useEffect(() => {
@@ -125,20 +158,74 @@ function AppContent() {
     return () => window.removeEventListener('app-open-ai-chat', handleOpenAIChat);
   }, []);
 
-  // Navigate to a new view while preserving forward/backward stack
+  // Smoothly scroll window, body, and main containers to top
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      if (document.documentElement) {
+        document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }
+      if (document.body) {
+        document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }
+      const mainEl = document.querySelector('main');
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }
+      const topAnchor = document.getElementById('top-anchor') || document.querySelector('header');
+      if (topAnchor) {
+        topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  // Ensure scroll to top whenever activeView changes
+  useEffect(() => {
+    scrollToTop();
+    const t1 = setTimeout(scrollToTop, 50);
+    const t2 = setTimeout(scrollToTop, 150);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [activeView]);
+
+  // Navigate to a root menu view while resetting scroll & position
   const navigateToView = (newView: ViewType) => {
-    if (newView === activeView) return;
+    // If tapping the already active root menu (e.g. tapping Home when on Home, or Cơ thể when on Cơ thể),
+    // immediately smooth scroll back to top and broadcast reset event to close sub-views/modals
+    if (newView === activeView) {
+      scrollToTop();
+      window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+      setTimeout(scrollToTop, 60);
+      setTimeout(scrollToTop, 180);
+      return;
+    }
+
     setHistory((prev) => {
       const sliced = prev.slice(0, historyIndex + 1);
       return [...sliced, newView];
     });
     setHistoryIndex((prev) => prev + 1);
     setActiveView(newView);
+
+    // Scroll to top and reset view state on navigation transition
+    scrollToTop();
+    window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+    setTimeout(scrollToTop, 60);
+    setTimeout(scrollToTop, 180);
   };
 
-  // Back navigation handler
+  // Back navigation handler (aligned with S-TimeTable gesture model)
   const handleBack = (): boolean => {
-    // 1. Dispatch custom event for child modals/views to intercept
+    // 1. Check global modal stack first (closes cards, sub-modals, popups, and dropdowns)
+    if (popTopModal()) {
+      return true;
+    }
+
+    // 2. Dispatch custom event for child modals/views to intercept
     const event = new CustomEvent('app-back-press', { cancelable: true });
     const notPrevented = window.dispatchEvent(event);
     if (!notPrevented) {
@@ -146,28 +233,14 @@ function AppContent() {
       return true;
     }
 
-    // 2. If drawer/modal in App is open, close it
+    // 3. If drawer or App-level modal is open, close it
     if (hasActiveModalOrDrawer) {
       closeActiveModalOrDrawer();
       return true;
     }
 
-    // 3. If history stack exists, go back
-    if (historyIndex > 0) {
-      const targetIndex = historyIndex - 1;
-      setHistoryIndex(targetIndex);
-      setActiveView(history[targetIndex]);
-      return true;
-    } 
-    // 4. If not at home (root menu), always return to home
-    else if (activeView !== 'home') {
-      setActiveView('home');
-      setHistory(['home']);
-      setHistoryIndex(0);
-      return true;
-    }
-    
-    // 5. Already at home (root)
+    // 4. In S-TimeTable behavior: "Tổng quan, Cơ thể, Bệnh lý, Dược liệu, Luyện tập" are root menus ("menu gốc").
+    // When at any of these root menus without open modals, return false so EdgeGestureHandler triggers S-TimeTable app exit!
     return false;
   };
 
@@ -187,6 +260,8 @@ function AppContent() {
     isAIChatPopupOpen || 
     isEmergencyModalOpen || 
     isSupportModalOpen || 
+    isNotificationSettingsOpen ||
+    isMedicationReminderOpen ||
     isAuthModalOpen;
 
   const closeActiveModalOrDrawer = () => {
@@ -194,13 +269,22 @@ function AppContent() {
     else if (isAIChatPopupOpen) setIsAIChatPopupOpen(false);
     else if (isEmergencyModalOpen) setIsEmergencyModalOpen(false);
     else if (isSupportModalOpen) setIsSupportModalOpen(false);
+    else if (isNotificationSettingsOpen) setIsNotificationSettingsOpen(false);
+    else if (isMedicationReminderOpen) setIsMedicationReminderOpen(false);
     else if (isAuthModalOpen) setIsAuthModalOpen(false);
   };
 
-  // canGoBack is true whenever there is history OR activeView is not home
-  const canGoBack = historyIndex > 0 || activeView !== 'home';
+  // Sync App level modals with global modal stack
+  useEffect(() => {
+    if (!hasActiveModalOrDrawer) return;
+    const unregister = registerModal('app-level-modal', closeActiveModalOrDrawer);
+    return () => unregister();
+  }, [hasActiveModalOrDrawer]);
+
+  // At root menus, canGoBack is false so edge swipe prompts S-TimeTable exit
+  const canGoBack = false;
   const canGoForward = historyIndex < history.length - 1;
-  const previousViewTitle = historyIndex > 0 ? viewTitles[history[historyIndex - 1]] : (activeView !== 'home' ? 'Tổng quan' : undefined);
+  const previousViewTitle = undefined;
   const nextViewTitle = canGoForward ? viewTitles[history[historyIndex + 1]] : undefined;
 
   const renderView = () => {
@@ -216,15 +300,20 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-bg pb-20 selection:bg-primary/30">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 px-3 sm:px-6 py-3.5 shadow-xs">
+      <div id="top-anchor" className="sr-only" aria-hidden="true" tabIndex={-1} />
+      {/* Header with Safe Area Status Bar spacing on Mobile */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 px-3 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),28px)+0.5rem)] sm:pt-3.5 pb-3 sm:pb-3.5 shadow-xs transition-all">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
-          <div className="flex items-center gap-2.5 sm:gap-4">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 medical-gradient rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+          <div 
+            onClick={() => navigateToView('home')}
+            className="flex items-center gap-2.5 sm:gap-4 cursor-pointer select-none group"
+            title="Về đầu trang Tổng quan"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 medical-gradient rounded-xl flex items-center justify-center shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
               <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h2 className="font-serif text-base sm:text-xl italic font-light text-slate-900 leading-tight">Bác sĩ Tâm An</h2>
+              <h2 className="font-serif text-base sm:text-xl italic font-light text-slate-900 leading-tight group-hover:text-teal-700 transition-colors">Bác sĩ Tâm An</h2>
               <p className="text-[8px] sm:text-[9px] text-teal-600 font-bold uppercase tracking-[0.2em]">Expert AI System</p>
             </div>
           </div>
@@ -240,220 +329,85 @@ function AppContent() {
               <span className="hidden sm:inline">Bác sĩ AI</span>
             </button>
 
-            <button className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer">
-              <Bell className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-600 hover:text-slate-900 transition-colors" />
-              <span className="absolute top-2 sm:top-2.5 right-2 sm:right-2.5 w-1.5 h-1.5 bg-teal-500 rounded-full shadow-[0_0_6px_rgba(13,148,136,0.5)]"></span>
+            <button 
+              onClick={() => setIsNotificationSettingsOpen(true)}
+              className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer active:scale-95"
+              title="Cài đặt thông báo & nhắc nhở (Uống nước, uống thuốc, đo chỉ số)"
+              aria-label="Cài đặt thông báo & nhắc nhở"
+            >
+              <Bell className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-600 hover:text-teal-700 transition-colors" />
+              <span className="absolute top-2 sm:top-2.5 right-2 sm:right-2.5 w-2 h-2 bg-teal-500 rounded-full shadow-[0_0_6px_rgba(13,148,136,0.6)] animate-pulse"></span>
             </button>
             <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
+              onClick={() => {
+                setMenuInitialTab('navigation');
+                setIsMenuOpen(true);
+              }}
+              className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-700 transition-all shadow-xs active:scale-95 cursor-pointer"
+              title="Menu điều hướng & Cài đặt hệ thống"
+              aria-label="Menu"
             >
-              <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-600 hover:text-slate-900" />
+              <Menu className="w-5 h-5 text-emerald-700" />
             </button>
           </div>
         </div>
       </header>
+      
+      {/* Background Notification Enable Banner for Mobile & Tablet */}
+      <AnimatePresence>
+        {showPermissionBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 text-white shadow-md z-20 border-b border-teal-500/30"
+          >
+            <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <Bell className="w-4 h-4 text-white animate-bounce" />
+                </div>
+                <p className="font-medium text-[11px] sm:text-xs truncate">
+                  Bật thông báo chạy ngầm trên điện thoại/tablet để không bỏ lỡ lịch uống thuốc, đo chỉ số & uống nước!
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={handleEnableNotifications}
+                  className="bg-white text-teal-800 hover:bg-teal-50 font-bold px-3 py-1.5 rounded-lg text-[10.5px] uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  Bật thông báo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissBanner}
+                  className="text-white/80 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+                  title="Để sau"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Background Side Navigation Drawer */}
+      {/* Side Navigation & Medical System Settings Drawer */}
       <AnimatePresence>
         {isMenuOpen && (
-          <>
-            {/* Blurry dim overlay backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            />
-
-            {/* Slide-over menu container */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white/95 backdrop-blur-2xl border-l border-slate-200 px-6 py-6 z-50 shadow-2xl flex flex-col justify-between"
-              id="navigation-sidebar-drawer"
-            >
-              <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pr-1 pb-4">
-                {/* Header inside drawer */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8.5 h-8.5 medical-gradient rounded-xl flex items-center justify-center shadow-md">
-                      <Activity className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-serif italic font-light text-slate-800 text-base leading-tight">Bác sĩ Tâm An</h3>
-                      <p className="text-[8px] text-teal-600 font-bold uppercase tracking-wider">Expert AI Portal</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsMenuOpen(false)}
-                    className="w-8.5 h-8.5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-full transition-all border border-slate-200 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Account card info */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3 shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold font-serif text-sm flex-shrink-0">
-                      {isAnonymousUser ? 'K' : (profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'T')}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold text-slate-800 truncate">
-                        {isAnonymousUser ? 'Người dùng Trải nghiệm' : (profile?.fullName || 'Người dùng')}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                        {isAnonymousUser ? 'Chế độ Khách (Chưa đăng nhập)' : (profile?.email || user?.email)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2.5 border-t border-slate-200/60">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200">
-                        {isAnonymousUser ? 'Chế độ Khách' : 'Thành viên'}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Sẵn sàng
-                      </span>
-                    </div>
-
-                    {!isAnonymousUser ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await logout();
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-[10px] font-bold transition-all cursor-pointer shadow-xs"
-                      >
-                        <LogOut className="w-3 h-3" />
-                        <span>Đăng xuất</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          setIsAuthModalOpen(true);
-                        }}
-                        className="text-[10px] text-teal-600 hover:text-teal-700 font-bold hover:underline cursor-pointer"
-                      >
-                        Đăng nhập / Đăng ký
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Subsystem menus navigation list */}
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-bold pl-2 mb-1">Chức năng chính</p>
-                    <SidebarNavItem 
-                      active={activeView === 'home'} 
-                      icon={Home} 
-                      title="Tổng quan" 
-                      onClick={() => { navigateToView('home'); setIsMenuOpen(false); }} 
-                    />
-                    <SidebarNavItem 
-                      active={activeView === 'anatomy'} 
-                      icon={Activity} 
-                      title="Giải phẫu học 3D" 
-                      onClick={() => { navigateToView('anatomy'); setIsMenuOpen(false); }} 
-                    />
-                    <SidebarNavItem 
-                      active={activeView === 'disease'} 
-                      icon={BookOpen} 
-                      title="Tra cứu Bệnh lý" 
-                      onClick={() => { navigateToView('disease'); setIsMenuOpen(false); }} 
-                    />
-                    <SidebarNavItem 
-                      active={activeView === 'herb'} 
-                      icon={Leaf} 
-                      title="Dược liệu Việt" 
-                      onClick={() => { navigateToView('herb'); setIsMenuOpen(false); }} 
-                    />
-                    <SidebarNavItem 
-                      active={activeView === 'health'} 
-                      icon={Heart} 
-                      title="Luyện tập Sức khỏe" 
-                      onClick={() => { navigateToView('health'); setIsMenuOpen(false); }} 
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-bold pl-2 mb-1">Hỗ trợ & AI</p>
-                    
-                    {/* Emergency SOS Banner inside Hỗ trợ & AI section */}
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsEmergencyModalOpen(true);
-                      }}
-                      className="w-full py-2 px-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white rounded-xl flex items-center justify-between shadow-[0_3px_12px_rgba(225,29,72,0.25)] transition-all cursor-pointer group border border-rose-400/30 mb-1.5"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center animate-pulse flex-shrink-0">
-                          <PhoneCall className="w-4 h-4 text-white" />
-                        </div>
-                        <h4 className="text-[11.5px] font-black uppercase tracking-wider">Cấp cứu Y tế (115)</h4>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white text-rose-700 text-[9.5px] font-black uppercase shadow-xs">
-                        SOS
-                      </span>
-                    </button>
-
-                    <SidebarNavItem 
-                      active={isAIChatPopupOpen} 
-                      icon={MessageSquare} 
-                      title="Trợ lý Tâm An AI" 
-                      onClick={() => { 
-                        setIsMenuOpen(false); 
-                        setIsAIChatPopupOpen(true);
-                      }} 
-                    />
-                    <SidebarNavItem 
-                      active={isSupportModalOpen} 
-                      icon={HelpCircle} 
-                      title="Trung tâm Hỗ trợ" 
-                      onClick={() => { 
-                        setIsMenuOpen(false); 
-                        setIsSupportModalOpen(true);
-                      }} 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Drawer footer (Login or Logout) */}
-              <div className="pt-4 border-t border-slate-100">
-                {!isAnonymousUser ? (
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Đăng xuất tài khoản</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                  >
-                    <span>Đăng nhập / Đăng ký</span>
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </>
+          <MenuAndSettingsDrawer
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            activeView={activeView}
+            navigateToView={navigateToView}
+            onOpenAIChat={() => setIsAIChatPopupOpen(true)}
+            onOpenEmergency={() => setIsEmergencyModalOpen(true)}
+            onOpenSupport={() => setIsSupportModalOpen(true)}
+            onOpenNotificationSettings={() => setIsNotificationSettingsOpen(true)}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            initialTab={menuInitialTab}
+          />
         )}
       </AnimatePresence>
 
@@ -522,6 +476,27 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      {/* Notification & Reminder Settings Modal */}
+      <AnimatePresence>
+        {isNotificationSettingsOpen && (
+          <NotificationSettingsModal
+            isOpen={isNotificationSettingsOpen}
+            onClose={() => setIsNotificationSettingsOpen(false)}
+            onOpenMedicationDetailModal={() => setIsMedicationReminderOpen(true)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Medication Reminder Detail Modal */}
+      <AnimatePresence>
+        {isMedicationReminderOpen && (
+          <MedicationReminderModal
+            isOpen={isMedicationReminderOpen}
+            onClose={() => setIsMedicationReminderOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Optional Auth Modal Popup */}
       <AnimatePresence>
         {isAuthModalOpen && (
@@ -542,7 +517,7 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200/80 px-2 sm:px-6 py-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-emerald-50/95 sm:bg-emerald-50/90 backdrop-blur-xl border-t border-emerald-200/80 px-2 sm:px-6 py-2 pb-safe shadow-[0_-4px_20px_rgba(5,150,105,0.08)]">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-1">
           <NavItem active={activeView === 'anatomy'} icon={Activity} label="Cơ thể" onClick={() => navigateToView('anatomy')} />
           <NavItem active={activeView === 'disease'} icon={BookOpen} label="Bệnh lý" onClick={() => navigateToView('disease')} />
@@ -594,62 +569,16 @@ function NavItem({ active, icon: Icon, label, onClick }: { active: boolean, icon
       onClick={onClick}
       className={cn(
         "flex flex-col items-center justify-center gap-1 transition-all relative group flex-1 py-1 px-0.5 min-w-0 rounded-xl cursor-pointer",
-        active ? "text-primary font-bold" : "text-slate-500 hover:text-teal-700 hover:bg-slate-100/80"
+        active ? "text-emerald-700 font-bold" : "text-slate-600 hover:text-emerald-700 hover:bg-emerald-100/60"
       )}
     >
-      <Icon className={cn("w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform group-hover:scale-110", active && "scale-110 text-primary")} />
+      <Icon className={cn("w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform group-hover:scale-110", active && "scale-110 text-emerald-700")} />
       <span className="text-[8px] sm:text-[9.5px] font-medium uppercase tracking-wider truncate max-w-full text-center">{label}</span>
       {active && (
         <motion.div 
           layoutId="nav-indicator"
-          className="absolute -bottom-1.5 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(13,148,136,0.5)]"
+          className="absolute -bottom-1.5 w-1.5 h-1.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.6)]"
         />
-      )}
-    </button>
-  );
-}
-
-function SidebarNavItem({ 
-  active, 
-  icon: Icon, 
-  title, 
-  onClick
-}: { 
-  active: boolean, 
-  icon: any, 
-  title: string, 
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full text-left py-2 px-3 sm:py-2 sm:px-3 rounded-xl flex items-center gap-2.5 transition-all duration-200 ease-out relative group overflow-hidden border cursor-pointer",
-        active 
-          ? "bg-teal-600 text-white font-bold shadow-sm border-teal-600 ring-2 ring-teal-500/20" 
-          : "bg-white hover:bg-teal-50 hover:border-teal-300 text-slate-800 border-slate-200/80 hover:shadow-xs hover:translate-x-0.5"
-      )}
-    >
-      <div className={cn(
-        "w-7 h-7 rounded-lg flex items-center justify-center border transition-all duration-200 flex-shrink-0",
-        active 
-          ? "bg-white/20 text-white border-white/20" 
-          : "bg-slate-100 text-slate-600 border-slate-200 group-hover:bg-teal-100 group-hover:text-teal-700 group-hover:border-teal-300 group-hover:scale-105"
-      )}>
-        <Icon className="w-4 h-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <h4 className={cn(
-          "text-[11.5px] font-bold uppercase tracking-wider transition-colors duration-200 truncate", 
-          active ? "text-white" : "text-slate-800 group-hover:text-teal-900"
-        )}>
-          {title}
-        </h4>
-      </div>
-      {!active && (
-        <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 text-teal-600 self-center shrink-0 -translate-x-1 group-hover:translate-x-0">
-          <ChevronRight className="w-3.5 h-3.5" />
-        </div>
       )}
     </button>
   );

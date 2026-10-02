@@ -17,7 +17,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '9%', left: '50%' },
     definition: 'Hộp sọ là cấu trúc xương phức tạp gồm 22 xương chính bảo vệ não bộ, tạo hình khuôn mặt, bảo vệ các giác quan và làm chỗ bám cho các cơ vùng đầu mặt.',
     location: 'Nằm ở phần đỉnh cao nhất của trục cơ thể, tiếp khớp với đốt sống cổ C1 (Atlas).',
-    illustrationUrl: 'https://images.unsplash.com/photo-1579684389782-64d84b5e901a?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&q=80&w=1200',
     model3dUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
     structures: [
       { name: 'Xương sọ não', detail: 'Xương trán, xương đỉnh, xương thái dương, xương chẩm, xương bướm, xương sàng.' },

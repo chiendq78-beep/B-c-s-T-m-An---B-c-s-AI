@@ -16,6 +16,7 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
+import { registerModal } from '../utils/modalManager';
 
 interface JournalEntryModalProps {
   isOpen: boolean;
@@ -27,6 +28,26 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Register modal in global stack for edge swipe gestures on mobile/tablet
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerModal('journal-entry-modal', onClose);
+    const handleBackPress = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('app-back-press', handleBackPress);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('app-back-press', handleBackPress);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Journal form state
   const [mood, setMood] = useState<string>('Vui vẻ');
@@ -214,7 +235,7 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
   return (
     <AnimatePresence>
       {isOpen && (
-        <div id="journal-entry-modal-container" className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div id="journal-entry-modal-container" className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-4">
           {/* Backdrop */}
           <motion.div
             id="journal-entry-backdrop"
@@ -228,13 +249,13 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
           {/* Modal content */}
           <motion.div
             id="journal-entry-modal-content"
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="relative w-full max-w-lg bg-panel border border-border rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+            className="relative w-full h-full lg:h-auto lg:max-w-lg lg:max-h-[90vh] bg-panel border-0 lg:border lg:border-border rounded-none lg:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div id="journal-entry-modal-header" className="p-6 border-b border-border flex items-center justify-between">
+            <div id="journal-entry-modal-header" className="p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div id="journal-entry-icon-holder" className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
                   <Sparkles className="w-5 h-5 animate-pulse" />
@@ -444,25 +465,26 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
                 )}
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Lưu and Đóng */}
               <div id="journal-modal-actions" className="pt-4 border-t border-border flex items-center justify-end gap-3">
+                <button
+                  id="journal-save-btn"
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 sm:flex-none px-6 py-3.5 bg-primary text-bg font-bold rounded-xl text-xs uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{loading ? 'Đang lưu...' : 'Lưu'}</span>
+                </button>
                 <button
                   id="journal-cancel-btn"
                   type="button"
                   onClick={onClose}
                   disabled={loading}
-                  className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-text-dim hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5 transition-all"
+                  className="flex-1 sm:flex-none px-6 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest text-text-dim hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Hủy bỏ
-                </button>
-                <button
-                  id="journal-save-btn"
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-3 bg-primary text-bg font-bold rounded-xl text-xs uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{loading ? 'Đang lưu...' : 'Lưu Nhật Ký'}</span>
+                  <X className="w-4 h-4" />
+                  <span>Đóng</span>
                 </button>
               </div>
             </form>

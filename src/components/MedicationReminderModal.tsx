@@ -10,6 +10,7 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, getDocs, setDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
+import { registerModal } from '../utils/modalManager';
 
 interface MedicationReminderModalProps {
   isOpen: boolean;
@@ -250,6 +251,33 @@ export default function MedicationReminderModal({ isOpen, onClose, defaultCatego
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [quickTemplateNotice, setQuickTemplateNotice] = useState<string | null>(null);
 
+  // Register modal in global stack for edge swipe gestures on mobile/tablet
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleCloseOrBackToList = () => {
+      if (viewMode !== 'list') {
+        setViewMode('list');
+      } else {
+        onClose();
+      }
+    };
+    const unregister = registerModal('medication-reminder-modal', handleCloseOrBackToList);
+    const handleBackPress = (e: Event) => {
+      e.preventDefault();
+      handleCloseOrBackToList();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleCloseOrBackToList();
+    };
+    window.addEventListener('app-back-press', handleBackPress);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('app-back-press', handleBackPress);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, viewMode, onClose]);
+
   // Fetch reminders when opened
   useEffect(() => {
     if (!user || !isOpen) return;
@@ -465,7 +493,7 @@ export default function MedicationReminderModal({ isOpen, onClose, defaultCatego
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 lg:p-6 bg-slate-900/60 backdrop-blur-sm">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -477,14 +505,14 @@ export default function MedicationReminderModal({ isOpen, onClose, defaultCatego
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 15 }}
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 15 }}
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
             transition={{ type: 'spring', damping: 25, stiffness: 260 }}
-            className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+            className="relative w-full h-full lg:h-auto lg:max-w-2xl lg:max-h-[90vh] bg-white border-0 lg:border lg:border-slate-200 rounded-none lg:rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10"
           >
             {/* Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between flex-shrink-0">
+            <div className="p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 bg-teal-50 border border-teal-200 text-teal-700 rounded-2xl flex items-center justify-center shadow-sm">
                   <Bell className="w-5 h-5 animate-pulse" />
@@ -968,28 +996,29 @@ export default function MedicationReminderModal({ isOpen, onClose, defaultCatego
                     </div>
                   </div>
 
-                  {/* Submit / Cancel Buttons */}
+                  {/* Submit / Close Buttons: Lưu and Đóng */}
                   <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('list')}
-                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer border border-slate-200"
-                    >
-                      Hủy bỏ
-                    </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-[2] bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all uppercase tracking-wider text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all uppercase tracking-wider text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {submitting ? (
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : (
                         <>
                           <Save className="w-4 h-4" />
-                          <span>Lưu nhắc nhở</span>
+                          <span>Lưu</span>
                         </>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer border border-slate-200 flex items-center justify-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Đóng</span>
                     </button>
                   </div>
                 </form>

@@ -16,7 +16,8 @@ import {
   Share,
   Image as ImageIcon,
   Sparkles,
-  Loader2
+  Loader2,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { chatWithAI } from '../../services/gemini';
@@ -25,6 +26,7 @@ interface Disease {
   id: string;
   name_vi: string;
   name_en?: string;
+  icd10?: string;
   category: string;
   severity: 'mild' | 'moderate' | 'severe' | 'critical';
   description: string;
@@ -124,10 +126,35 @@ export default function DiseaseDetailView({ disease, onBack, onHerbClick, onExer
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <div className="flex-1">
-          <h2 className="font-serif text-xl italic font-light text-white leading-tight">{disease.name_vi}</h2>
-          <p className="text-[9px] text-primary font-bold uppercase tracking-[0.2em]">{disease.category}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-serif text-xl italic font-light text-white leading-tight truncate">{disease.name_vi}</h2>
+            {disease.name_en && (
+              <span className="text-xs text-text-dim italic font-light hidden sm:inline truncate">
+                ({disease.name_en})
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[9px] text-primary font-bold uppercase tracking-[0.2em]">{disease.category}</p>
+            {disease.icd10 && (
+              <span className="text-[9px] font-mono font-bold text-teal-300 bg-teal-950/60 px-1.5 py-0.5 rounded border border-teal-500/30">
+                ICD-10: {disease.icd10}
+              </span>
+            )}
+          </div>
         </div>
+        <button 
+          onClick={() => {
+            const prompt = `Chào Bác sĩ Tâm An, tôi đang tìm hiểu chi tiết về bệnh: ${disease.name_vi} (${disease.category}${disease.icd10 ? `, ICD-10: ${disease.icd10}` : ''}). Xin bác sĩ giải thích sâu hơn về cơ chế bệnh sinh, phác đồ điều trị và cách phòng ngừa tái phát.`;
+            window.dispatchEvent(new CustomEvent('app-open-ai-chat', { detail: { prompt } }));
+          }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+          title="Tư vấn với Bác sĩ AI về bệnh này"
+        >
+          <MessageSquare className="w-4 h-4 text-teal-400" />
+          <span className="hidden sm:inline">Hỏi Bác sĩ AI</span>
+        </button>
         <button 
           onClick={handleShare}
           className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-text-dim hover:text-white transition-all border border-transparent hover:border-border"

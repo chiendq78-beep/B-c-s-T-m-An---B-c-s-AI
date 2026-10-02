@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
+import { registerModal } from '../utils/modalManager';
 
 interface EmergencyModalProps {
   isOpen: boolean;
@@ -188,10 +189,23 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
     setIsEditingMedicalId(false);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerModal('emergency-modal', onClose);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -203,14 +217,14 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
 
       {/* Modal Card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-rose-200 overflow-hidden z-10 my-auto flex flex-col max-h-[92vh]"
+        className="relative w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-xl bg-white rounded-none lg:rounded-3xl shadow-2xl border-0 lg:border lg:border-rose-200 overflow-hidden z-10 my-auto flex flex-col"
       >
         {/* Urgent Red Header */}
-        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white p-5 sm:p-6 relative overflow-hidden flex-shrink-0 shadow-lg">
+        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 relative overflow-hidden flex-shrink-0 shadow-lg">
           <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex items-center justify-between relative z-10">

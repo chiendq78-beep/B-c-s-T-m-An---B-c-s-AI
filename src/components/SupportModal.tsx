@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   HelpCircle, 
   PhoneCall, 
@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
+import { registerModal } from '../utils/modalManager';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -81,10 +82,23 @@ export default function SupportModal({ isOpen, onClose, onOpenAIChat }: SupportM
     }, 4000);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerModal('support-modal', onClose);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -96,14 +110,14 @@ export default function SupportModal({ isOpen, onClose, onOpenAIChat }: SupportM
 
       {/* Modal Dialog */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-teal-100 overflow-hidden z-10 my-auto flex flex-col max-h-[90vh]"
+        className="relative w-full h-full lg:h-auto lg:max-w-xl lg:max-h-[90vh] bg-white rounded-none lg:rounded-3xl shadow-2xl border-0 lg:border lg:border-teal-100 overflow-hidden z-10 my-auto flex flex-col"
       >
         {/* Teal Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-white p-5 sm:p-6 relative overflow-hidden flex-shrink-0 shadow-md">
+        <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-white p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 relative overflow-hidden flex-shrink-0 shadow-md">
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">

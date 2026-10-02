@@ -286,33 +286,33 @@ export default function BmiCalculatorCard() {
   };
 
   return (
-    <section className="bg-panel rounded-3xl p-6 border border-border shadow-2xl space-y-6" id="home-bmi-calculator-section">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20 shadow-sm">
-            <Scale className="w-5 h-5" />
+    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="home-bmi-calculator-section">
+      {/* Header with medium-soft green background */}
+      <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-teal-200/60 flex items-center justify-center text-teal-700 border border-teal-300/80 shadow-xs">
+            <Scale className="w-4 h-4 text-teal-700" />
           </div>
           <div>
-            <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+            <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               Chỉ số Thể trạng & BMI
             </h3>
-            <p className="text-[9px] text-text-dim font-bold uppercase tracking-widest mt-0.5">
+            <p className="text-[8.5px] sm:text-[9px] text-teal-800 font-bold uppercase tracking-wider mt-0.5">
               Phân tích thể trạng chuẩn Nhân trắc học Y tế & Đông Y
             </p>
           </div>
         </div>
 
         {/* Standard selector pills */}
-        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-teal-200 shadow-xs self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setStandard('asian')}
             className={cn(
-              "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
+              "px-2.5 py-1 rounded-md text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
               standard === 'asian'
-                ? "bg-primary text-bg shadow-sm"
-                : "text-text-dim hover:text-white"
+                ? "bg-teal-700 text-white-pure shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             )}
             title="Chuẩn WPRO / IDI dành riêng cho người Châu Á & Việt Nam"
           >
@@ -322,10 +322,10 @@ export default function BmiCalculatorCard() {
             type="button"
             onClick={() => setStandard('who')}
             className={cn(
-              "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
+              "px-2.5 py-1 rounded-md text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
               standard === 'who'
-                ? "bg-primary text-bg shadow-sm"
-                : "text-text-dim hover:text-white"
+                ? "bg-teal-700 text-white-pure shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             )}
             title="Chuẩn Quốc tế của Tổ chức Y tế Thế giới (WHO)"
           >
@@ -334,18 +334,20 @@ export default function BmiCalculatorCard() {
         </div>
       </div>
 
+      <div className="p-4 sm:p-5 space-y-3 sm:space-y-3.5">
+
       {/* Main Grid: Inputs vs Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5">
         {/* Left column: Height & Weight Inputs (5 cols) */}
-        <div className="lg:col-span-5 bg-bg/40 border border-white/5 rounded-2xl p-5 space-y-5">
+        <div className="lg:col-span-5 bg-bg/40 border border-white/5 rounded-xl p-3 sm:p-3.5 space-y-2.5 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
+            <span className="text-[9.5px] font-bold text-text-dim uppercase tracking-wider">
               Thông số nhân trắc của bạn
             </span>
             <button
               type="button"
               onClick={handleReset}
-              className="text-text-dim hover:text-white text-[10px] flex items-center gap-1 transition-colors"
+              className="text-text-dim hover:text-white text-[9.5px] flex items-center gap-1 transition-colors"
               title="Đặt lại thông số mặc định"
             >
               <RotateCcw className="w-3 h-3" />
@@ -354,14 +356,14 @@ export default function BmiCalculatorCard() {
           </div>
 
           {/* Height Input */}
-          <div className="space-y-2.5">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-white flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-teal-400" />
+              <label className="text-xs font-medium text-white flex items-center gap-1.5">
+                <Ruler className="w-3.5 h-3.5 text-teal-400" />
                 Chiều cao
               </label>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-mono font-bold text-white">{height}</span>
+                <span className="text-lg font-mono font-bold text-white">{height}</span>
                 <span className="text-[10px] text-text-dim font-mono">cm</span>
               </div>
             </div>
@@ -372,9 +374,9 @@ export default function BmiCalculatorCard() {
               step={1}
               value={height}
               onChange={(e) => setHeight(parseFloat(e.target.value))}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
-            <div className="flex justify-between text-[9px] font-mono text-text-dim">
+            <div className="flex justify-between text-[8.5px] font-mono text-text-dim">
               <span>120 cm</span>
               <span>165 cm</span>
               <span>210 cm</span>
@@ -382,14 +384,14 @@ export default function BmiCalculatorCard() {
           </div>
 
           {/* Weight Input */}
-          <div className="space-y-2.5">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-white flex items-center gap-2">
-                <Scale className="w-4 h-4 text-amber-400" />
+              <label className="text-xs font-medium text-white flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-amber-400" />
                 Cân nặng
               </label>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-mono font-bold text-white">{weight}</span>
+                <span className="text-lg font-mono font-bold text-white">{weight}</span>
                 <span className="text-[10px] text-text-dim font-mono">kg</span>
               </div>
             </div>
@@ -400,9 +402,9 @@ export default function BmiCalculatorCard() {
               step={0.5}
               value={weight}
               onChange={(e) => setWeight(parseFloat(e.target.value))}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
-            <div className="flex justify-between text-[9px] font-mono text-text-dim">
+            <div className="flex justify-between text-[8.5px] font-mono text-text-dim">
               <span>35 kg</span>
               <span>65 kg</span>
               <span>150 kg</span>
@@ -410,17 +412,17 @@ export default function BmiCalculatorCard() {
           </div>
 
           {/* Quick Stats Pills */}
-          <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/5">
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-left">
-              <span className="text-[9px] text-text-dim uppercase font-bold block mb-0.5">Cân nặng lý tưởng</span>
-              <span className="text-xs font-mono font-bold text-emerald-400">
+          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-white/5">
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 text-left">
+              <span className="text-[8.5px] text-text-dim uppercase font-bold block mb-0.5">Cân nặng lý tưởng</span>
+              <span className="text-[11px] font-mono font-bold text-emerald-400">
                 {idealWeightRange.min} - {idealWeightRange.max} kg
               </span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-left">
-              <span className="text-[9px] text-text-dim uppercase font-bold block mb-0.5">Nhu cầu nước/ngày</span>
-              <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1">
-                <Droplets className="w-3 h-3" />
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 text-left">
+              <span className="text-[8.5px] text-text-dim uppercase font-bold block mb-0.5">Nhu cầu nước/ngày</span>
+              <span className="text-[11px] font-mono font-bold text-cyan-400 flex items-center gap-1">
+                <Droplets className="w-2.5 h-2.5" />
                 {(weight * 0.035).toFixed(1)} Lít
               </span>
             </div>
@@ -428,59 +430,62 @@ export default function BmiCalculatorCard() {
         </div>
 
         {/* Right column: Results & Visual Scale (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
+        <div className="lg:col-span-7 flex flex-col justify-between space-y-2.5 sm:space-y-3">
           {/* Main BMI Result Badge Card */}
           <div className={cn(
-            "rounded-2xl p-5 border transition-all duration-300 relative overflow-hidden bg-bg/60",
+            "rounded-xl p-3 sm:p-3.5 border transition-all duration-300 relative overflow-hidden bg-bg/60",
             currentCategory.borderColor,
-            "shadow-xl"
+            "shadow-sm"
           )}>
             {/* Ambient background glow */}
             <div className={cn(
-              "absolute -right-16 -top-16 w-36 h-36 rounded-full blur-3xl opacity-20",
+              "absolute -right-16 -top-16 w-32 h-32 rounded-full blur-3xl opacity-15",
               currentCategory.color
             )} />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className={cn("text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border", currentCategory.badgeBg)}>
-                    {currentCategory.label}
-                  </span>
-                  <span className="text-[10px] text-text-dim font-mono">
-                    Ngưỡng chuẩn: {currentCategory.rangeText}
-                  </span>
-                </div>
-                <h4 className={cn("text-lg font-serif italic font-medium", currentCategory.textColor)}>
+            {/* Top row: Badge and reference range */}
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+              <span className={cn("text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border", currentCategory.badgeBg)}>
+                {currentCategory.label}
+              </span>
+              <span className="text-[9.5px] text-text-dim font-mono">
+                Ngưỡng chuẩn: {currentCategory.rangeText}
+              </span>
+            </div>
+
+            {/* Main 1-row layout: Left text & Right BMI box */}
+            <div className="flex flex-row items-center justify-between gap-3 relative z-10">
+              <div className="space-y-1 min-w-0 flex-1">
+                <h4 className={cn("text-sm sm:text-base font-serif italic font-medium leading-snug", currentCategory.textColor)}>
                   {currentCategory.sublabel}
                 </h4>
-                <p className="text-xs text-text-dim font-light leading-relaxed max-w-md">
+                <p className="text-[11px] text-text-dim font-light leading-relaxed">
                   {currentCategory.description}
                 </p>
               </div>
 
               {/* Big BMI Number Display */}
-              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/[0.03] border border-white/10 min-w-[110px] shrink-0">
-                <span className="text-[9px] font-bold text-text-dim uppercase tracking-wider">Chỉ số BMI</span>
-                <span className={cn("text-3xl sm:text-4xl font-mono font-extrabold tracking-tight", currentCategory.textColor)}>
+              <div className="flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl bg-white/[0.04] border border-white/10 w-20 sm:w-24 shrink-0 shadow-xs">
+                <span className="text-[8px] sm:text-[8.5px] font-bold text-text-dim uppercase tracking-wider whitespace-nowrap">Chỉ số BMI</span>
+                <span className={cn("text-xl sm:text-3xl font-mono font-extrabold tracking-tight leading-none my-0.5", currentCategory.textColor)}>
                   {bmiValue}
                 </span>
-                <span className="text-[9px] font-mono text-text-dim">
+                <span className="text-[8px] sm:text-[8.5px] font-mono text-text-dim whitespace-nowrap">
                   kg/m²
                 </span>
               </div>
             </div>
 
             {/* Visual Gauge / Scale Bar */}
-            <div className="mt-5 pt-4 border-t border-white/5 space-y-2">
-              <div className="flex justify-between items-center text-[9px] text-text-dim font-mono uppercase">
+            <div className="mt-2.5 pt-2 border-t border-white/5 space-y-1">
+              <div className="flex justify-between items-center text-[8.5px] text-text-dim font-mono uppercase">
                 <span>15.0 (Thiếu cân)</span>
                 <span className="text-emerald-400 font-bold">18.5 - 22.9 (Chuẩn)</span>
                 <span>35.0+ (Béo phì)</span>
               </div>
 
               {/* Gradient Track */}
-              <div className="relative w-full h-3.5 bg-white/5 rounded-full overflow-visible border border-white/10 flex">
+              <div className="relative w-full h-2.5 bg-white/5 rounded-full overflow-visible border border-white/10 flex">
                 <div className="w-[17.5%] h-full bg-sky-500/60 rounded-l-full" title="Thiếu cân (< 18.5)" />
                 <div className="w-[22%] h-full bg-emerald-500/80" title="Bình thường (18.5 - 22.9)" />
                 <div className="w-[10%] h-full bg-amber-500/80" title="Thừa cân (23.0 - 24.9)" />
@@ -489,14 +494,14 @@ export default function BmiCalculatorCard() {
 
                 {/* Needle Indicator */}
                 <motion.div
-                  className="absolute -top-1.5 -bottom-1.5 w-3.5 bg-white border-2 border-slate-900 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20 -ml-1.5 transition-all duration-300"
+                  className="absolute -top-1 -bottom-1 w-3 bg-white border-2 border-slate-900 rounded-full shadow-sm z-20 -ml-1.5 transition-all duration-300"
                   style={{ left: `${scalePercent}%` }}
                   animate={{ left: `${scalePercent}%` }}
                 />
               </div>
 
               {/* Status summary under gauge */}
-              <div className="flex items-center justify-between text-[10px] text-text-dim pt-1">
+              <div className="flex items-center justify-between text-[9.5px] text-text-dim pt-0.5">
                 <span>
                   Chênh lệch thể trọng: <strong className={cn(weightDiff > 0 ? "text-amber-400" : weightDiff < 0 ? "text-sky-400" : "text-emerald-400")}>
                     {weightDiff > 0 ? `+${weightDiff} kg` : weightDiff < 0 ? `${weightDiff} kg` : 'Cân đối chuẩn'}
@@ -509,12 +514,12 @@ export default function BmiCalculatorCard() {
                 >
                   {savedSuccess ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       <span className="text-emerald-400">Đã lưu thông số</span>
                     </>
                   ) : (
                     <>
-                      <BookmarkCheck className="w-3.5 h-3.5" />
+                      <BookmarkCheck className="w-3 h-3" />
                       <span>Ghi nhớ thể trạng</span>
                     </>
                   )}
@@ -524,27 +529,30 @@ export default function BmiCalculatorCard() {
           </div>
 
           {/* Oriental Medicine & Health Advice Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {/* Advice & Diet */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3.5 space-y-1.5 text-left">
-              <div className="flex items-center gap-2 text-primary">
-                <Heart className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase font-bold tracking-wider">Lời khuyên dưỡng sinh</span>
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 space-y-1 text-left">
+              <div className="flex items-center gap-1.5 text-primary">
+                <Heart className="w-3 h-3" />
+                <span className="text-[9.5px] uppercase font-bold tracking-wider">Lời khuyên dưỡng sinh</span>
               </div>
-              <p className="text-[11px] text-text-dim font-light leading-relaxed">
+              <p className="text-[10.5px] text-text-dim font-light leading-snug">
                 {currentCategory.advice}
               </p>
             </div>
 
             {/* Recommended Herbs */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3.5 space-y-1.5 text-left">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase font-bold tracking-wider">Thảo dược Đông Y phù hợp</span>
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 space-y-1 text-left">
+              <div className="flex items-center gap-1.5 text-emerald-400">
+                <Sparkles className="w-3 h-3" />
+                <span className="text-[9.5px] uppercase font-bold tracking-wider">Thảo dược Đông Y phù hợp</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {currentCategory.herbs.map((herb, i) => (
-                  <span key={i} className="text-[9.5px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded-md font-medium">
+                  <span 
+                    key={i} 
+                    className="text-[9.5px] bg-emerald-700 text-white-pure border border-emerald-600 px-2 py-0.5 rounded-lg font-medium shadow-xs"
+                  >
                     {herb}
                   </span>
                 ))}
@@ -552,6 +560,7 @@ export default function BmiCalculatorCard() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

@@ -22,6 +22,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
+import { registerModal } from '../utils/modalManager';
 
 interface HealthReportExportModalProps {
   isOpen: boolean;
@@ -30,6 +31,26 @@ interface HealthReportExportModalProps {
 
 export default function HealthReportExportModal({ isOpen, onClose }: HealthReportExportModalProps) {
   const { user, profile } = useAuth();
+
+  // Register modal in global stack for edge swipe gestures on mobile/tablet
+  useEffect(() => {
+    if (!isOpen) return;
+    const unregister = registerModal('health-report-export-modal', onClose);
+    const handleBackPress = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('app-back-press', handleBackPress);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('app-back-press', handleBackPress);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
   const [exportingType, setExportingType] = useState<'pdf' | 'image' | null>(null);
   const [includeBmi, setIncludeBmi] = useState(true);
@@ -785,12 +806,12 @@ export default function HealthReportExportModal({ isOpen, onClose }: HealthRepor
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 lg:p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="bg-panel border border-border rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-6 relative overflow-hidden"
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
+        className="bg-panel border-0 lg:border lg:border-border rounded-none lg:rounded-3xl w-full h-full lg:h-auto lg:max-w-xl p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+1rem)] lg:pt-6 shadow-2xl space-y-6 relative overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -947,34 +968,45 @@ export default function HealthReportExportModal({ isOpen, onClose }: HealthRepor
           </div>
         </div>
 
-        {/* Action Buttons: PDF or PNG */}
-        <div className="pt-2 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={handleExportPDF}
-            disabled={exportingType !== null}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-bg font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-          >
-            {exportingType === 'pdf' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <FileText className="w-4 h-4" />
-            )}
-            Xuất File PDF Đầy Đủ
-          </button>
+        {/* Action Buttons: PDF or PNG or Đóng */}
+        <div className="pt-2 border-t border-white/5 space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={exportingType !== null}
+              className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-primary text-bg font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {exportingType === 'pdf' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              Xuất File PDF Đầy Đủ
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportImage}
+              disabled={exportingType !== null}
+              className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider border border-white/10 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {exportingType === 'image' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ImageIcon className="w-4 h-4 text-primary" />
+              )}
+              Lưu Ảnh Tóm Tắt (PNG)
+            </button>
+          </div>
 
           <button
             type="button"
-            onClick={handleExportImage}
-            disabled={exportingType !== null}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider border border-white/10 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            onClick={onClose}
+            className="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-text-dim hover:text-white font-bold text-xs uppercase tracking-wider border border-white/5 transition-all cursor-pointer flex items-center justify-center gap-2"
           >
-            {exportingType === 'image' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ImageIcon className="w-4 h-4 text-primary" />
-            )}
-            Lưu Ảnh Tóm Tắt (PNG)
+            <X className="w-4 h-4" />
+            <span>Đóng</span>
           </button>
         </div>
       </motion.div>

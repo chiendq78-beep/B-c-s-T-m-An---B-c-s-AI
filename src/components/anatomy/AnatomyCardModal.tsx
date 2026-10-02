@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   MapPin, 
@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AnatomyPartData } from '../../data/anatomyData';
+import { registerModal } from '../../utils/modalManager';
+import AnatomyIllustrationViewer from './AnatomyIllustrationViewer';
+import Anatomy3DViewer from './Anatomy3DViewer';
 
 interface AnatomyCardModalProps {
   part: AnatomyPartData | null;
@@ -39,6 +42,28 @@ export default function AnatomyCardModal({
 }: AnatomyCardModalProps) {
   const [activeTab, setActiveTab] = useState<'standard' | 'interactive_3d' | 'faq'>('standard');
   const [model3dAngle, setModel3dAngle] = useState(0);
+
+  // Register this modal in global modal stack for edge swipe gestures
+  useEffect(() => {
+    if (!part) return;
+    const unregister = registerModal(`anatomy-card-${part.id}`, onClose);
+    const handleBackPress = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('app-back-press', handleBackPress);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unregister();
+      window.removeEventListener('app-back-press', handleBackPress);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [part, onClose]);
 
   if (!part) return null;
 
@@ -60,42 +85,42 @@ export default function AnatomyCardModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-[60] bg-slate-900/75 backdrop-blur-sm flex flex-col items-center justify-center p-0 lg:p-4 overflow-hidden animate-fadeIn">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.96, y: 15 }}
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 15 }}
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
         transition={{ duration: 0.2 }}
-        className="bg-white w-full max-w-4xl max-h-[92vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto"
+        className="bg-white w-full h-full lg:max-w-5xl lg:h-[95vh] rounded-none lg:rounded-3xl shadow-2xl border-0 lg:border lg:border-slate-200 overflow-hidden flex flex-col"
       >
         {/* Header Bar */}
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-gradient-to-r from-teal-50 via-emerald-50/30 to-slate-50 flex items-center justify-between gap-3 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="px-4 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-3.5 pb-3 sm:pb-3.5 border-b border-slate-200 bg-gradient-to-r from-teal-50 via-emerald-50/30 to-slate-50 flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-teal-500/20 flex-shrink-0">
               {part.name_vi.charAt(0)}
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate">
                   {part.name_vi}
                 </h2>
                 {part.name_latin && (
-                  <span className="text-[11px] sm:text-xs italic text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-lg font-mono border border-teal-200 font-semibold">
+                  <span className="text-[10px] sm:text-xs italic text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg font-mono border border-teal-200 font-semibold whitespace-nowrap">
                     {part.name_latin}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
                 {part.name_en || 'Human Anatomy Structure'} • Mã: <span className="font-semibold text-slate-700">{part.code}</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={onClose}
               aria-label="Đóng cửa sổ"
-              className="w-9 h-9 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+              className="w-9 h-9 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <X className="w-5 h-5" />
             </button>
@@ -103,11 +128,11 @@ export default function AnatomyCardModal({
         </div>
 
         {/* Action / View Mode Selector Pills */}
-        <div className="px-4 sm:px-6 pt-2 pb-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/60">
+        <div className="px-3 sm:px-6 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200/60 overflow-x-auto no-scrollbar max-w-full">
             <button
               onClick={() => setActiveTab('standard')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'standard'
                   ? 'bg-white text-teal-800 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -121,7 +146,7 @@ export default function AnatomyCardModal({
 
             <button
               onClick={() => setActiveTab('interactive_3d')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'interactive_3d'
                   ? 'bg-white text-teal-800 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -135,7 +160,7 @@ export default function AnatomyCardModal({
 
             <button
               onClick={() => setActiveTab('faq')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'faq'
                   ? 'bg-white text-teal-800 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -151,7 +176,7 @@ export default function AnatomyCardModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleAskAIWithPrompt(`Tư vấn chuyên sâu toàn diện về ${part.name_vi} (${part.name_latin || ''}) cho tôi.`)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] sm:text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Hỏi Bác sĩ AI ngay</span>
@@ -160,53 +185,17 @@ export default function AnatomyCardModal({
         </div>
 
         {/* Body Content - Standardized 10 Points */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/40">
+        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto flex-1 space-y-6 bg-slate-50/40 overscroll-contain">
           {activeTab === 'interactive_3d' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <div className="bg-gradient-to-b from-white via-teal-50/30 to-slate-50 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[320px] border border-slate-200 shadow-xs">
-                {/* 3D Visual Simulation Frame */}
-                <div 
-                  className="relative w-56 h-56 rounded-full border-2 border-teal-500/30 flex items-center justify-center transition-transform duration-300 shadow-xl bg-white"
-                  style={{ transform: `rotateY(${model3dAngle}deg)` }}
-                >
-                  <img
-                    src={part.illustrationUrl}
-                    alt={part.name_vi}
-                    className="w-44 h-44 object-cover rounded-full drop-shadow-md"
-                  />
-                  <div className="absolute inset-0 rounded-full border border-teal-400/30 animate-pulse pointer-events-none" />
-                </div>
-
-                {/* 3D controls */}
-                <div className="mt-6 flex items-center gap-3 z-10">
-                  <button
-                    onClick={() => setModel3dAngle(prev => prev - 45)}
-                    className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-xs cursor-pointer"
-                  >
-                    <span>⟲ Xoay trái 45°</span>
-                  </button>
-                  <button
-                    onClick={() => setModel3dAngle(0)}
-                    className="p-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs shadow-xs cursor-pointer"
-                    title="Đặt lại góc nhìn"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setModel3dAngle(prev => prev + 45)}
-                    className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-xs cursor-pointer"
-                  >
-                    <span>Xoay phải 45° ⟳</span>
-                  </button>
-                </div>
-                <span className="text-[11px] text-slate-500 font-medium mt-2">
-                  Góc nhìn mô phỏng 3 chiều • Không gian giải phẫu định vị
-                </span>
-              </div>
+              <Anatomy3DViewer
+                part={part}
+                onAskAI={handleAskAIWithPrompt}
+              />
             </motion.div>
           )}
 
@@ -277,20 +266,15 @@ export default function AnatomyCardModal({
                     <span>Hình ảnh minh họa giải phẫu</span>
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    Minh họa y khoa chi tiết
+                    Minh họa y khoa đa chế độ
                   </span>
                 </div>
-                <div className="relative rounded-xl overflow-hidden bg-slate-900 h-48 sm:h-64 flex items-center justify-center border border-slate-200">
-                  <img
-                    src={part.illustrationUrl}
-                    alt={part.name_vi}
-                    className="w-full h-full object-cover filter brightness-95 hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-lg text-slate-800 border border-slate-200 text-xs font-semibold flex items-center gap-2 shadow-md">
-                    <Eye className="w-3.5 h-3.5 text-teal-600" />
-                    <span>{part.name_vi} ({part.name_latin || part.name_en})</span>
-                  </div>
-                </div>
+                
+                {/* Advanced Multi-mode Anatomical Illustration Viewer */}
+                <AnatomyIllustrationViewer
+                  part={part}
+                  onAskAI={handleAskAIWithPrompt}
+                />
               </div>
 
               {/* SECTION ④ CẤU TRÚC CƠ BẢN & SECTION ⑤ CHỨC NĂNG */}
@@ -529,9 +513,9 @@ export default function AnatomyCardModal({
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all cursor-pointer border border-slate-200"
+            className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-slate-200 flex items-center gap-1.5"
           >
-            Đóng Thẻ
+            <span>Đóng</span>
           </button>
         </div>
       </motion.div>

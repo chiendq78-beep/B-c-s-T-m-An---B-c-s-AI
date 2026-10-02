@@ -19,7 +19,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import VitalsEntryModal from '../VitalsEntryModal';
 import MedicationReminderModal, { getReminderCategoryInfo, ReminderCategory } from '../MedicationReminderModal';
@@ -29,6 +29,7 @@ import HealthReportExportModal from '../HealthReportExportModal';
 import { collection, getDocs, limit, query, where, orderBy, setDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
+import { reminderService } from '../../services/reminderService';
 
 interface HomeViewProps {
   setActiveView: (view: any) => void;
@@ -56,13 +57,65 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
   const [waterReminderInterval, setWaterReminderInterval] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('waterReminderInterval');
-      return saved ? parseFloat(saved) : 60; // default 60 minutes
+      const val = saved ? parseFloat(saved) : 60; // default 60 minutes
+      return val === 30 ? 60 : val;
     }
     return 60;
   });
 
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [showWaterToast, setShowWaterToast] = useState<boolean>(false);
+
+  // Vietnam GMT+7 Time Greeting (Chào buổi sáng, Chào buổi chiều, Chào buổi tối)
+  const greetingData = useMemo(() => {
+    try {
+      const now = new Date();
+      // Format time in Asia/Ho_Chi_Minh timezone (GMT+7)
+      const vnHourStr = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour12: false,
+        hour: 'numeric'
+      });
+      const hour = parseInt(vnHourStr, 10);
+      const vnHour = isNaN(hour) ? (now.getUTCHours() + 7) % 24 : hour;
+
+      if (vnHour >= 5 && vnHour < 12) {
+        return {
+          greeting: 'Chào buổi sáng',
+          subtitle: 'Chúc bạn một ngày mới an lành, tràn đầy năng lượng.'
+        };
+      } else if (vnHour >= 12 && vnHour < 18) {
+        return {
+          greeting: 'Chào buổi chiều',
+          subtitle: 'Duy trì năng lượng và chăm sóc sức khỏe thật tốt nhé.'
+        };
+      } else {
+        return {
+          greeting: 'Chào buổi tối',
+          subtitle: 'Thư giãn tinh thần và dưỡng sinh giấc ngủ an lành.'
+        };
+      }
+    } catch {
+      const now = new Date();
+      const vnHour = (now.getUTCHours() + 7) % 24;
+      if (vnHour >= 5 && vnHour < 12) {
+        return {
+          greeting: 'Chào buổi sáng',
+          subtitle: 'Chúc bạn một ngày mới an lành, tràn đầy năng lượng.'
+        };
+      } else if (vnHour >= 12 && vnHour < 18) {
+        return {
+          greeting: 'Chào buổi chiều',
+          subtitle: 'Duy trì năng lượng và chăm sóc sức khỏe thật tốt nhé.'
+        };
+      } else {
+        return {
+          greeting: 'Chào buổi tối',
+          subtitle: 'Thư giãn tinh thần và dưỡng sinh giấc ngủ an lành.'
+        };
+      }
+    }
+  }, []);
 
   // Close modals on back gesture
   useEffect(() => {
@@ -81,6 +134,23 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
     window.addEventListener('app-back-press', handleBackModal);
     return () => window.removeEventListener('app-back-press', handleBackModal);
   }, [isVitalsModalOpen, isMedicationModalOpen, isReportModalOpen]);
+
+  // Listen for root menu reset to return to top of Home view
+  useEffect(() => {
+    const handleResetToRoot = (e: any) => {
+      if (e.detail?.view === 'home') {
+        setIsVitalsModalOpen(false);
+        setIsMedicationModalOpen(false);
+        setIsReportModalOpen(false);
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.getElementById('top-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    window.addEventListener('app-reset-to-root', handleResetToRoot);
+    return () => window.removeEventListener('app-reset-to-root', handleResetToRoot);
+  }, []);
 
   const playWaterChime = () => {
     try {
@@ -128,10 +198,13 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
     }
   };
 
-  const testReminderNotification = () => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+  const testReminderNotification = async () => {
+    await reminderService.requestNotificationPermission();
+    reminderService.showNotification(
+      '💧 Đã đến giờ uống nước!',
+      'Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào và đào thải độc tố cơ thể nhé!',
+      'water-alert-test'
+    );
     triggerWaterReminder();
   };
 
@@ -213,7 +286,8 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       const savedEnabled = localStorage.getItem(`waterReminderEnabled_${user.uid}`);
       setWaterReminderEnabled(savedEnabled ? savedEnabled === 'true' : false);
       const savedInterval = localStorage.getItem(`waterReminderInterval_${user.uid}`);
-      setWaterReminderInterval(savedInterval ? parseFloat(savedInterval) : 60);
+      const val = savedInterval ? parseFloat(savedInterval) : 60;
+      setWaterReminderInterval(val === 30 ? 60 : val);
     }
   }, [user]);
 
@@ -224,7 +298,32 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
     } else {
       setTimeLeft(0);
     }
+    // Sync to background reminder service for mobile/tablet background notifications
+    reminderService.updateWaterConfig(waterReminderEnabled, waterReminderInterval);
   }, [waterReminderEnabled, waterReminderInterval]);
+
+  // Listen to background reminder event & notification modal updates
+  useEffect(() => {
+    const handleHealthReminder = (e: any) => {
+      if (e.detail?.type === 'water') {
+        setShowWaterToast(true);
+      }
+    };
+    const handleWaterUpdated = (e: any) => {
+      if (typeof e.detail?.enabled === 'boolean') {
+        setWaterReminderEnabled(e.detail.enabled);
+      }
+      if (typeof e.detail?.interval === 'number') {
+        setWaterReminderInterval(e.detail.interval);
+      }
+    };
+    window.addEventListener('app-health-reminder', handleHealthReminder);
+    window.addEventListener('water-reminder-updated', handleWaterUpdated);
+    return () => {
+      window.removeEventListener('app-health-reminder', handleHealthReminder);
+      window.removeEventListener('water-reminder-updated', handleWaterUpdated);
+    };
+  }, []);
 
   // Countdown timer thread
   useEffect(() => {
@@ -244,8 +343,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
   }, [waterReminderEnabled, waterReminderInterval]);
 
   const intervalOptions = [
-    { value: 0.25, label: '15 giây (Thử nghiệm)' },
-    { value: 30, label: '30 phút' },
+    { value: 0.25, label: 'TEST' },
     { value: 60, label: '1 giờ' },
     { value: 120, label: '2 giờ' },
     { value: 180, label: '3 giờ' }
@@ -356,7 +454,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-3 sm:p-5 space-y-3.5 sm:space-y-4">
       {/* In-app Hydration Toast Alert */}
       <AnimatePresence>
         {showWaterToast && (
@@ -364,16 +462,16 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             initial={{ opacity: 0, y: -50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.95 }}
-            className="fixed top-6 left-6 right-6 md:left-auto md:right-6 md:w-96 z-50 bg-slate-950/95 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-4 shadow-[0_0_25px_rgba(6,182,212,0.25)] flex gap-4 text-white"
+            className="water-toast-alert fixed top-6 left-6 right-6 md:left-auto md:right-6 md:w-96 z-50 bg-teal-600 backdrop-blur-xl border border-teal-400/50 rounded-2xl p-4 shadow-[0_10px_30px_rgba(13,148,136,0.35)] flex gap-4 text-white"
           >
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20 flex-shrink-0 animate-bounce">
-              <Droplets className="w-5 h-5 animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-teal-800/80 flex items-center justify-center text-white border border-teal-400/40 flex-shrink-0 shadow-xs animate-bounce">
+              <Droplets className="w-5 h-5 text-white animate-pulse" />
             </div>
             <div className="flex-1 space-y-1 text-left">
               <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">
                 Đã đến giờ uống nước!
               </h4>
-              <p className="text-xs text-text-dim leading-relaxed font-light">
+              <p className="text-xs text-white leading-relaxed font-normal opacity-95">
                 Đã đến chu kỳ nhắc nhở. Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào cơ thể nhé!
               </p>
               <div className="flex gap-2 pt-2.5">
@@ -383,15 +481,15 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                     handleUpdateWater(1);
                     setShowWaterToast(false);
                   }}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-bg font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-lg shadow-cyan-500/20"
+                  className="btn-water-action bg-teal-800 hover:bg-teal-900 text-white font-bold text-[9.5px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-md border border-teal-400/40"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
+                  <PlusCircle className="w-3.5 h-3.5 text-white" />
                   Uống ngay 1 cốc (+250ml)
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowWaterToast(false)}
-                  className="bg-white/5 hover:bg-white/10 border border-white/5 text-text-dim hover:text-white font-bold text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
+                  className="btn-water-dismiss bg-teal-900/40 hover:bg-teal-900/70 border border-teal-300/30 text-white font-bold text-[9.5px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
                   Bỏ qua
                 </button>
@@ -417,71 +515,60 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
         onClose={() => setIsReportModalOpen(false)}
       />
 
-      {/* Welcome Section & Quick Report Export Header */}
-      <section className="flex items-center justify-between gap-3">
-        <div className="space-y-0.5 min-w-0 flex-1">
-          <h1 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 truncate leading-tight">
-            Chào buổi sáng, {(() => {
-              if (!profile?.fullName || profile.fullName.includes('Người dùng') || profile.fullName === 'Người') {
-                return 'Bạn';
-              }
-              const parts = profile.fullName.trim().split(' ');
-              return parts[parts.length - 1] || 'Bạn';
-            })()}.
-          </h1>
-          <p className="text-slate-600 text-xs sm:text-sm truncate">Hệ thống đã sẵn sàng cho ngày mới của bạn.</p>
-        </div>
-        <button
-          id="btn-home-export-report"
-          type="button"
-          onClick={() => setIsReportModalOpen(true)}
-          className="flex-shrink-0 flex items-center gap-2 p-2.5 sm:px-4 sm:py-2.5 rounded-2xl bg-white hover:bg-teal-50 text-teal-800 border border-slate-200 hover:border-teal-300 transition-all active:scale-95 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-xs group"
-          title="Xuất báo cáo sức khỏe PDF/Hình ảnh"
-        >
-          <FileDown className="w-4 h-4 text-teal-600 group-hover:animate-bounce" />
-          <span className="hidden sm:inline">Xuất báo cáo</span>
-        </button>
+      {/* Welcome Section */}
+      <section className="space-y-0.5">
+        <h1 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 truncate leading-tight">
+          {greetingData.greeting}, {(() => {
+            if (!profile?.fullName || profile.fullName.includes('Người dùng') || profile.fullName === 'Người') {
+              return 'Bạn';
+            }
+            const parts = profile.fullName.trim().split(' ');
+            return parts[parts.length - 1] || 'Bạn';
+          })()}.
+        </h1>
+        <p className="text-slate-600 text-xs sm:text-sm truncate">{greetingData.subtitle}</p>
       </section>
 
       {/* Health Today Card */}
       <section>
-        <div className="bg-white rounded-3xl p-6 text-slate-900 shadow-xl border border-slate-200 relative overflow-hidden group">
-          <div className="relative z-10 space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="bg-teal-50 px-3 py-1 rounded-full text-[10px] font-bold text-teal-700 uppercase tracking-wider border border-teal-200 shadow-xs">
-                Sức khỏe hiện tại
-              </span>
-              <Calendar className="w-5 h-5 text-slate-400" />
-            </div>
+        <div className="bg-white rounded-2xl text-slate-900 shadow-sm border border-slate-200 relative overflow-hidden group">
+          {/* Card Header with medium-soft green background */}
+          <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 flex items-center justify-between">
+            <span className="bg-white/95 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-teal-800 uppercase tracking-wider border border-teal-200 shadow-xs">
+              Sức khỏe hiện tại
+            </span>
+            <Calendar className="w-4 h-4 text-teal-700" />
+          </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:gap-6">
-              <div className="flex items-center gap-3.5 sm:gap-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 transition-colors">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-slate-200 text-teal-600 flex-shrink-0 shadow-xs">
-                  <Heart className="w-6 h-6 text-teal-600 animate-pulse" />
+          <div className="p-4 sm:p-5 relative z-10 space-y-3.5 sm:space-y-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="flex items-center gap-2.5 sm:gap-3 bg-teal-50/70 border border-teal-200/80 rounded-xl p-3 transition-all shadow-xs hover:bg-teal-50">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-teal-200 text-teal-600 flex-shrink-0 shadow-xs">
+                  <Heart className="w-5 h-5 text-teal-600 animate-pulse" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">Nhịp tim</p>
-                  <p className="text-xl font-bold text-slate-900">72 <span className="text-xs text-slate-600 font-semibold">BPM</span></p>
+                  <p className="text-[9.5px] text-teal-800 uppercase tracking-wider font-bold">Nhịp tim</p>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">72 <span className="text-[10px] text-slate-600 font-semibold">BPM</span></p>
                 </div>
               </div>
-              <div className="flex items-center gap-3.5 sm:gap-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 transition-colors">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-slate-200 text-cyan-600 flex-shrink-0 shadow-xs">
-                  <Droplets className="w-6 h-6 text-cyan-600" />
+              <div className="flex items-center gap-2.5 sm:gap-3 bg-cyan-50/70 border border-cyan-200/80 rounded-xl p-3 transition-all shadow-xs hover:bg-cyan-50">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-cyan-200 text-cyan-600 flex-shrink-0 shadow-xs">
+                  <Droplets className="w-5 h-5 text-cyan-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">Cấp nước</p>
-                  <p className="text-xl font-bold text-slate-900">{(waterCups * 0.25).toFixed(1)} <span className="text-xs text-slate-600 font-semibold">/ 2L</span></p>
+                  <p className="text-[9.5px] text-cyan-800 uppercase tracking-wider font-bold">Cấp nước</p>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">{(waterCups * 0.25).toFixed(1)} <span className="text-[10px] text-slate-600 font-semibold">/ 2L</span></p>
                 </div>
               </div>
             </div>
 
             {/* Visual water progress bar component */}
-            <div id="home-water-meter-container" className="space-y-2.5 pt-4 border-t border-slate-100">
+            <div id="home-water-meter-container" className="space-y-1.5 pt-2.5 border-t border-slate-100">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
                 <span className="text-slate-600">Mục tiêu cấp nước hàng ngày</span>
-                <span className="text-teal-700 font-mono text-[11px] font-bold">{waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0}% ({waterCups}/{waterGoal} cốc)</span>
+                <span className="text-teal-700 font-mono text-[10px] sm:text-[11px] font-bold">{waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0}% ({waterCups}/{waterGoal} cốc)</span>
               </div>
-              <div className="h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
+              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
                 <motion.div 
                   id="home-water-meter-bar"
                   className="h-full bg-teal-500 rounded-full shadow-xs"
@@ -490,7 +577,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                   transition={{ duration: 0.8, ease: "easeOut" }}
                 />
               </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed italic font-light">
+              <p className="text-[10px] text-slate-600 leading-normal italic font-light">
                 {(waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0) >= 100 
                   ? "🎉 Thật xuất sắc! Bạn đã đạt mục tiêu cấp nước lý tưởng cho hôm nay!" 
                   : waterCups > 0 
@@ -499,15 +586,15 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               </p>
 
               {/* Interactive Quick Add Controls for Water */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-slate-700 uppercase tracking-widest font-bold">Ghi nhận nhanh:</span>
-                  <div className="flex items-center bg-slate-50 border border-slate-200 p-1 rounded-xl gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[9.5px] text-slate-700 uppercase tracking-wider font-bold">Ghi nhận nhanh:</span>
+                  <div className="flex items-center bg-slate-50 border border-slate-200 p-0.5 rounded-lg gap-1.5">
                     <button
                       type="button"
                       disabled={updatingWater}
                       onClick={() => handleUpdateWater(-1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-white active:scale-95 text-slate-600 hover:text-slate-900 rounded-lg transition-all font-bold cursor-pointer font-mono disabled:opacity-45"
+                      className="w-7 h-7 flex items-center justify-center hover:bg-white active:scale-95 text-slate-600 hover:text-slate-900 rounded transition-all font-bold cursor-pointer font-mono disabled:opacity-45 text-xs"
                       title="Bớt 1 cốc nước (250ml)"
                     >
                       -
@@ -517,16 +604,16 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                       type="button"
                       disabled={updatingWater}
                       onClick={() => handleUpdateWater(1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-white active:scale-95 text-teal-700 hover:text-teal-800 rounded-lg transition-all font-bold cursor-pointer font-mono disabled:opacity-45"
+                      className="w-7 h-7 flex items-center justify-center hover:bg-white active:scale-95 text-teal-700 hover:text-teal-800 rounded transition-all font-bold cursor-pointer font-mono disabled:opacity-45 text-xs"
                       title="Thêm 1 cốc nước (250ml)"
                     >
                       +
                     </button>
                   </div>
-                  <span className="text-[10px] text-slate-500 italic">cốc (~{waterCups * 250}ml/ly)</span>
+                  <span className="text-[9.5px] text-slate-500 italic">cốc (~{waterCups * 250}ml/ly)</span>
                 </div>
                 {updatingWater && (
-                  <span className="text-[9px] text-teal-600 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1.5">
+                  <span className="text-[9px] text-teal-600 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-ping" />
                     Đang đồng bộ...
                   </span>
@@ -534,27 +621,22 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
               <button 
-                onClick={() => setActiveView('health')}
-                className="bg-white border border-slate-200 text-slate-800 font-bold py-3.5 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all uppercase tracking-widest text-[11px] cursor-pointer text-center shadow-xs"
+                type="button"
+                onClick={() => setIsReportModalOpen(true)}
+                title="Xuất Báo Cáo Sức Khỏe Chi Tiết"
+                className="bg-white border border-slate-200 text-slate-800 font-bold py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all uppercase tracking-normal sm:tracking-wider text-[9.5px] sm:text-[11px] cursor-pointer text-center shadow-xs whitespace-nowrap overflow-hidden text-ellipsis"
               >
                 Chi tiết
               </button>
               <button 
                 type="button"
-                onClick={() => setIsReportModalOpen(true)}
-                className="bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 font-bold py-3.5 rounded-xl active:scale-[0.98] transition-all uppercase tracking-widest text-[11px] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                Xuất Báo Cáo
-              </button>
-              <button 
                 onClick={() => setIsVitalsModalOpen(true)}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-[0.98] transition-all uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 cursor-pointer"
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl shadow-xs active:scale-[0.98] transition-all uppercase tracking-normal sm:tracking-wider text-[9.5px] sm:text-[11px] flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap overflow-hidden"
               >
-                <PlusCircle className="w-4 h-4" />
-                Ghi sinh hiệu
+                <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Ghi sinh hiệu</span>
               </button>
             </div>
           </div>
@@ -574,15 +656,16 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       />
 
       {/* Periodic Hydration Reminders Hub */}
-      <section className="bg-panel rounded-3xl p-6 border border-border mt-6 space-y-4 shadow-2xl" id="home-hydration-reminder-panel">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
-              <Bell className="w-5 h-5 animate-pulse" />
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-3.5 sm:mt-4" id="home-hydration-reminder-panel">
+        {/* Header with medium-soft green background */}
+        <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-teal-200/60 flex items-center justify-center text-teal-700 border border-teal-300/80 shadow-xs">
+              <Bell className="w-4 h-4 text-teal-700 animate-pulse" />
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-white leading-tight">Nhắc nhở uống nước định kỳ</h3>
-              <p className="text-[9px] text-text-dim font-bold uppercase tracking-widest mt-0.5">Bảo vệ sức khỏe & Đào thải độc tố</p>
+              <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 leading-tight">Nhắc nhở uống nước định kỳ</h3>
+              <p className="text-[8.5px] sm:text-[9px] text-teal-800 font-bold uppercase tracking-wider mt-0.5">Bảo vệ sức khỏe & Đào thải độc tố</p>
             </div>
           </div>
           
@@ -592,37 +675,42 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             type="button"
             onClick={() => setWaterReminderEnabled(!waterReminderEnabled)}
             className={cn(
-              "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-cyan-500/30",
-              waterReminderEnabled ? "bg-cyan-500" : "bg-white/10"
+              "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-teal-500/30",
+              waterReminderEnabled ? "bg-teal-600" : "bg-slate-200"
             )}
           >
             <span className="sr-only">Bật nhắc nhở nước</span>
             <span
               className={cn(
-                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out",
-                waterReminderEnabled ? "translate-x-5" : "translate-x-0"
+                "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                waterReminderEnabled ? "translate-x-4" : "translate-x-0"
               )}
             />
           </button>
         </div>
 
-        {/* Configurations block */}
-        <div className="space-y-4 pt-2 border-t border-white/[0.03]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Configurations block inside Card Body */}
+        <div className="p-4 sm:p-5 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {/* Interval Selection */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">Khoảng thời gian nhắc nhở</label>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-1.5">
+              <label className="text-[9.5px] font-bold text-slate-700 uppercase tracking-wider block">Khoảng thời gian nhắc nhở</label>
+              <div className="flex flex-wrap gap-1.5">
                 {intervalOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setWaterReminderInterval(opt.value)}
+                    onClick={() => {
+                      setWaterReminderInterval(opt.value);
+                      if (opt.value === 0.25) {
+                        testReminderNotification();
+                      }
+                    }}
                     className={cn(
-                      "px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border cursor-pointer transition-all active:scale-95",
+                      "px-2.5 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider border cursor-pointer transition-all active:scale-95",
                       waterReminderInterval === opt.value
-                        ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400 ring-1 ring-cyan-500/30"
-                        : "bg-white/[0.01] border-white/5 text-text-dim hover:text-white"
+                        ? "bg-teal-700 text-white-pure border-teal-700 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     )}
                   >
                     {opt.label}
@@ -631,44 +719,21 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               </div>
             </div>
 
-            {/* Live countdown & test block */}
-            <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 flex flex-col justify-between space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">Tiến trình đếm ngược</span>
-                <span className={cn(
-                  "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border flex-shrink-0",
-                  waterReminderEnabled 
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse" 
-                    : "bg-white/5 text-text-dim border-transparent"
-                )}>
-                  {waterReminderEnabled ? "Đang chạy" : "Tạm dừng"}
-                </span>
-              </div>
-              
-              <div className="flex items-baseline gap-2">
-                {waterReminderEnabled ? (
-                  <>
-                    <span className="text-2xl font-mono text-cyan-400 font-bold leading-none">
-                      {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="text-[10px] text-text-dim">thời gian còn lại</span>
-                  </>
-                ) : (
-                  <span className="text-xs italic text-text-dim font-light">Chưa kích hoạt chế độ tự động nhắc nhở định kỳ.</span>
-                )}
-              </div>
+            {/* Live countdown block */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-xs">
+              <span className="text-[9.5px] font-bold text-slate-700 uppercase tracking-wider block">
+                Tiến trình đếm ngược
+              </span>
 
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={testReminderNotification}
-                  className="bg-white/5 hover:bg-white/10 text-text-dim hover:text-white py-2 px-3 rounded-lg border border-white/5 hover:border-white/10 active:scale-95 transition-all text-[9.5px] uppercase font-bold tracking-wider cursor-pointer"
-                  title="Kiểm tra hệ thống âm thanh & thông báo đẩy"
-                >
-                  Gửi thông báo thử
-                </button>
-              </div>
+              {waterReminderEnabled ? (
+                <span className="text-xl sm:text-2xl font-mono text-teal-700 font-bold leading-none tracking-wider">
+                  {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                </span>
+              ) : (
+                <span className="text-xs italic text-slate-500 font-light">
+                  Chưa kích hoạt
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -676,59 +741,59 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
       {/* Medication & Health Metric Reminders Section - Unified Card */}
       <section id="home-medication-reminders-section">
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl space-y-5">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
           {/* Card Header with Title, Count Badge and Action Button */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h3 className="font-serif text-xl font-bold text-slate-900">
-                Lịch nhắc uống thuốc & Đo chỉ số hôm nay
-              </h3>
-              <span className="bg-teal-50 border border-teal-200 text-teal-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+          <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900">
+              Lịch nhắc uống thuốc & Đo chỉ số hôm nay
+            </h3>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="bg-white/95 border border-teal-200 text-teal-800 text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap">
                 {reminders.filter(r => r.enabled).length} Đang bật
               </span>
-            </div>
-
-            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsMedicationModalOpen(true)}
-                className="text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3.5 py-2 rounded-xl uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/90 hover:bg-white border border-teal-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer whitespace-nowrap"
               >
-                <PlusCircle className="w-4 h-4 text-teal-600" />
-                <span>Quản lý & Thêm nhắc nhở</span>
-                <ChevronRight className="w-3.5 h-3.5 text-teal-600" />
+                <PlusCircle className="w-3.5 h-3.5 text-teal-700" />
+                <span>Hiệu chỉnh</span>
+                <ChevronRight className="w-3.5 h-3.5 text-teal-700" />
               </button>
             </div>
           </div>
 
+          <div className="p-4 sm:p-5 space-y-3 sm:space-y-3.5">
+
           {/* Reminder List & States */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {loadingReminders ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-2">
-                <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex flex-col items-center justify-center py-6 space-y-2">
+                <div className="w-5 h-5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-xs text-slate-500 font-medium">Đang tải lịch nhắc nhở...</p>
               </div>
             ) : reminders.length === 0 ? (
-              <div className="text-center py-8 px-4 space-y-3 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center border border-teal-100 mx-auto text-teal-600">
-                  <Bell className="w-6 h-6 animate-pulse" />
+              <div className="text-center py-6 px-4 space-y-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center border border-teal-100 mx-auto text-teal-600">
+                  <Bell className="w-5 h-5 animate-pulse" />
                 </div>
                 <div className="max-w-md mx-auto">
                   <p className="text-sm font-bold text-slate-800">Chưa có lịch nhắc nhở nào</p>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
                     Thiết lập lịch nhắc đo chỉ số tiểu đường, huyết áp, nhịp tim hoặc uống thuốc để bảo vệ sức khỏe đúng giờ mỗi ngày.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsMedicationModalOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all uppercase tracking-wider shadow-sm cursor-pointer"
+                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all uppercase tracking-wider shadow-xs cursor-pointer"
                 >
                   + Cài đặt lịch nhắc mới
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {reminders
                   .slice()
                   .sort((a, b) => {
@@ -749,22 +814,22 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                       <div 
                         key={reminder.id}
                         className={cn(
-                          "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all duration-200 gap-3 group",
+                          "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border transition-all duration-200 gap-2.5 group",
                           reminder.enabled 
                             ? "bg-slate-50/70 border-slate-200 hover:border-teal-300 hover:shadow-xs" 
                             : "bg-slate-50/30 border-slate-200/50 opacity-60"
                         )}
                       >
-                        <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                           {/* Time indicator */}
                           <div className={cn(
-                            "w-12 h-12 rounded-2xl flex flex-col items-center justify-center border font-mono shadow-xs flex-shrink-0",
+                            "w-10 h-10 rounded-xl flex flex-col items-center justify-center border font-mono shadow-xs flex-shrink-0",
                             reminder.enabled 
                               ? `${catConfig.bgLight} ${catConfig.borderClass} ${catConfig.colorClass}` 
                               : "bg-slate-100 border-slate-200 text-slate-400"
                           )}>
-                            <IconComp className="w-4 h-4 mb-0.5" />
-                            <span className="text-xs font-bold leading-none">{reminder.time}</span>
+                            <IconComp className="w-3.5 h-3.5 mb-0.5" />
+                            <span className="text-[11px] font-bold leading-none">{reminder.time}</span>
                           </div>
 
                           {/* Reminder Details */}
@@ -846,7 +911,8 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             )}
           </div>
         </div>
-      </section>
+      </div>
+    </section>
     </div>
   );
 }

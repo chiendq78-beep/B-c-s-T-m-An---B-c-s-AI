@@ -1,41 +1,46 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Leaf, Search, Camera, ChevronRight, Bookmark, Sparkles, Filter, X, Activity, Calendar, Sun } from 'lucide-react';
+import { 
+  Leaf, 
+  Search, 
+  Camera, 
+  ChevronRight, 
+  Bookmark, 
+  Sparkles, 
+  Filter, 
+  X, 
+  Activity, 
+  Calendar, 
+  Sun,
+  Flame,
+  Droplets,
+  Wind,
+  Moon,
+  Zap,
+  RotateCcw,
+  Check,
+  MessageSquare,
+  ShieldCheck,
+  BookOpen,
+  Info
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { identifyHerb } from '../../services/gemini';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import DailySymptomHerbSuggestions from '../DailySymptomHerbSuggestions';
-
-const SAMPLE_HERBS = [
-  { 
-    id: '1', 
-    name_vi: 'Đinh lăng', 
-    name_scientific: 'Polyscias fruticosa',
-    family: 'Ngũ gia bì', 
-    partUsed: 'Rễ và lá',
-    benefit: 'Bồi bổ sức khỏe, an thần', 
-    image: 'https://images.unsplash.com/photo-1628156108169-c09e33454652?auto=format&fit=crop&q=80&w=400' 
-  },
-  { 
-    id: '2', 
-    name_vi: 'Tía tô', 
-    name_scientific: 'Perilla frutescens',
-    family: 'Hoa môi', 
-    partUsed: 'Lá, cành, hạt',
-    benefit: 'Giải cảm, hạ sốt', 
-    image: 'https://images.unsplash.com/photo-1596701062351-8c2c14d1fdd0?auto=format&fit=crop&q=80&w=400' 
-  },
-  { 
-    id: '3', 
-    name_vi: 'Kinh giới', 
-    name_scientific: 'Elsholtzia cristata',
-    family: 'Hoa môi', 
-    partUsed: 'Toàn cây trên mặt đất',
-    benefit: 'Trị cảm gió, ngứa ngáy', 
-    image: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&q=80&w=400' 
-  },
-];
+import HerbDetailModal from '../HerbDetailModal';
+import { registerModal } from '../../utils/modalManager';
+import { 
+  COMPREHENSIVE_HERBS, 
+  HERB_GROUPS, 
+  SYMPTOM_FILTER_TAGS, 
+  NATURE_COLOR_MAP, 
+  HerbItem, 
+  HerbNature, 
+  HerbTaste, 
+  HerbMeridian 
+} from '../../data/herbsData';
 
 const SEASONAL_HERBS_DATA = [
   {
@@ -132,9 +137,9 @@ const SEASONAL_HERBS_DATA = [
     month: 10,
     season: 'Mùa Đông',
     focus: 'Ôn vị kiện tỳ, sưởi ấm kinh lạc chống lạnh xâm nhập đầu đông',
-    herbName: 'Gừng (Sinh khương)',
+    herbName: 'Sinh khương (Gừng tươi)',
     scientificName: 'Zingiber officinale',
-    benefit: 'Ấm bụng bổ tiêu hóa, chống đầy loét nhiệt bụng, tán phong hàn trị cơ thể run',
+    benefit: 'Ấm bụng bổ tiêu hóa, chống đầy bụng, tán phong hàn trị ớn lạnh gai rét',
     tip: 'Nhâm nhi tách trà gừng mật ong sả nóng ngay khi vừa ra gió về để ngăn nhiễm lạnh.',
     image: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&q=80&w=400'
   },
@@ -152,13 +157,17 @@ const SEASONAL_HERBS_DATA = [
     month: 12,
     season: 'Mùa Đông',
     focus: 'Bổ trung ích khí, an dưỡng tim mạch, hồi phục sinh lực cuối năm',
-    herbName: 'Táo tàu (Đại táo)',
+    herbName: 'Táo nhân / Đại táo',
     scientificName: 'Ziziphus jujuba',
-    benefit: 'Bổ tỳ vị ích khí huyết, điều hòa trăm vị thuốc, ổn định huyết khí toàn thân',
+    benefit: 'Bổ tỳ vị ích khí huyết, an thần ngủ ngon, điều hòa trăm vị thuốc',
     tip: 'Kết hợp đại táo hầm chung gà ác, hạt sen bồi dưỡng nguyên khí cực cao ngày cuối năm.',
     image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&q=80&w=400'
   }
 ];
+
+const ALL_NATURES: HerbNature[] = ['Hàn', 'Lương', 'Bình', 'Ôn', 'Nhiệt'];
+const ALL_TASTES: HerbTaste[] = ['Ngọt', 'Cay', 'Đắng', 'Chua', 'Mặn'];
+const ALL_MERIDIANS: HerbMeridian[] = ['Phế', 'Tỳ', 'Vị', 'Tâm', 'Can', 'Thận', 'Đởm', 'Bàng quang'];
 
 const getSeasonStyles = (season: string) => {
   switch (season) {
@@ -212,74 +221,176 @@ interface HerbAIResult {
 
 export default function HerbView() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
+  const [selectedSymptom, setSelectedSymptom] = useState<string>('all');
+  const [selectedNature, setSelectedNature] = useState<HerbNature | 'all'>('all');
+  const [selectedTaste, setSelectedTaste] = useState<HerbTaste | 'all'>('all');
+  const [selectedMeridian, setSelectedMeridian] = useState<HerbMeridian | 'all'>('all');
+  const [onlyBookmarked, setOnlyBookmarked] = useState<boolean>(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  
+  // Modal state
+  const [selectedHerbForModal, setSelectedHerbForModal] = useState<HerbItem | null>(null);
+
+  // Bookmarks local state
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('bookmarked_herbs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Seasonal widget
   const [selectedSeasonalMonth, setSelectedSeasonalMonth] = useState<number>(() => {
     return new Date().getMonth() + 1;
   });
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+  // AI Camera scanning state
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<HerbAIResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [dbHerbs, setDbHerbs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load live herbs from Firestore on mount
+  // Sync bookmark updates from global events
   useEffect(() => {
-    const fetchLiveHerbs = async () => {
+    const handleBookmarkChange = () => {
       try {
-        setLoading(true);
-        const snap = await getDocs(collection(db, 'herbs'));
-        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setDbHerbs(list);
-      } catch (err) {
-        console.error("Error loading live herbs in HerbView:", err);
-      } finally {
-        setLoading(false);
+        const saved = localStorage.getItem('bookmarked_herbs');
+        setBookmarkedIds(saved ? JSON.parse(saved) : []);
+      } catch {
+        // ignore
       }
     };
-    fetchLiveHerbs();
+    window.addEventListener('app-herbs-bookmark-changed', handleBookmarkChange);
+    return () => window.removeEventListener('app-herbs-bookmark-changed', handleBookmarkChange);
   }, []);
 
-  // Filter and merge sample list with database records
-  const processedHerbs = useMemo(() => {
-    const mergedMap = new Map<string, any>();
-    
-    // Static core default items
-    SAMPLE_HERBS.forEach(item => {
-      mergedMap.set(item.id, item);
-    });
-
-    // Firestore overrides/additions
-    dbHerbs.forEach(item => {
-      const match = SAMPLE_HERBS.find(
-        fallback => fallback.id === item.id || fallback.name_vi.toLowerCase() === item.name_vi.toLowerCase()
-      );
-      if (match) {
-        mergedMap.set(match.id, {
-          ...match,
-          ...item,
-          benefit: item.benefit || item.benefits?.join(', ') || match.benefit
-        });
-      } else {
-        mergedMap.set(item.id, {
-          image: 'https://images.unsplash.com/photo-1596701062351-8c2c14d1fdd0?auto=format&fit=crop&q=80&w=400',
-          ...item,
-          benefit: item.benefit || item.benefits?.join(', ') || 'Đang cập nhật dược tính'
-        });
+  // Listen for root menu reset to return to top of Herb view
+  useEffect(() => {
+    const handleResetToRoot = (e: any) => {
+      if (e.detail?.view === 'herb') {
+        setSelectedHerbForModal(null);
+        setIsFilterPanelOpen(false);
+        setSelectedGroup('all');
+        setSelectedSymptom(null);
+        setSelectedNature('all');
+        setSelectedTaste('all');
+        setSelectedMeridian('all');
+        setSearchTerm('');
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.getElementById('top-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    });
+    };
+    window.addEventListener('app-reset-to-root', handleResetToRoot);
+    return () => window.removeEventListener('app-reset-to-root', handleResetToRoot);
+  }, []);
 
-    const allHerbs = Array.from(mergedMap.values());
+  const toggleBookmark = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    let updated: string[];
+    if (bookmarkedIds.includes(id)) {
+      updated = bookmarkedIds.filter(item => item !== id);
+    } else {
+      updated = [...bookmarkedIds, id];
+    }
+    setBookmarkedIds(updated);
+    localStorage.setItem('bookmarked_herbs', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('app-herbs-bookmark-changed'));
+  };
+
+  const handleAskAIAboutHerb = (herb: HerbItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const prompt = `Chào Bác sĩ Tâm An, xin tư vấn cho tôi về vị thuốc Đông y ${herb.name_vi} (Tính ${herb.nature}, vị ${herb.tastes.join('/')}, quy kinh ${herb.meridians.join('/')}). Trường hợp của tôi có phù hợp dùng không và cách phối ngũ liều dùng chuẩn như thế nào?`;
+    window.dispatchEvent(new CustomEvent('app-open-ai-chat', { detail: { prompt } }));
+  };
+
+  // Filter herbs based on search, group, symptom, nature, taste, meridian, and bookmarks
+  const filteredHerbs = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return allHerbs;
 
-    return allHerbs.filter(h => 
-      h.name_vi.toLowerCase().includes(query) ||
-      h.name_scientific?.toLowerCase().includes(query) ||
-      h.family?.toLowerCase().includes(query) ||
-      h.benefit?.toLowerCase().includes(query)
-    );
-  }, [searchTerm, dbHerbs]);
+    return COMPREHENSIVE_HERBS.filter(herb => {
+      // Search term
+      if (query) {
+        const matchName = herb.name_vi.toLowerCase().includes(query);
+        const matchEn = herb.name_en?.toLowerCase().includes(query);
+        const matchSci = herb.name_scientific.toLowerCase().includes(query);
+        const matchFamily = herb.family.toLowerCase().includes(query);
+        const matchAction = herb.summaryAction.toLowerCase().includes(query);
+        const matchSymptoms = herb.matchedSymptoms.some(s => s.toLowerCase().includes(query));
+        const matchNature = herb.nature.toLowerCase().includes(query);
+        const matchTaste = herb.tastes.some(t => t.toLowerCase().includes(query));
+        const matchMeridian = herb.meridians.some(m => m.toLowerCase().includes(query));
+
+        if (!matchName && !matchEn && !matchSci && !matchFamily && !matchAction && !matchSymptoms && !matchNature && !matchTaste && !matchMeridian) {
+          return false;
+        }
+      }
+
+      // Group filter
+      if (selectedGroup !== 'all' && herb.groupId !== selectedGroup) {
+        return false;
+      }
+
+      // Symptom filter
+      if (selectedSymptom !== 'all') {
+        const tag = SYMPTOM_FILTER_TAGS.find(t => t.id === selectedSymptom);
+        if (tag && tag.symptom) {
+          const hasSymptom = herb.matchedSymptoms.some(s => 
+            s.toLowerCase().includes(tag.symptom.toLowerCase()) || 
+            tag.symptom.toLowerCase().includes(s.toLowerCase())
+          );
+          if (!hasSymptom) return false;
+        }
+      }
+
+      // Nature filter
+      if (selectedNature !== 'all' && herb.nature !== selectedNature) {
+        return false;
+      }
+
+      // Taste filter
+      if (selectedTaste !== 'all' && !herb.tastes.includes(selectedTaste)) {
+        return false;
+      }
+
+      // Meridian filter
+      if (selectedMeridian !== 'all' && !herb.meridians.includes(selectedMeridian) && !herb.meridians.includes('12 đường kinh')) {
+        return false;
+      }
+
+      // Bookmark filter
+      if (onlyBookmarked && !bookmarkedIds.includes(herb.id)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [searchTerm, selectedGroup, selectedSymptom, selectedNature, selectedTaste, selectedMeridian, onlyBookmarked, bookmarkedIds]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedGroup !== 'all') count++;
+    if (selectedSymptom !== 'all') count++;
+    if (selectedNature !== 'all') count++;
+    if (selectedTaste !== 'all') count++;
+    if (selectedMeridian !== 'all') count++;
+    if (onlyBookmarked) count++;
+    return count;
+  }, [selectedGroup, selectedSymptom, selectedNature, selectedTaste, selectedMeridian, onlyBookmarked]);
+
+  const resetAllFilters = () => {
+    setSelectedGroup('all');
+    setSelectedSymptom('all');
+    setSelectedNature('all');
+    setSelectedTaste('all');
+    setSelectedMeridian('all');
+    setOnlyBookmarked(false);
+    setSearchTerm('');
+  };
 
   const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -320,23 +431,49 @@ export default function HerbView() {
   };
 
   const closeCamera = () => {
-    setIsCameraOpen(false);
     setCapturedImage(null);
     setAiResult(null);
   };
 
+  // Find matching herb in database from AI result
+  const matchedHerbFromAI = useMemo(() => {
+    if (!aiResult || !aiResult.identified) return null;
+    const name = aiResult.name_vi?.toLowerCase();
+    const sci = aiResult.name_scientific?.toLowerCase();
+    return COMPREHENSIVE_HERBS.find(h => 
+      h.name_vi.toLowerCase().includes(name) || 
+      name?.includes(h.name_vi.toLowerCase()) ||
+      (sci && h.name_scientific.toLowerCase().includes(sci))
+    ) || null;
+  }, [aiResult]);
+
   return (
-    <div className="p-6 space-y-8 bg-bg min-h-full pb-20">
+    <div className="p-4 sm:p-6 space-y-7 bg-bg min-h-full pb-24 text-left">
       {/* Header with AI Camera Button */}
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-3xl italic font-light text-white leading-tight">Dược học Cổ truyền</h2>
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 bg-primary text-bg px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(45,212,191,0.2)] hover:scale-105 active:scale-95 transition-all border border-white/5"
-        >
-          <Camera className="w-5 h-5" />
-          <span>Quét AI Thực thể</span>
-        </button>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-bold text-primary uppercase tracking-[0.25em]">
+            Y Học Cổ Truyền • Dược Điển
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 flex-nowrap">
+          <h1 className="font-serif text-xl sm:text-2xl md:text-3xl italic font-light text-white leading-tight truncate">
+            Dược Học Cổ Truyền
+          </h1>
+
+          <button 
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-1.5 bg-emerald-600/85 hover:bg-emerald-600 backdrop-blur-md text-white-pure px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-md shadow-emerald-700/25 hover:shadow-lg hover:shadow-emerald-700/35 hover:-translate-y-0.5 active:translate-y-0 transition-all border border-emerald-400/30 cursor-pointer flex-shrink-0 whitespace-nowrap"
+            title="Quét nhận diện dược liệu bằng A.I"
+          >
+            <Camera className="w-3.5 h-3.5 text-white-pure flex-shrink-0" />
+            <span className="text-white-pure font-medium">Quét A.I</span>
+          </button>
+        </div>
+
         <input 
           type="file" 
           accept="image/*" 
@@ -347,174 +484,558 @@ export default function HerbView() {
         />
       </div>
 
-      {/* Search Bar */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative group">
-          <Search className="absolute left-4 top-3.5 w-4 h-4 text-text-dim group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm theo phương danh hoặc tính vị..."
-            className="w-full bg-white/5 border border-border rounded-xl py-3.5 pr-4 pl-12 text-sm text-white placeholder:text-text-dim outline-none focus:ring-1 focus:ring-primary/40 focus:bg-white/10 transition-all font-light shadow-inner"
-          />
+      {/* Search Bar & Filter Controls */}
+      <div className="space-y-3">
+        <div className="flex gap-2.5">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-4 top-3.5 w-4 h-4 text-text-dim group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm theo phương danh, tên tiếng Anh, tính vị, quy kinh..."
+              className="w-full bg-white/5 border border-border rounded-2xl py-3 pr-4 pl-11 text-xs sm:text-sm text-white placeholder:text-text-dim outline-none focus:ring-1 focus:ring-primary/50 focus:bg-white/10 transition-all font-light shadow-inner"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-3 text-text-dim hover:text-white p-1"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <button 
+            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+            className={cn(
+              "px-3.5 py-3 rounded-2xl border flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer shadow-sm",
+              isFilterPanelOpen || activeFiltersCount > 0
+                ? "bg-teal-500/20 text-teal-300 border-teal-500/40 shadow-[0_0_15px_rgba(20,184,166,0.2)]"
+                : "bg-white/5 border-border text-text-dim hover:text-white hover:border-white/20"
+            )}
+            title="Mở bộ lọc chuyên sâu Đông y"
+          >
+            <Filter className="w-4 h-4" />
+            <span className="hidden sm:inline">Bộ lọc</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-teal-400 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setOnlyBookmarked(!onlyBookmarked)}
+            className={cn(
+              "px-3.5 py-3 rounded-2xl border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer",
+              onlyBookmarked
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                : "bg-white/5 border-border text-text-dim hover:text-white hover:border-white/20"
+            )}
+            title="Chỉ hiện vị thuốc đã lưu"
+          >
+            <Bookmark className={cn("w-4 h-4", onlyBookmarked ? "fill-amber-400 text-amber-400" : "")} />
+            <span className="hidden md:inline">Đã lưu</span>
+            {bookmarkedIds.length > 0 && (
+              <span className="text-[10px] text-text-dim font-mono">({bookmarkedIds.length})</span>
+            )}
+          </button>
         </div>
-        <button className="w-12 h-12 bg-white/5 border border-border rounded-xl flex items-center justify-center text-text-dim hover:text-white transition-all shadow-lg hover:border-primary/20">
-          <Filter className="w-5 h-5" />
-        </button>
+
+        {/* 1-Click Symptom Filter Pills (Liên kết thuộc tính Dược liệu với Thể trạng ghi nhận) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              Lọc Nhanh Theo Thể Trạng / Triệu Chứng:
+            </span>
+            {selectedSymptom !== 'all' && (
+              <button 
+                onClick={() => setSelectedSymptom('all')}
+                className="text-[10px] text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                Xóa lọc thể trạng
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+            {SYMPTOM_FILTER_TAGS.map(tag => {
+              const isSelected = selectedSymptom === tag.id;
+              // Count matching herbs for this symptom tag
+              const count = tag.id === 'all' 
+                ? COMPREHENSIVE_HERBS.length 
+                : COMPREHENSIVE_HERBS.filter(h => 
+                    h.matchedSymptoms.some(s => s.toLowerCase().includes(tag.symptom?.toLowerCase() || ''))
+                  ).length;
+
+              return (
+                <button
+                  key={tag.id}
+                  onClick={() => setSelectedSymptom(tag.id)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border cursor-pointer active:scale-95",
+                    isSelected
+                      ? "bg-primary text-slate-950 border-primary font-bold shadow-md shadow-primary/20 scale-[1.02]"
+                      : "bg-white/[0.03] border-white/10 text-text-dim hover:text-white hover:border-white/20 hover:bg-white/[0.06]"
+                  )}
+                >
+                  <span>{tag.label}</span>
+                  <span className={cn(
+                    "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
+                    isSelected ? "bg-slate-950/20 text-slate-950 font-bold" : "bg-white/5 text-text-dim"
+                  )}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Expandable Advanced Filter Panel (Tứ Khí, Ngũ Vị, Quy Kinh, Nhóm Tác Dụng) */}
+        <AnimatePresence>
+          {isFilterPanelOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-panel border border-border rounded-3xl p-5 shadow-2xl space-y-4 overflow-hidden"
+            >
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                    Bộ Lọc Chuyên Sâu Y Học Cổ Truyền
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={resetAllFilters}
+                      className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Đặt lại bộ lọc</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setIsFilterPanelOpen(false)}
+                    className="p-1 rounded-lg text-text-dim hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Group Filter */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
+                  1. Nhóm Dược Liệu Tác Dụng:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {HERB_GROUPS.map(grp => (
+                    <button
+                      key={grp.id}
+                      onClick={() => setSelectedGroup(grp.id)}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex items-center justify-between",
+                        selectedGroup === grp.id
+                          ? "bg-teal-500/20 border-teal-500/40 text-teal-300 font-bold shadow-xs"
+                          : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white hover:border-white/15"
+                      )}
+                    >
+                      <span className="truncate">{grp.shortName}</span>
+                      {selectedGroup === grp.id && <Check className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tứ Khí (Tính) Filter */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
+                  2. Tứ Khí (Tính: Hàn - Lương - Bình - Ôn - Nhiệt):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedNature('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer",
+                      selectedNature === 'all'
+                        ? "bg-white/20 text-white border-white/40"
+                        : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                    )}
+                  >
+                    Tất cả tính
+                  </button>
+                  {ALL_NATURES.map(nature => {
+                    const style = NATURE_COLOR_MAP[nature];
+                    const isSelected = selectedNature === nature;
+                    return (
+                      <button
+                        key={nature}
+                        onClick={() => setSelectedNature(nature)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer",
+                          isSelected
+                            ? cn(style.bg, style.text, style.border, "ring-1 ring-primary/40 shadow-xs")
+                            : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                        )}
+                      >
+                        {nature}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Ngũ Vị Filter */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
+                  3. Ngũ Vị (Vị):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedTaste('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer",
+                      selectedTaste === 'all'
+                        ? "bg-white/20 text-white border-white/40"
+                        : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                    )}
+                  >
+                    Tất cả vị
+                  </button>
+                  {ALL_TASTES.map(taste => (
+                    <button
+                      key={taste}
+                      onClick={() => setSelectedTaste(taste)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer",
+                        selectedTaste === taste
+                          ? "bg-purple-500/20 text-purple-300 border-purple-500/40 ring-1 ring-purple-500/40"
+                          : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                      )}
+                    >
+                      Vị {taste}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quy Kinh (12 Kinh Lạc) */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
+                  4. Quy Kinh Lạc:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setSelectedMeridian('all')}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border cursor-pointer",
+                      selectedMeridian === 'all'
+                        ? "bg-white/20 text-white border-white/40"
+                        : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                    )}
+                  >
+                    Tất cả kinh
+                  </button>
+                  {ALL_MERIDIANS.map(meridian => (
+                    <button
+                      key={meridian}
+                      onClick={() => setSelectedMeridian(meridian)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer",
+                        selectedMeridian === meridian
+                          ? "bg-teal-500/20 text-teal-300 border-teal-500/40 font-bold"
+                          : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
+                      )}
+                    >
+                      Kinh {meridian}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* AI Result Modal (Inline Overlay) */}
+      {/* AI Camera Result Banner (when image captured) */}
       <AnimatePresence>
         {capturedImage && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-panel border border-primary/20 rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden"
+            className="bg-panel border border-primary/30 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden"
           >
-            <button onClick={closeCamera} className="absolute top-4 right-4 text-text-dim hover:text-red-400 transition-colors z-20">
-              <X className="w-6 h-6" />
+            <button 
+              onClick={closeCamera} 
+              className="absolute top-4 right-4 text-text-dim hover:text-rose-400 transition-colors z-20 p-1"
+            >
+              <X className="w-5 h-5" />
             </button>
-            <div className="flex gap-5 relative z-10">
-              <div className="w-28 h-28 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10">
+            <div className="flex gap-4 sm:gap-5 relative z-10">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10">
                 <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 py-1">
-                <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Xử lý Thực thể AI</p>
-                <h3 className="font-serif text-xl italic font-light text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                  Đối chiếu Dữ liệu
+                <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">
+                  Định Danh Thực Thể AI
+                </p>
+                <h3 className="font-serif text-lg sm:text-xl italic font-light text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                  Đối chiếu Dược điển Đông y
                 </h3>
                 {isAnalyzing ? (
-                  <div className="flex items-center gap-2 text-primary mt-3">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}><Activity className="w-4 h-4" /></motion.div>
-                    <span className="text-[11px] font-bold uppercase tracking-widest animate-pulse">Đang định danh...</span>
+                  <div className="flex items-center gap-2 text-primary mt-2">
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                      <Activity className="w-4 h-4" />
+                    </motion.div>
+                    <span className="text-[11px] font-bold uppercase tracking-widest animate-pulse">
+                      Đang phân tích mẫu vật...
+                    </span>
                   </div>
                 ) : (
-                  <p className="text-[9px] text-text-dim font-bold uppercase tracking-widest mt-3 px-2 py-0.5 bg-white/5 rounded border border-white/5 inline-block">Trích xuất hoàn tất</p>
+                  <p className="text-[9px] text-text-dim font-bold uppercase tracking-widest mt-2 px-2 py-0.5 bg-white/5 rounded border border-white/5 inline-block">
+                    Trích xuất hoàn tất
+                  </p>
                 )}
               </div>
             </div>
             
             {aiResult && (
-              <div className="bg-bg/40 backdrop-blur-md p-5 rounded-2xl max-h-[400px] overflow-y-auto border border-white/5 shadow-inner space-y-6">
+              <div className="bg-bg/60 backdrop-blur-md p-4 sm:p-5 rounded-2xl max-h-[350px] overflow-y-auto border border-white/5 shadow-inner space-y-4">
                 {!aiResult.identified ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                    <Activity className="w-12 h-12 text-text-dim opacity-20" />
-                    <div>
-                      <p className="text-white font-medium">Không thể định danh thực thể</p>
-                      <p className="text-[10px] text-text-dim uppercase tracking-widest mt-1">Vui lòng thử lại với góc chụp khác hoặc ánh sáng tốt hơn</p>
-                    </div>
+                  <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+                    <Activity className="w-10 h-10 text-text-dim opacity-30" />
+                    <p className="text-white font-medium text-sm">Không thể nhận diện chính xác thực thể</p>
+                    <p className="text-[10px] text-text-dim uppercase tracking-wider">
+                      Vui lòng thử lại với góc chụp cận cảnh lá, củ hoặc hoa
+                    </p>
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                      <div>
+                        <h4 className="text-xl font-serif italic text-primary font-bold">
+                          {aiResult.name_vi}
+                        </h4>
+                        <p className="text-xs text-text-dim italic">
+                          {aiResult.name_scientific} • Họ: {aiResult.family}
+                        </p>
+                      </div>
+
+                      {matchedHerbFromAI && (
+                        <button
+                          onClick={() => {
+                            setSelectedHerbForModal(matchedHerbFromAI);
+                            closeCamera();
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold flex items-center gap-1.5 hover:bg-teal-500/30 transition-all cursor-pointer self-start sm:self-auto"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>Xem trong Dược điển</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">Bộ phận dùng:</span>
+                        <p className="text-white">{aiResult.partUsed || "Đang cập nhật"}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">Liều lượng:</span>
+                        <p className="text-white">{aiResult.dosage || "Tham khảo bác sĩ"}</p>
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <h4 className="text-xl font-serif italic text-primary">{aiResult.name_vi || "Chưa rõ tên"}</h4>
-                      <p className="text-xs text-text-dim italic">{aiResult.name_scientific || "Chưa cập nhật tên khoa học"}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-5">
-                      <div className="grid grid-cols-2 gap-4">
-                        <InfoSection title="Họ thực vật (Family)" content={aiResult.family || "Chưa rõ họ"} />
-                        <InfoSection title="Bộ phận dùng (Part Used)" content={aiResult.partUsed || "Chưa có thông tin"} />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Công dụng (Benefits)</p>
-                        <div className="flex flex-wrap gap-2">
-                          {aiResult.benefits.map((b, i) => (
-                            <span key={i} className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-lg text-[10px] text-white">
-                              {b}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <InfoSection title="Cách dùng (Usage)" content={aiResult.usage} />
-                        <InfoSection title="Liều lượng (Dosage)" content={aiResult.dosage} />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest">Chống chỉ định (Contraindications)</p>
-                        <ul className="space-y-1">
-                          {aiResult.contraindications.map((c, i) => (
-                            <li key={i} className="text-[11px] text-text-dim flex items-start gap-2">
-                              <span className="w-1 h-1 bg-rose-500 rounded-full mt-1.5 flex-shrink-0" />
-                              {c}
-                            </li>
-                          ))}
-                        </ul>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Công năng chủ trị:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {aiResult.benefits.map((b, i) => (
+                          <span key={i} className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-lg text-[10px] text-white">
+                            {b}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}
-            
-            {!isAnalyzing && (
-              <button 
-                onClick={closeCamera}
-                className="w-full bg-primary text-bg font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.2)] uppercase tracking-widest text-[11px] hover:brightness-110 transition-all active:scale-[0.98]"
-              >
-                Xác thực Lưu trữ Chuyên ngành
-              </button>
-            )}
-            
-            <div className="absolute -left-20 -top-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl"></div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Main Medicinal Herbs Directory */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-2 px-1 flex-nowrap">
+          <div className="min-w-0">
+            <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+              <Leaf className="w-4 h-4 text-primary shrink-0" />
+              <span>Vị Thuốc Cổ Truyền Chuẩn Hóa</span>
+            </h2>
+          </div>
+
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={resetAllFilters}
+              className="text-xs text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1 cursor-pointer font-semibold whitespace-nowrap shrink-0"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Bỏ lọc</span>
+            </button>
+          )}
+        </div>
+
+        {/* Empty Search State */}
+        {filteredHerbs.length === 0 ? (
+          <div className="bg-panel border border-border rounded-3xl p-10 text-center space-y-4">
+            <Leaf className="w-12 h-12 text-text-dim opacity-30 mx-auto" />
+            <div className="space-y-1">
+              <h3 className="text-white font-medium text-base">Không tìm thấy vị thuốc phù hợp</h3>
+              <p className="text-xs text-text-dim max-w-md mx-auto">
+                Không có dược liệu nào khớp với từ khóa tìm kiếm hoặc các bộ lọc đang chọn. Hãy thử tìm theo tên tiếng Việt hoặc đặt lại bộ lọc.
+              </p>
+            </div>
+            <button
+              onClick={resetAllFilters}
+              className="px-4 py-2.5 rounded-xl bg-primary text-slate-950 font-bold text-xs uppercase tracking-wider shadow-sm hover:brightness-110 cursor-pointer"
+            >
+              Đặt lại tất cả bộ lọc
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredHerbs.map(herb => {
+              const isSaved = bookmarkedIds.includes(herb.id);
+
+              return (
+                <div
+                  key={herb.id}
+                  onClick={() => setSelectedHerbForModal(herb)}
+                  className="bg-panel rounded-3xl overflow-hidden border border-border shadow-xl text-left group hover:border-teal-500/40 transition-all cursor-pointer flex flex-col justify-between hover:shadow-2xl hover:-translate-y-0.5"
+                >
+                  <div>
+                    {/* Header above the image with colored background */}
+                    <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-emerald-50/70 border-b border-teal-100/70 px-3.5 sm:px-4 py-2 sm:py-2.5 transition-colors group-hover:from-emerald-100/60 group-hover:to-teal-100/60">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className="font-serif text-[15px] sm:text-base italic font-semibold text-slate-800 group-hover:text-teal-900 transition-colors truncate">
+                          {herb.name_vi}
+                        </h3>
+                        <span className="text-[8px] sm:text-[8.5px] text-teal-700 font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/90 border border-teal-200/80 shadow-2xs shrink-0 whitespace-nowrap">
+                          {herb.groupName.split(' - ')[0]}
+                        </span>
+                      </div>
+                      <p className="text-[9px] sm:text-[9.5px] text-teal-700/80 font-mono italic truncate mt-0.5 font-light">
+                        {herb.name_scientific}
+                      </p>
+                    </div>
+
+                    {/* Herb Image & Top Overlays */}
+                    <div className="h-40 sm:h-44 overflow-hidden relative bg-slate-100">
+                      <img 
+                        src={herb.image} 
+                        alt={herb.name_vi} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-[1.02] contrast-[1.02]" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                      
+                      {/* Botanical Family & English Name Badge */}
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[8px] sm:text-[8.5px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-teal-800 border border-teal-200/70 shadow-2xs">
+                          {herb.family}
+                        </span>
+                        {herb.name_en && (
+                          <span className="text-[8.5px] sm:text-[9px] font-normal tracking-normal px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-amber-900 border border-amber-200/70 shadow-2xs">
+                            {herb.name_en}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Bookmark Quick Action Button */}
+                      <button 
+                        onClick={(e) => toggleBookmark(herb.id, e)}
+                        className={`absolute top-2.5 right-2.5 w-7 h-7 backdrop-blur-md rounded-full flex items-center justify-center border transition-all cursor-pointer shadow-2xs ${
+                          isSaved 
+                            ? 'bg-amber-50 text-amber-600 border-amber-300' 
+                            : 'bg-white/90 text-slate-700 border-slate-200/80 hover:bg-white hover:text-slate-950'
+                        }`}
+                        title={isSaved ? 'Đã lưu trữ' : 'Lưu trữ vị thuốc'}
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
+                      </button>
+
+                      {/* Part Used on bottom left of image */}
+                      <div className="absolute bottom-2 left-2.5 text-[8.5px] sm:text-[9px] font-mono flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-slate-800 border border-slate-200/70 shadow-2xs">
+                        <span className="text-primary font-semibold">Bộ phận:</span>
+                        <span className="truncate max-w-[180px] text-slate-700 font-normal">{herb.partUsed}</span>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-3.5 sm:p-4 space-y-2.5">
+                      {/* Summary action */}
+                      <p className="text-[11px] sm:text-xs text-slate-600 font-normal line-clamp-2 leading-relaxed">
+                        {herb.summaryAction}
+                      </p>
+
+                      {/* Matched symptoms text */}
+                      <div className="space-y-0.5 pt-0.5">
+                        <span className="text-[8px] sm:text-[8.5px] font-medium text-slate-500 uppercase tracking-wider block">
+                          Tương thích thể trạng:
+                        </span>
+                        <p className="text-[11px] sm:text-xs text-slate-800 font-normal leading-relaxed">
+                          {herb.matchedSymptoms.slice(0, 3).join(' • ')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="px-3.5 sm:px-4 pb-3 pt-1 flex items-center justify-between border-t border-border/50 text-[11px]">
+                    <button
+                      onClick={(e) => handleAskAIAboutHerb(herb, e)}
+                      className="text-teal-700 hover:text-teal-900 flex items-center gap-1 font-medium transition-colors cursor-pointer py-0.5"
+                    >
+                      <MessageSquare className="w-3 h-3 text-teal-600" />
+                      <span>Hỏi Bác sĩ AI</span>
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedHerbForModal(herb)}
+                      className="text-slate-600 hover:text-teal-800 flex items-center gap-0.5 font-medium transition-colors cursor-pointer group-hover:translate-x-0.5 py-0.5"
+                    >
+                      <span>Chi tiết</span>
+                      <ChevronRight className="w-3 h-3 text-teal-600" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Daily Symptom-Based Medicinal Herbs & Remedies Suggestions */}
       <DailySymptomHerbSuggestions />
 
-      {/* Popular Herbs Collection */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="font-serif text-xl font-bold text-white flex items-center gap-3">
-            <Leaf className="w-6 h-6 text-primary" />
-            Vị thuốc Kinh điển
-          </h3>
-          <span className="text-[9px] font-bold text-text-dim uppercase tracking-[0.2em]">Danh mục lưu hành</span>
-        </div>
-        <div className="grid grid-cols-2 gap-5">
-          {processedHerbs.map(herb => (
-            <button
-              key={herb.id}
-              className="bg-panel rounded-3xl overflow-hidden border border-border shadow-xl text-left group hover:border-primary/20 transition-all active:scale-[0.97]"
-            >
-              <div className="h-32 overflow-hidden relative">
-                <img src={herb.image} alt={herb.name_vi} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
-                <div className="absolute top-3 right-3 w-8 h-8 bg-bg/40 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Bookmark className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="p-4 space-y-2">
-                <div className="flex justify-between items-start">
-                  <p className="text-[8px] font-bold text-primary uppercase tracking-widest">{herb.family}</p>
-                  <p className="text-[8px] font-bold text-text-dim uppercase tracking-widest">{herb.partUsed || "Chưa rõ bộ phận"}</p>
-                </div>
-                <h4 className="font-serif text-lg italic font-light text-white group-hover:text-primary transition-colors">{herb.name_vi}</h4>
-                <p className="text-[9px] text-text-dim italic -mt-1">{herb.name_scientific || "Chưa cập nhật tên khoa học"}</p>
-                <p className="text-[10px] text-text-dim line-clamp-2 font-light leading-snug pt-1">{herb.benefit}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Seasonal Herbs Section */}
-      <section className="bg-panel rounded-3xl p-6 border border-border shadow-2xl space-y-6" id="seasonal-herbs-panel">
+      {/* Seasonal Herbs Section (Dược Thảo 12 Tháng Theo Tiết Khí) */}
+      <section className="bg-panel rounded-3xl p-5 sm:p-6 border border-border shadow-2xl space-y-6" id="seasonal-herbs-panel">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-1">
           <div>
-            <h3 className="font-serif text-xl font-bold text-white flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-primary" />
-              Dược Thảo Theo Mùa
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-white flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-primary" />
+              Dược Thảo Theo Mùa & Tiết Khí
             </h3>
-            <p className="text-[9px] text-text-dim font-bold uppercase tracking-widest mt-1">
-              Khuyến nghị bồi bổ theo tiết khí & thời tiết hệ thống
+            <p className="text-[10px] text-text-dim font-bold uppercase tracking-widest mt-1">
+              Khuyến nghị bồi dưỡng theo vòng tuần hoàn thiên nhiên 12 tháng
             </p>
           </div>
           <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-xl font-bold flex items-center gap-1.5 self-start md:self-auto shadow-sm">
@@ -552,7 +1073,6 @@ export default function HerbView() {
                   {isCurrentSystemMonth && (
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-slate-900 shadow-sm animate-pulse" title="Tháng hiện tại" />
                   )}
-                  {/* Miniature tooltip on hover for month's herb */}
                   <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-950 text-[8px] font-sans font-normal text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30 border border-white/5 shadow-xl">
                     {monthHerb?.herbName} ({monthHerb?.season})
                   </span>
@@ -570,7 +1090,6 @@ export default function HerbView() {
 
           return (
             <div className={cn("bg-bg/40 border border-white/5 rounded-3xl p-5 md:p-6 transition-all relative overflow-hidden", styles.glowAccent)}>
-              {/* Decorative radial gradients inside */}
               <div className="absolute -right-24 -bottom-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10">
@@ -583,7 +1102,6 @@ export default function HerbView() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/20" />
                   
-                  {/* Dynamic Weather theme watermark or Season badge */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className={cn("text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full", styles.badge)}>
                       {activeHerb.season}
@@ -619,7 +1137,7 @@ export default function HerbView() {
                     </div>
                   </div>
 
-                  {/* Elite Tip / Apothecary advice box */}
+                  {/* Apothecary advice box */}
                   <div className="bg-primary/[0.02] border border-primary/10 rounded-2xl p-4 space-y-2">
                     <div className="flex items-center gap-2 text-primary">
                       <Sparkles className="w-4 h-4 animate-pulse text-primary" />
@@ -636,52 +1154,119 @@ export default function HerbView() {
         })()}
       </section>
 
-      {/* Recipes Summary */}
-      <section className="space-y-6">
+      {/* Classical Formulas Section */}
+      <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h3 className="font-serif text-xl italic font-light text-white">Liệu pháp Phối ngũ</h3>
-          <button className="text-primary text-[10px] font-bold uppercase tracking-widest hover:gap-2 transition-all flex items-center gap-1">Tất cả bài thuốc <ChevronRight className="w-4 h-4" /></button>
+          <div>
+            <h3 className="font-serif text-xl italic font-light text-white flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              <span>Liệu Pháp Phối Ngũ Kinh Điển</span>
+            </h3>
+            <p className="text-[10px] text-text-dim font-bold uppercase tracking-wider">
+              Các bài thuốc mẫu mực theo nguyên tắc Quân - Thần - Tá - Sứ
+            </p>
+          </div>
         </div>
-        <div className="grid gap-4">
-          <RecipeItem 
-            title="Sắc nước lá vối giảm nóng"
-            benefit="Giải độc, mát gan"
-            ingredients={['Lá vối tươi/khô', 'Cam thảo']}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <RecipeCard 
+            title="Tứ quân tử thang"
+            indication="Đại bổ nguyên khí tỳ vị, trị mệt mỏi suy nhược, ăn uống không tiêu"
+            ingredients={['Nhân sâm (Quân)', 'Bạch truật (Thần)', 'Bạch linh (Tá)', 'Chích Cam thảo (Sứ)']}
+            dosage="Sắc ấm ngày 1 thang chia làm 2 lần"
           />
-          <RecipeItem 
-            title="Trà Gừng tươi trị cảm"
-            benefit="Làm ấm, tán hàn"
-            ingredients={['Gừng tươi', 'Mật ong', 'Nước ấm']}
+          <RecipeCard 
+            title="Ngân kiều tán"
+            indication="Tán phong nhiệt giải cảm, trị cảm sốt nhiệt, đau rát họng, phát ban"
+            ingredients={['Kim ngân hoa (Quân)', 'Liên kiều (Quân)', 'Bạc hà (Thần)', 'Cát cánh (Tá)', 'Cam thảo (Sứ)']}
+            dosage="Sắc nước uống ấm lúc đang sốt nhẹ phát ban"
+          />
+          <RecipeCard 
+            title="Toan táo nhân thang"
+            indication="Dưỡng tâm an thần, trị mất ngủ triền miên, bồn chồn lo âu, đổ mồ hôi trộm"
+            ingredients={['Toan táo nhân sao đen', 'Tri mẫu', 'Phục linh', 'Xuyên khung', 'Cam thảo']}
+            dosage="Uống 1 chén ấm trước khi đi ngủ 1 giờ"
+          />
+          <RecipeCard 
+            title="Nhị trần thang"
+            indication="Táo thấp hóa đờm lí khí, trị ho nhiều đờm bọt trắng, đầy trướng bụng buồn nôn"
+            ingredients={['Trần bì lâu năm', 'Bán hạ chế', 'Phục linh', 'Cam thảo', 'Gừng tươi']}
+            dosage="Sắc nước uống chia 2 lần ấm trong ngày"
           />
         </div>
       </section>
+
+      {/* Full Herb Detail Modal */}
+      <AnimatePresence>
+        {selectedHerbForModal && (
+          <HerbDetailModal 
+            herb={selectedHerbForModal} 
+            onClose={() => setSelectedHerbForModal(null)}
+            onFilterBySymptom={(sym) => {
+              const matchedTag = SYMPTOM_FILTER_TAGS.find(t => 
+                t.symptom && sym.toLowerCase().includes(t.symptom.toLowerCase())
+              );
+              if (matchedTag) {
+                setSelectedSymptom(matchedTag.id);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function InfoSection({ title, content }: { title: string, content: string }) {
-  if (!content) return null;
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{title}</p>
-      <p className="text-[12px] text-white font-light leading-relaxed">{content}</p>
-    </div>
-  );
-}
+function RecipeCard({ 
+  title, 
+  indication, 
+  ingredients, 
+  dosage 
+}: { 
+  title: string; 
+  indication: string; 
+  ingredients: string[]; 
+  dosage: string;
+}) {
+  const handleConsult = () => {
+    const prompt = `Chào Bác sĩ Tâm An, xin tư vấn chi tiết về bài thuốc cổ truyền: ${title}. Thành phần gồm: ${ingredients.join(', ')}. Cách gia giảm liều dùng cho thể trạng người Việt như thế nào?`;
+    window.dispatchEvent(new CustomEvent('app-open-ai-chat', { detail: { prompt } }));
+  };
 
-function RecipeItem({ title, benefit, ingredients }: { title: string, benefit: string, ingredients: string[] }) {
   return (
-    <div className="bg-panel p-5 rounded-2xl border border-border shadow-xl flex items-center justify-between group hover:border-primary/20 transition-all cursor-pointer">
-      <div className="space-y-2 flex-1">
-        <h4 className="font-serif text-xl italic font-light text-white group-hover:text-primary transition-colors">{title}</h4>
-        <p className="text-[11px] text-text-dim italic font-light">Mục tiêu: {benefit}</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {ingredients.slice(0, 3).map(i => (
-            <span key={i} className="text-[8px] font-bold uppercase tracking-widest bg-white/5 text-primary px-2.5 py-1 rounded-md border border-white/5 shadow-inner">{i}</span>
-          ))}
-        </div>
+    <div className="bg-panel p-5 rounded-2xl border border-border shadow-xl space-y-3 hover:border-primary/30 transition-all text-left">
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="font-serif text-lg italic font-bold text-white group-hover:text-primary">
+          {title}
+        </h4>
+        <button
+          onClick={handleConsult}
+          className="text-[10px] text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+        >
+          <MessageSquare className="w-3 h-3" />
+          <span>Hỏi Bác sĩ AI</span>
+        </button>
       </div>
-      <ChevronRight className="w-5 h-5 text-text-dim group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-2" />
+
+      <p className="text-xs text-text-dim italic leading-snug">
+        Chủ trị: {indication}
+      </p>
+
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {ingredients.map(ing => (
+          <span 
+            key={ing} 
+            className="text-[10px] font-mono bg-white/5 text-primary px-2.5 py-0.5 rounded-md border border-white/5"
+          >
+            {ing}
+          </span>
+        ))}
+      </div>
+
+      <div className="text-[11px] bg-emerald-700 text-white-pure p-2.5 rounded-xl border border-emerald-600 font-normal">
+        <span className="font-bold text-white-pure">Cách dùng: </span>
+        <span className="text-white-pure">{dosage}</span>
+      </div>
     </div>
   );
 }
