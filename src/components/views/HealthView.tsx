@@ -31,6 +31,8 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'fire
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { registerModal } from '../../utils/modalManager';
+import { useLanguage } from '../../contexts/LanguageContext';
+import ActiveWorkoutModal from './ActiveWorkoutModal';
 
 interface Exercise {
   id: string;
@@ -61,11 +63,12 @@ const THERAPY_EXERCISES: Exercise[] = [
     description: 'Liệu pháp giải phóng căng thẳng vùng cơ thắt lưng và tăng tính linh hoạt cột sống.',
     benefits: ['Kéo giãn đốt sống L4-L5', 'Giảm chèn ép dây thần kinh tọa', 'Tăng lưu thông máu vùng lưng'],
     steps: [
-      'Tư thế Con Mèo - Con Bò (Cat-Cow): 3 phút làm mềm cột sống',
-      'Tư thế Em Bé (Child Pose): 5 phút kéo giãn cơ thắt lưng',
-      'Tư thế Cây Cầu (Bridge Pose): 5 phút củng cố cơ mông và đáy chậu',
-      'Tư thế Rắn Hổ Mang nhẹ: 4 phút giải phóng áp lực đĩa đệm',
-      'Thư giãn Savasana và thở bụng sâu: 8 phút'
+      '1. Con Mèo - Con Bò (Cat-Cow): 3 phút (Khởi động & Làm mềm dẻo cột sống)',
+      '2. Tư thế Em Bé (Child Pose): 3 phút (Kéo giãn thắt lưng & Mở rộng hông)',
+      '3. Dynamic Bridge (Cây Cầu động): 4 phút (Củng cố cơ mông, đùi & Đáy chậu)',
+      '4. Baby Cobra (Rắn Hổ Mang nhẹ): 3 phút (Kích hoạt cơ dựng sống & Mở ngực)',
+      '5. Thắt lưng gập nhẹ / Lăn lưng (Knees to Chest): 2 phút (Trả lại trạng thái trung tính)',
+      '6. Savasana & Thở bụng sâu: 10 phút (Thư giãn sâu, cân bằng thần kinh & Giảm đau)'
     ]
   },
   {
@@ -209,15 +212,14 @@ const THERAPY_PROGRAMS = [
 
 export default function HealthView() {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   // Sub-tabs as explicitly requested: [ Cho bạn hôm nay ] | [ Giáo trình Trị liệu ] | [ Lịch sử luyện tập ]
   const [subTab, setSubTab] = useState<'today' | 'programs' | 'history'>('today');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'cotsong' | 'timmach' | 'giamstress' | 'dotcalo' | 'thothieng'>('all');
 
   // Active workout session modal
   const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
-  const [sessionSeconds, setSessionSeconds] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [sessionCompleted, setSessionCompleted] = useState<boolean>(false);
 
   // Workout History
   const [workoutHistory, setWorkoutHistory] = useState<any[]>([
@@ -247,48 +249,12 @@ export default function HealthView() {
     }
   ]);
 
-  // Timer effect
-  useEffect(() => {
-    let interval: any = null;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setSessionSeconds(prev => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
-
-  // Back gesture listener for modal
-  useEffect(() => {
-    if (!activeExercise) return;
-    const closeFn = () => {
-      setActiveExercise(null);
-      setIsTimerRunning(false);
-      setSessionSeconds(0);
-      setSessionCompleted(false);
-    };
-    const unregister = registerModal('workout-session-modal', closeFn);
-    const handleBack = (e: Event) => {
-      e.preventDefault();
-      closeFn();
-    };
-    window.addEventListener('app-back-press', handleBack);
-    return () => {
-      unregister();
-      window.removeEventListener('app-back-press', handleBack);
-    };
-  }, [activeExercise]);
-
   // Listen for root menu reset to return to top of Health view
   useEffect(() => {
     const handleResetToRoot = (e: any) => {
       if (e.detail?.view === 'health') {
         setSubTab('today');
         setActiveExercise(null);
-        setIsTimerRunning(false);
-        setSessionSeconds(0);
         setSelectedFilter('all');
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         const mainEl = document.querySelector('main');
@@ -302,25 +268,17 @@ export default function HealthView() {
 
   const startExercise = (ex: Exercise) => {
     setActiveExercise(ex);
-    setSessionSeconds(0);
-    setIsTimerRunning(true);
-    setSessionCompleted(false);
   };
 
-  const finishExercise = async () => {
-    setIsTimerRunning(false);
-    setSessionCompleted(true);
+  const handleWorkoutComplete = async (actualMinutes: number, actualKcal: number) => {
     if (!activeExercise) return;
-
-    const actualMinutes = Math.max(1, Math.round(sessionSeconds / 60)) || activeExercise.duration;
-    const actualKcal = Math.round((activeExercise.kcal / activeExercise.duration) * actualMinutes);
 
     const record = {
       id: `wh_${Date.now()}`,
       title: activeExercise.title,
       duration: actualMinutes,
       kcal: actualKcal,
-      date: 'Vừa xong',
+      date: isEn ? 'Just now' : 'Vừa xong',
       category: activeExercise.categoryLabel
     };
 
@@ -365,55 +323,60 @@ export default function HealthView() {
       <div className="space-y-1">
         <div className="flex items-center gap-1.5 text-teal-700 font-bold text-[11px] uppercase tracking-wider">
           <Dumbbell className="w-4 h-4 text-teal-600" />
-          <span>Luyện tập Trị liệu & Phục hồi</span>
+          <span>{isEn ? "Therapeutic & Recovery Workouts" : "Luyện tập Trị liệu & Phục hồi"}</span>
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-          Sức Khỏe & Vận Động
+          {isEn ? "Health & Workout" : "Sức Khỏe & Vận Động"}
         </h1>
         <p className="text-xs text-slate-500">
-          Các bài tập yoga dưỡng sinh, giải tỏa đau mỏi và nâng cao thể trạng mỗi ngày
+          {isEn 
+            ? "Yoga therapy, pain relief, and daily wellness workouts" 
+            : "Các bài tập yoga dưỡng sinh, giải tỏa đau mỏi và nâng cao thể trạng mỗi ngày"}
         </p>
       </div>
 
-      {/* 2. Top Sub-Tabs Navigation (Strictly Reorganized as Requested) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-xs">
+      {/* 2. Top Sub-Tabs Navigation (Optimized for Mobile & Desktop) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-xs w-full max-w-full overflow-hidden">
         <button
           onClick={() => setSubTab('today')}
           className={cn(
-            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap",
+            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap min-w-0",
             subTab === 'today'
-              ? "bg-teal-600 text-white-pure shadow-sm shadow-teal-600/25"
+              ? "bg-teal-600 text-force-white shadow-sm shadow-teal-600/25"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           )}
         >
           <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-          <span>Cho bạn hôm nay</span>
+          <span className="sm:hidden truncate">{isEn ? "Today" : "Hôm nay"}</span>
+          <span className="hidden sm:inline">{isEn ? "Today For You" : "Cho bạn hôm nay"}</span>
         </button>
 
         <button
           onClick={() => setSubTab('programs')}
           className={cn(
-            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap",
+            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap min-w-0",
             subTab === 'programs'
-              ? "bg-teal-600 text-white-pure shadow-sm shadow-teal-600/25"
+              ? "bg-teal-600 text-force-white shadow-sm shadow-teal-600/25"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           )}
         >
           <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-          <span>Giáo trình Trị liệu</span>
+          <span className="sm:hidden truncate">{isEn ? "Programs" : "Giáo trình"}</span>
+          <span className="hidden sm:inline">{isEn ? "Therapy Programs" : "Giáo trình Trị liệu"}</span>
         </button>
 
         <button
           onClick={() => setSubTab('history')}
           className={cn(
-            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap",
+            "flex-1 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-tight sm:tracking-normal transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap min-w-0",
             subTab === 'history'
-              ? "bg-teal-600 text-white-pure shadow-sm shadow-teal-600/25"
+              ? "bg-teal-600 text-force-white shadow-sm shadow-teal-600/25"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           )}
         >
           <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-          <span>Lịch sử luyện tập</span>
+          <span className="sm:hidden truncate">{isEn ? "History" : "Lịch sử"}</span>
+          <span className="hidden sm:inline">{isEn ? "Workout History" : "Lịch sử luyện tập"}</span>
         </button>
       </div>
 
@@ -427,10 +390,7 @@ export default function HealthView() {
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-teal-600" />
-                Khuyên dùng hôm nay
-              </span>
-              <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                Cá nhân hóa theo sinh hiệu
+                {isEn ? "TODAY'S RECOMMENDATION:" : "LỜI KHUYÊN CHO HÔM NAY:"}
               </span>
             </div>
 
@@ -447,12 +407,12 @@ export default function HealthView() {
                       🏷️ {featuredExercise.tag}
                     </span>
                     <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/95 backdrop-blur-md text-slate-800 border border-slate-200/90 shadow-2xs">
-                      Mức độ: {featuredExercise.level}
+                      {isEn ? "Level: " : "Mức độ: "}{featuredExercise.level}
                     </span>
                   </div>
 
-                  <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 border border-white/90 shadow-md">
-                    <h3 className="font-serif text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-snug">
+                  <div className="bg-white/95 backdrop-blur-md rounded-2xl py-2.5 px-3.5 sm:py-3 sm:px-4 border border-white/90 shadow-md text-center">
+                    <h3 className="font-serif text-sm sm:text-base font-bold tracking-tight text-slate-900 leading-snug text-center">
                       {featuredExercise.title}
                     </h3>
                   </div>
@@ -469,7 +429,7 @@ export default function HealthView() {
                 <div className="flex flex-wrap items-center gap-3 sm:gap-6 pt-1 text-xs text-slate-600 font-medium">
                   <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                     <Clock className="w-4 h-4 text-teal-600" />
-                    <span>⏱️ <strong>{featuredExercise.duration} phút</strong></span>
+                    <span>⏱️ <strong>{featuredExercise.duration} {isEn ? "min" : "phút"}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                     <Flame className="w-4 h-4 text-rose-500" />
@@ -477,7 +437,7 @@ export default function HealthView() {
                   </div>
                   <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>📊 <strong>Mức độ: {featuredExercise.level}</strong></span>
+                    <span>📊 <strong>{isEn ? "Level: " : "Mức độ: "}{featuredExercise.level}</strong></span>
                   </div>
                 </div>
 
@@ -487,7 +447,7 @@ export default function HealthView() {
                   className="w-full py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-force-white font-bold text-xs uppercase tracking-widest shadow-md shadow-teal-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
                   <Play className="w-4 h-4 fill-white" />
-                  <span>▶️ Bắt đầu luyện tập ngay</span>
+                  <span>{isEn ? "▶️ Start Workout Now" : "▶️ Bắt đầu luyện tập ngay"}</span>
                 </button>
               </div>
             </div>
@@ -497,22 +457,22 @@ export default function HealthView() {
           <div className="space-y-3.5 pt-2">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Danh sách Luyện tập theo Mục tiêu
+                {isEn ? "Targeted Workout Directory" : "Danh sách Luyện tập theo Mục tiêu"}
               </h3>
               <span className="text-[11px] text-slate-500">
-                {filteredExercises.length} bài tập
+                {filteredExercises.length} {isEn ? "exercises" : "bài tập"}
               </span>
             </div>
 
             {/* Quick Filter Chips */}
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
               {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'cotsong', label: 'Cột sống' },
-                { id: 'timmach', label: 'Tim mạch' },
-                { id: 'giamstress', label: 'Giảm stress' },
-                { id: 'dotcalo', label: 'Đốt calo' },
-                { id: 'thothieng', label: 'Thở & Thiền' },
+                { id: 'all', label: isEn ? 'All' : 'Tất cả' },
+                { id: 'cotsong', label: isEn ? 'Spine' : 'Cột sống' },
+                { id: 'timmach', label: isEn ? 'Cardio' : 'Tim mạch' },
+                { id: 'giamstress', label: isEn ? 'Stress Relief' : 'Giảm stress' },
+                { id: 'dotcalo', label: isEn ? 'Calorie Burn' : 'Đốt calo' },
+                { id: 'thothieng', label: isEn ? 'Breath & Zen' : 'Thở & Thiền' },
               ].map(chip => (
                 <button
                   key={chip.id}
@@ -559,7 +519,7 @@ export default function HealthView() {
                     <div className="flex items-center gap-3 text-slate-500 text-[11px] font-medium">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-teal-600" />
-                        {ex.duration} phút
+                        {ex.duration} {isEn ? "min" : "phút"}
                       </span>
                       <span className="flex items-center gap-1">
                         <Flame className="w-3.5 h-3.5 text-rose-500" />
@@ -572,7 +532,7 @@ export default function HealthView() {
                       className="flex items-center gap-1 px-3 py-1.5 bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       <Play className="w-3 h-3 fill-current" />
-                      <span>Tập ngay</span>
+                      <span>{isEn ? "Start" : "Tập ngay"}</span>
                     </button>
                   </div>
                 </div>
@@ -589,10 +549,10 @@ export default function HealthView() {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Lộ trình Trị liệu Đa Tuần
+              {isEn ? "Multi-Week Therapy Roadmap" : "Lộ trình Trị liệu Đa Tuần"}
             </span>
             <span className="text-xs text-slate-500">
-              Có hướng dẫn & kiểm tra tiến độ
+              {isEn ? "Guided routines with milestone checks" : "Có hướng dẫn & kiểm tra tiến độ"}
             </span>
           </div>
 
@@ -626,14 +586,14 @@ export default function HealthView() {
                     onClick={() => startExercise(featuredExercise)}
                     className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-force-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs transition-all shrink-0 cursor-pointer self-start sm:self-auto"
                   >
-                    Thực hành
+                    {isEn ? "Practice" : "Thực hành"}
                   </button>
                 </div>
 
                 {/* Progress bar */}
                 <div className="space-y-1.5 pt-1 border-t border-slate-100">
                   <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span>Tiến độ: <strong>{prog.completedSessions} / {prog.totalSessions} buổi</strong></span>
+                    <span>{isEn ? "Progress: " : "Tiến độ: "}<strong>{prog.completedSessions} / {prog.totalSessions} {isEn ? "sessions" : "buổi"}</strong></span>
                     <span className="font-bold text-teal-700">{Math.round((prog.completedSessions / prog.totalSessions) * 100)}%</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -658,17 +618,17 @@ export default function HealthView() {
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Tổng thời gian
+                {isEn ? "Total Time" : "Tổng thời gian"}
               </span>
               <span className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
                 {totalStats.totalMinutes}
               </span>
-              <span className="text-[10px] text-teal-600 font-medium block">phút tập</span>
+              <span className="text-[10px] text-teal-600 font-medium block">{isEn ? "minutes" : "phút tập"}</span>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Đốt năng lượng
+                {isEn ? "Burned" : "Đốt năng lượng"}
               </span>
               <span className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
                 {totalStats.totalKcal}
@@ -678,19 +638,19 @@ export default function HealthView() {
 
             <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Buổi hoàn thành
+                {isEn ? "Completed" : "Buổi hoàn thành"}
               </span>
               <span className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
                 {totalStats.sessionCount}
               </span>
-              <span className="text-[10px] text-emerald-600 font-medium block">buổi tập</span>
+              <span className="text-[10px] text-emerald-600 font-medium block">{isEn ? "sessions" : "buổi tập"}</span>
             </div>
           </div>
 
           {/* History List */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider px-1">
-              Nhật ký các buổi tập đã hoàn tất
+              {isEn ? "Completed Workout Sessions Log" : "Nhật ký các buổi tập đã hoàn tất"}
             </h4>
             <div className="divide-y divide-slate-100 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
               {workoutHistory.map((item, idx) => (
@@ -708,7 +668,7 @@ export default function HealthView() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <span className="font-bold text-teal-700 block">{item.duration} phút</span>
+                    <span className="font-bold text-teal-700 block">{item.duration} {isEn ? "min" : "phút"}</span>
                     <span className="text-[10px] text-rose-500 font-semibold">{item.kcal} kcal</span>
                   </div>
                 </div>
@@ -719,110 +679,16 @@ export default function HealthView() {
       )}
 
       {/* ========================================================================= */}
-      {/* INTERACTIVE WORKOUT SESSION MODAL                                         */}
+      {/* ACTIVE WORKOUT MODE MODAL (Step Countdown, Pose Guide & Audio Chimes)     */}
       {/* ========================================================================= */}
       <AnimatePresence>
         {activeExercise && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 lg:p-4 bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="bg-white rounded-none lg:rounded-3xl w-full h-full lg:h-auto lg:max-w-xl lg:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
-            >
-              {/* Header */}
-              <div className="px-4 sm:px-5 pt-[calc(max(env(safe-area-inset-top,0px),34px)+0.5rem)] lg:pt-5 pb-3.5 sm:pb-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
-                    <Play className="w-4 h-4 fill-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-lg font-bold text-slate-900 leading-tight">
-                      {activeExercise.title}
-                    </h3>
-                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">
-                      {activeExercise.tag} • Mục tiêu {activeExercise.duration} phút
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setActiveExercise(null)}
-                  className="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-200 flex items-center justify-center text-slate-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Workout Body */}
-              <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
-                {/* Timer Clock Banner */}
-                <div className="p-6 rounded-3xl bg-gradient-to-br from-teal-700 via-emerald-700 to-teal-800 text-white-pure text-center space-y-3 shadow-lg shadow-teal-900/15 border border-teal-600/30">
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-100 block">
-                    Thời gian đang thực hiện
-                  </span>
-                  <div className="font-mono text-4xl sm:text-5xl font-black tracking-wider text-white-pure drop-shadow-sm">
-                    {String(Math.floor(sessionSeconds / 60)).padStart(2, '0')}:
-                    {String(sessionSeconds % 60).padStart(2, '0')}
-                  </div>
-
-                  {/* Timer Controls */}
-                  <div className="flex items-center justify-center gap-3 pt-2">
-                    <button
-                      onClick={() => setIsTimerRunning(!isTimerRunning)}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white-pure font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md border border-white/25 active:scale-95 transition-all"
-                    >
-                      {isTimerRunning ? <Pause className="w-4 h-4 text-white-pure" /> : <Play className="w-4 h-4 fill-white text-white-pure" />}
-                      <span className="text-white-pure">{isTimerRunning ? 'Tạm dừng' : 'Tiếp tục'}</span>
-                    </button>
-                    <button
-                      onClick={() => { setSessionSeconds(0); setIsTimerRunning(false); }}
-                      className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white-pure text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-white/25 active:scale-95 transition-all"
-                    >
-                      <RotateCcw className="w-4 h-4 text-white-pure" />
-                      <span className="text-white-pure">Đặt lại</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Steps & Guidance */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Các bước thực hiện chuẩn y khoa
-                  </h4>
-                  <div className="space-y-2">
-                    {activeExercise.steps.map((st, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5 text-xs text-slate-700">
-                        <span className="w-5 h-5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px] flex items-center justify-center shrink-0">
-                          {i + 1}
-                        </span>
-                        <span>{st}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer Action */}
-              <div className="px-4 sm:px-5 py-3.5 pb-[calc(max(env(safe-area-inset-bottom,0px),16px)+0.5rem)] sm:pb-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-                <span className="text-xs text-slate-500">
-                  {sessionCompleted ? 'Đã ghi nhận buổi tập!' : 'Nhấn khi bạn đã hoàn thành bài tập'}
-                </span>
-                <button
-                  disabled={sessionCompleted}
-                  onClick={finishExercise}
-                  className={cn(
-                    "px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer",
-                    sessionCompleted
-                      ? "bg-emerald-600 text-white-pure"
-                      : "bg-teal-600 hover:bg-teal-700 text-white-pure shadow-teal-600/25"
-                  )}
-                >
-                  {sessionCompleted ? '✓ Đã hoàn tất' : 'Hoàn thành buổi tập'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
+          <ActiveWorkoutModal
+            exercise={activeExercise}
+            onClose={() => setActiveExercise(null)}
+            onComplete={handleWorkoutComplete}
+            isEn={isEn}
+          />
         )}
       </AnimatePresence>
     </div>

@@ -38,6 +38,7 @@ import { collection, query, where, getDocs, orderBy, deleteDoc, doc, setDoc, ser
 import { db } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
+import { useLanguage } from '../contexts/LanguageContext';
 import VitalsEntryModal from './VitalsEntryModal';
 import JournalEntryModal from './JournalEntryModal';
 import HealthReportExportModal from './HealthReportExportModal';
@@ -68,6 +69,8 @@ const DEFAULT_7DAY_BASELINE = [
 
 export default function VitalsSensoryDashboard() {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [vitals, setVitals] = useState<VitalsData[]>([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState<'7d' | '14d' | '30d'>('7d');
@@ -78,7 +81,7 @@ export default function VitalsSensoryDashboard() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Sensory Log States
-  const [mood, setMood] = useState<string>('Vui vẻ');
+  const [mood, setMood] = useState<string>(isEn ? 'Happy' : 'Vui vẻ');
   const [energy, setEnergy] = useState<number>(80);
   const [sleepHours, setSleepHours] = useState<number>(7.5);
   const [waterAmount, setWaterAmount] = useState<number>(1.8);
@@ -102,7 +105,7 @@ export default function VitalsSensoryDashboard() {
         } else if (d.timestamp) {
           rawDate = new Date(d.timestamp);
         }
-        const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const days = isEn ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
         return {
           id: docSnap.id,
           heartRate: Number(d.heartRate) || 72,
@@ -112,7 +115,7 @@ export default function VitalsSensoryDashboard() {
           spo2: Number(d.spo2) || 98,
           timestamp: d.timestamp,
           rawTimestamp: rawDate,
-          dateLabel: rawDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+          dateLabel: rawDate.toLocaleDateString(isEn ? 'en-US' : 'vi-VN', { day: '2-digit', month: '2-digit' }),
           dayOfWeek: days[rawDate.getDay()]
         };
       });
@@ -203,11 +206,13 @@ export default function VitalsSensoryDashboard() {
                 <Activity className="w-4 h-4" />
               </div>
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Tiến trình Sinh hiệu
+                {isEn ? "Vitals Progression" : "Tiến trình Sinh hiệu"}
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Theo dõi nhịp tim (bpm), độ bão hòa oxy SpO2 (%) và huyết áp theo thời gian
+              {isEn 
+                ? "Track heart rate (bpm), blood oxygen SpO2 (%) and blood pressure over time" 
+                : "Theo dõi nhịp tim (bpm), độ bão hòa oxy SpO2 (%) và huyết áp theo thời gian"}
             </p>
           </div>
 
@@ -216,10 +221,10 @@ export default function VitalsSensoryDashboard() {
             <button
               onClick={() => setIsReportModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
-              title="Xuất báo cáo PDF & Ảnh"
+              title={isEn ? "Export PDF & Image report" : "Xuất báo cáo PDF & Ảnh"}
             >
               <FileDown className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">Xuất báo cáo</span>
+              <span className="hidden sm:inline">{isEn ? "Export Report" : "Xuất báo cáo"}</span>
             </button>
 
             <button
@@ -227,7 +232,7 @@ export default function VitalsSensoryDashboard() {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-sm shadow-teal-600/25 transition-all cursor-pointer active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Ghi sinh hiệu</span>
+              <span>{isEn ? "+ Log Vitals" : "+ Ghi sinh hiệu"}</span>
             </button>
           </div>
         </div>
@@ -239,10 +244,10 @@ export default function VitalsSensoryDashboard() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1">
                 <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 animate-pulse" />
-                Nhịp tim
+                {isEn ? "Heart Rate" : "Nhịp tim"}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-700">
-                Bình thường
+                {isEn ? "Normal" : "Bình thường"}
               </span>
             </div>
             <div className="flex items-baseline gap-1 pt-1">
@@ -251,7 +256,7 @@ export default function VitalsSensoryDashboard() {
               </span>
               <span className="text-xs text-slate-500 font-medium">bpm</span>
             </div>
-            <p className="text-[10px] text-slate-500 font-light">Mục tiêu nghỉ: 60 - 90 bpm</p>
+            <p className="text-[10px] text-slate-500 font-light">{isEn ? "Rest target: 60 - 90 bpm" : "Mục tiêu nghỉ: 60 - 90 bpm"}</p>
           </div>
 
           {/* SpO2 Card */}
@@ -259,10 +264,10 @@ export default function VitalsSensoryDashboard() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider flex items-center gap-1">
                 <Activity className="w-3.5 h-3.5 text-teal-600" />
-                SpO2 (Oxy máu)
+                {isEn ? "SpO2 (Oxygen)" : "SpO2 (Oxy máu)"}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-teal-700">
-                Tốt
+                {isEn ? "Good" : "Tốt"}
               </span>
             </div>
             <div className="flex items-baseline gap-1 pt-1">
@@ -271,7 +276,7 @@ export default function VitalsSensoryDashboard() {
               </span>
               <span className="text-xs text-slate-500 font-medium">%</span>
             </div>
-            <p className="text-[10px] text-slate-500 font-light">Mức tối ưu: 95% - 100%</p>
+            <p className="text-[10px] text-slate-500 font-light">{isEn ? "Optimal: 95% - 100%" : "Mức tối ưu: 95% - 100%"}</p>
           </div>
 
           {/* Blood Pressure Card */}
@@ -279,10 +284,10 @@ export default function VitalsSensoryDashboard() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
                 <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-                Huyết áp
+                {isEn ? "Blood Pressure" : "Huyết áp"}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 text-indigo-700">
-                Tối ưu
+                {isEn ? "Optimal" : "Tối ưu"}
               </span>
             </div>
             <div className="flex items-baseline gap-1 pt-1">
@@ -291,7 +296,7 @@ export default function VitalsSensoryDashboard() {
               </span>
               <span className="text-[10px] text-slate-500 font-medium">mmHg</span>
             </div>
-            <p className="text-[10px] text-slate-500 font-light">Mục tiêu: &lt; 120/80 mmHg</p>
+            <p className="text-[10px] text-slate-500 font-light">{isEn ? "Target: < 120/80 mmHg" : "Mục tiêu: < 120/80 mmHg"}</p>
           </div>
 
           {/* Temperature Card */}
@@ -299,10 +304,10 @@ export default function VitalsSensoryDashboard() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
                 <Thermometer className="w-3.5 h-3.5 text-amber-600" />
-                Thân nhiệt
+                {isEn ? "Body Temp" : "Thân nhiệt"}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700">
-                Ổn định
+                {isEn ? "Stable" : "Ổn định"}
               </span>
             </div>
             <div className="flex items-baseline gap-1 pt-1">
@@ -311,7 +316,7 @@ export default function VitalsSensoryDashboard() {
               </span>
               <span className="text-xs text-slate-500 font-medium">°C</span>
             </div>
-            <p className="text-[10px] text-slate-500 font-light">Chuẩn: 36.5°C - 37.2°C</p>
+            <p className="text-[10px] text-slate-500 font-light">{isEn ? "Standard: 36.5°C - 37.2°C" : "Chuẩn: 36.5°C - 37.2°C"}</p>
           </div>
         </div>
 
@@ -321,16 +326,20 @@ export default function VitalsSensoryDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Biểu đồ đường Nhịp tim & SpO2 ({timeFilter === '7d' ? '7 ngày qua' : timeFilter === '14d' ? '14 ngày qua' : '30 ngày qua'})
+                  {isEn 
+                    ? `Heart Rate & SpO2 Trend (${timeFilter === '7d' ? 'Last 7 Days' : timeFilter === '14d' ? 'Last 14 Days' : 'Last 30 Days'})`
+                    : `Biểu đồ đường Nhịp tim & SpO2 (${timeFilter === '7d' ? '7 ngày qua' : timeFilter === '14d' ? '14 ngày qua' : '30 ngày qua'})`}
                 </h4>
                 {isUsingSampleData && (
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                    Mẫu chuẩn y khoa
+                    {isEn ? "Standard clinical sample" : "Mẫu chuẩn y khoa"}
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-500">
-                Trục màu đỏ: Nhịp tim (bpm) • Trục màu ngọc bích: Độ bão hòa oxy SpO2 (%)
+                {isEn 
+                  ? "Red line: Heart Rate (bpm) • Jade line: Oxygen saturation SpO2 (%)"
+                  : "Trục màu đỏ: Nhịp tim (bpm) • Trục màu ngọc bích: Độ bão hòa oxy SpO2 (%)"}
               </p>
             </div>
 
@@ -347,7 +356,7 @@ export default function VitalsSensoryDashboard() {
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   )}
                 >
-                  {tf === '7d' ? '7 Ngày' : tf === '14d' ? '14 Ngày' : '30 Ngày'}
+                  {isEn ? (tf === '7d' ? '7 Days' : tf === '14d' ? '14 Days' : '30 Days') : (tf === '7d' ? '7 Ngày' : tf === '14d' ? '14 Ngày' : '30 Ngày')}
                 </button>
               ))}
             </div>
@@ -381,16 +390,16 @@ export default function VitalsSensoryDashboard() {
                             {data.dateLabel || label}
                           </p>
                           <p className="text-rose-400 font-semibold flex items-center justify-between gap-4">
-                            <span>❤️ Nhịp tim:</span>
+                            <span>{isEn ? "❤️ Heart Rate:" : "❤️ Nhịp tim:"}</span>
                             <span>{data.heartRate} bpm</span>
                           </p>
                           <p className="text-teal-400 font-semibold flex items-center justify-between gap-4">
-                            <span>🫁 SpO2:</span>
+                            <span>{isEn ? "🫁 SpO2:" : "🫁 SpO2:"}</span>
                             <span>{data.spo2} %</span>
                           </p>
                           {data.isSample && (
                             <p className="text-[9px] text-amber-300 italic pt-1 border-t border-slate-800">
-                              (Chỉ số tham chiếu chuẩn)
+                              {isEn ? "(Standard reference metric)" : "(Chỉ số tham chiếu chuẩn)"}
                             </p>
                           )}
                         </div>
@@ -409,7 +418,7 @@ export default function VitalsSensoryDashboard() {
                 <Line 
                   type="monotone" 
                   dataKey="heartRate" 
-                  name="Nhịp tim (bpm)" 
+                  name={isEn ? "Heart Rate (bpm)" : "Nhịp tim (bpm)"} 
                   stroke="#F43F5E" 
                   strokeWidth={2.5}
                   dot={{ r: 4, fill: '#F43F5E', strokeWidth: 2, stroke: '#FFFFFF' }}
@@ -433,13 +442,13 @@ export default function VitalsSensoryDashboard() {
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs">
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>Bạn chưa có nhiều dữ liệu đo cá nhân. Hãy ghi lại để biểu đồ vẽ sát thực tế nhất!</span>
+                <span>{isEn ? "No personal records yet. Log your vitals to see your personalized trends!" : "Bạn chưa có nhiều dữ liệu đo cá nhân. Hãy ghi lại để biểu đồ vẽ sát thực tế nhất!"}</span>
               </div>
               <button
                 onClick={() => setIsVitalsModalOpen(true)}
                 className="px-2.5 py-1 bg-teal-600 text-white text-[11px] font-bold rounded-lg shrink-0 hover:bg-teal-700 cursor-pointer transition-all"
               >
-                Ghi ngay
+                {isEn ? "Log now" : "Ghi ngay"}
               </button>
             </div>
           )}
@@ -453,14 +462,16 @@ export default function VitalsSensoryDashboard() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider">
-                💡 AI ĐÁNH GIÁ SỨC KHỎE
+                {isEn ? "💡 AI HEALTH ASSESSMENT" : "💡 AI ĐÁNH GIÁ SỨC KHỎE"}
               </h4>
               <span className="text-[10px] text-teal-700 bg-teal-100/80 px-2 py-0.5 rounded-full font-semibold">
-                Phân tích bởi Bác sĩ Tâm An
+                {isEn ? "Analyzed by Dr. Tâm An" : "Phân tích bởi Bác sĩ Tâm An"}
               </span>
             </div>
             <p className="text-xs text-slate-700 leading-relaxed font-normal">
-              Chỉ số sinh hiệu tuần này của bạn duy trì rất ổn định. Nhịp tim trung bình ở mức lý tưởng (72 bpm), độ bão hòa oxy SpO2 tối ưu ({latestVital.spo2}%). Không phát hiện dấu hiệu bất thường về tuần hoàn hay thiếu oxy mô. Tiếp tục duy trì chế độ sinh hoạt đều đặn và bổ sung đủ nước hằng ngày.
+              {isEn 
+                ? `Your vital signs this week remain very stable. Average resting heart rate is in an ideal range (72 bpm), SpO2 is optimal (${latestVital.spo2}%). No abnormal signs of circulatory issues or hypoxia detected. Continue your healthy daily routine and maintain adequate hydration.`
+                : `Chỉ số sinh hiệu tuần này của bạn duy trì rất ổn định. Nhịp tim trung bình ở mức lý tưởng (72 bpm), độ bão hòa oxy SpO2 tối ưu (${latestVital.spo2}%). Không phát hiện dấu hiệu bất thường về tuần hoàn hay thiếu oxy mô. Tiếp tục duy trì chế độ sinh hoạt đều đặn và bổ sung đủ nước hằng ngày.`}
             </p>
           </div>
         </div>
@@ -478,11 +489,13 @@ export default function VitalsSensoryDashboard() {
                 <Smile className="w-4 h-4" />
               </div>
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Nhật ký cảm quan hôm nay
+                {isEn ? "Today's Sensory Log" : "Nhật ký cảm quan hôm nay"}
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Chạm vào từng thẻ để cập nhật nhanh mức độ cảm giác và trạng thái sinh hoạt
+              {isEn 
+                ? "Tap each card to quickly update sensations and daily wellness metrics" 
+                : "Chạm vào từng thẻ để cập nhật nhanh mức độ cảm giác và trạng thái sinh hoạt"}
             </p>
           </div>
 
@@ -491,7 +504,7 @@ export default function VitalsSensoryDashboard() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
           >
             <Calendar className="w-3.5 h-3.5 text-slate-600" />
-            <span>📅 Chọn ngày khác</span>
+            <span>{isEn ? "📅 Other dates" : "📅 Chọn ngày khác"}</span>
           </button>
         </div>
 
@@ -509,13 +522,13 @@ export default function VitalsSensoryDashboard() {
             </div>
             <div className="space-y-0.5">
               <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
-                Tâm trạng
+                {isEn ? "Mood" : "Tâm trạng"}
               </span>
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
                 {mood}
               </span>
             </div>
-            <span className="text-[10px] text-amber-800/80 font-medium">Bấm để đổi</span>
+            <span className="text-[10px] text-amber-800/80 font-medium">{isEn ? "Tap to change" : "Bấm để đổi"}</span>
           </motion.div>
 
           {/* Card 2: Năng lượng */}
@@ -530,13 +543,13 @@ export default function VitalsSensoryDashboard() {
             </div>
             <div className="space-y-0.5">
               <span className="text-[11px] font-bold text-teal-900 uppercase tracking-wider block">
-                Năng lượng
+                {isEn ? "Energy" : "Năng lượng"}
               </span>
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-teal-600 text-white shadow-xs">
-                {energy}% Sung mãn
+                {energy}% {isEn ? "Vibrant" : "Sung mãn"}
               </span>
             </div>
-            <span className="text-[10px] text-teal-800/80 font-medium">Bấm để chỉnh</span>
+            <span className="text-[10px] text-teal-800/80 font-medium">{isEn ? "Tap to adjust" : "Bấm để chỉnh"}</span>
           </motion.div>
 
           {/* Card 3: Giấc ngủ */}
@@ -551,13 +564,13 @@ export default function VitalsSensoryDashboard() {
             </div>
             <div className="space-y-0.5">
               <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider block">
-                Giấc ngủ
+                {isEn ? "Sleep" : "Giấc ngủ"}
               </span>
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-xs">
-                {sleepHours} giờ
+                {sleepHours} {isEn ? "hrs" : "giờ"}
               </span>
             </div>
-            <span className="text-[10px] text-indigo-800/80 font-medium">Ngủ sâu & ngon</span>
+            <span className="text-[10px] text-indigo-800/80 font-medium">{isEn ? "Deep & Restful" : "Ngủ sâu & ngon"}</span>
           </motion.div>
 
           {/* Card 4: Nước uống */}
@@ -572,13 +585,13 @@ export default function VitalsSensoryDashboard() {
             </div>
             <div className="space-y-0.5">
               <span className="text-[11px] font-bold text-sky-900 uppercase tracking-wider block">
-                Nước uống
+                {isEn ? "Hydration" : "Nước uống"}
               </span>
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-sky-600 text-white shadow-xs">
                 {waterAmount} / 2L
               </span>
             </div>
-            <span className="text-[10px] text-sky-800/80 font-medium">{Math.round((waterAmount / 2) * 100)}% mục tiêu</span>
+            <span className="text-[10px] text-sky-800/80 font-medium">{Math.round((waterAmount / 2) * 100)}% {isEn ? "of target" : "mục tiêu"}</span>
           </motion.div>
         </div>
 
@@ -593,10 +606,10 @@ export default function VitalsSensoryDashboard() {
             </div>
             <div className="text-left">
               <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-                🎙️ Ghi chú bằng giọng nói / bằng chữ cho Bác sĩ AI
+                {isEn ? "🎙️ Voice / Text Note for AI Doctor" : "🎙️ Ghi chú bằng giọng nói / bằng chữ cho Bác sĩ AI"}
               </h4>
               <p className="text-[11px] text-teal-100 font-light mt-0.5">
-                Nói hoặc nhập cảm giác cơ thể để Bác sĩ Tâm An phân tích và đưa lời khuyên
+                {isEn ? "Speak or type body sensations for Dr. Tâm An to analyze and advise" : "Nói hoặc nhập cảm giác cơ thể để Bác sĩ Tâm An phân tích và đưa lời khuyên"}
               </p>
             </div>
           </div>
@@ -607,7 +620,7 @@ export default function VitalsSensoryDashboard() {
         {recentJournals.length > 0 && (
           <div className="space-y-3 pt-2">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Nhật ký gần đây
+              {isEn ? "Recent Journals" : "Nhật ký gần đây"}
             </h4>
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-slate-50/50 overflow-hidden">
               {recentJournals.map(j => (
@@ -615,7 +628,7 @@ export default function VitalsSensoryDashboard() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-800">
-                        {j.createdAt?.toDate ? j.createdAt.toDate().toLocaleDateString('vi-VN') : 'Hôm nay'}
+                        {j.createdAt?.toDate ? j.createdAt.toDate().toLocaleDateString(isEn ? 'en-US' : 'vi-VN') : (isEn ? 'Today' : 'Hôm nay')}
                       </span>
                       {j.mood && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
@@ -630,7 +643,7 @@ export default function VitalsSensoryDashboard() {
                     )}
                   </div>
                   <span className="text-[10px] text-slate-400 shrink-0">
-                    💧 {j.water || 0} cốc • 🌙 {j.sleep || 0}h
+                    💧 {j.water || 0} {isEn ? "cups" : "cốc"} • 🌙 {j.sleep || 0}h
                   </span>
                 </div>
               ))}

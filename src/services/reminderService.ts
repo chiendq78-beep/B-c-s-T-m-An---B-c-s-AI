@@ -13,6 +13,18 @@ export interface ScheduledReminderItem {
   lastTriggeredDate?: string;
 }
 
+export interface AppNotificationItem {
+  id: string;
+  type: 'water' | 'medication' | 'vitals' | 'general';
+  title: string;
+  body: string;
+  timeStr: string;
+  timestamp: number;
+  read: boolean;
+  actionType?: 'drink_water' | 'take_med' | 'log_vital';
+  metadata?: any;
+}
+
 class ReminderService {
   private swRegistration: ServiceWorkerRegistration | null = null;
   private worker: Worker | null = null;
@@ -309,13 +321,21 @@ class ReminderService {
 
         if (r.time === currentTimeStr && !alreadyTriggered) {
           localStorage.setItem(lastKey, 'true');
-          const title = `⏰ Nhắc nhở: ${r.medName}`;
+          const isVitals = r.category === 'vitals' || r.id.startsWith('vitals-');
+          const title = isVitals 
+            ? `🩺 Lịch nhắc đo chỉ số sinh hiệu (${r.time})`
+            : `💊 Lịch nhắc uống thuốc: ${r.medName} (${r.time})`;
           const body = r.dosage
             ? `Đã đến giờ! Chỉ số/Liều lượng: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ''}`
             : `Đã đến giờ theo dõi sức khỏe theo lịch cài đặt.`;
 
-          this.showNotification(title, body, `reminder-${r.id}`);
-          this.playAudioAlert();
+          this.showNotification(
+            title, 
+            body, 
+            `reminder-${r.id}`,
+            isVitals ? 'vitals' : 'medication',
+            r
+          );
           this.dispatchInAppEvent('medication', r);
         }
       });
@@ -330,19 +350,56 @@ class ReminderService {
         this.syncToServiceWorker();
 
         this.showNotification(
-          '💧 Đã đến giờ uống nước!',
-          'Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào và đào thải độc tố cơ thể nhé!',
-          'water-alert'
+          '💧 Nhắc nhở uống nước định kỳ',
+          'Đã đến lúc bổ sung 200 - 250ml nước tinh khiết để thanh lọc tế bào, bảo vệ thận và kích hoạt năng lượng!',
+          'water-alert',
+          'water',
+          { amount: 250 }
         );
-        this.playAudioAlert();
         this.dispatchInAppEvent('water', { interval: this.waterIntervalMinutes });
       }
     }
   }
 
-  public showNotification(title: string, body: string, tag: string = 'health-reminder') {
+  public showNotification(
+    title: string, 
+    body: string, 
+    tag: string = 'health-reminder',
+    type: 'water' | 'medication' | 'vitals' | 'general' = 'general',
+    metadata?: any
+  ) {
     if (typeof window === 'undefined') return;
 
+    // 1. Play chime and haptic vibration
+    this.playAudioAlert();
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    } catch {
+      // Ignore vibration error
+    }
+
+    // 2. Add to Notification Center storage
+    const newNotif: AppNotificationItem = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      type,
+      title,
+      body,
+      timeStr: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+      read: false,
+      actionType: type === 'water' ? 'drink_water' : type === 'medication' ? 'take_med' : type === 'vitals' ? 'log_vital' : undefined,
+      metadata
+    };
+    this.saveNotificationToHistory(newNotif);
+
+    // 3. Dispatch event for In-App Notification Center and Top Floating Banner
+    window.dispatchEvent(new CustomEvent('app-new-notification', {
+      detail: newNotif
+    }));
+
+    // 4. Native Browser / Device Notification
     const options: any = {
       body,
       icon: '/icon-192.png',
@@ -350,7 +407,7 @@ class ReminderService {
       tag,
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
-      data: { url: '/' }
+      data: { url: '/', type, id: newNotif.id }
     };
 
     // Priority 1: ServiceWorker showNotification (delivers to mobile/tablet notification shade)
@@ -365,11 +422,129 @@ class ReminderService {
         title,
         body,
         icon: '/icon-192.png',
-        tag
+        tag,
+        data: { url: '/', type, id: newNotif.id }
       });
     } else {
       this.fallbackNotification(title, options);
     }
+  }
+
+  public getNotifications(): AppNotificationItem[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const data = localStorage.getItem('tam_an_notification_center_items');
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.warn('Error reading notifications:', e);
+    }
+    // Return initial high-value sample reminders if empty
+    return [
+      {
+        id: 'init-water-1',
+        type: 'water',
+        title: '💧 Nhắc nhở uống nước định kỳ',
+        body: 'Đã đến giờ uống 200-250ml nước lọc ấm để bảo vệ chức năng lọc của thận và bài trừ độc tố.',
+        timeStr: 'Vừa xong',
+        timestamp: Date.now() - 1000 * 60 * 5,
+        read: false,
+        actionType: 'drink_water',
+        metadata: { amount: 250 }
+      },
+      {
+        id: 'init-med-1',
+        type: 'medication',
+        title: '💊 Lịch nhắc uống thuốc & đo chỉ số',
+        body: 'Đã đến giờ uống: Thuốc tiểu đường (Metformin 500mg) - 1 viên sau ăn.',
+        timeStr: '20:30',
+        timestamp: Date.now() - 1000 * 60 * 30,
+        read: false,
+        actionType: 'take_med',
+        metadata: { medName: 'Thuốc tiểu đường', dosage: '1 viên' }
+      },
+      {
+        id: 'init-vitals-1',
+        type: 'vitals',
+        title: '🩺 Lịch kiểm tra chỉ số sinh hiệu',
+        body: 'Đến giờ đo Huyết áp, Nhịp tim và SpO2 để theo dõi tiến trình hồi phục sức khỏe.',
+        timeStr: '08:00',
+        timestamp: Date.now() - 1000 * 60 * 120,
+        read: true,
+        actionType: 'log_vital',
+        metadata: { vitalType: 'Huyết áp & SpO2' }
+      }
+    ];
+  }
+
+  public saveNotificationToHistory(notif: AppNotificationItem) {
+    if (typeof window === 'undefined') return;
+    try {
+      const list = this.getNotifications();
+      const updated = [notif, ...list].slice(0, 30);
+      localStorage.setItem('tam_an_notification_center_items', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: updated }));
+    } catch (e) {
+      console.warn('Error saving notification:', e);
+    }
+  }
+
+  public markAllAsRead() {
+    if (typeof window === 'undefined') return;
+    const list = this.getNotifications().map(item => ({ ...item, read: true }));
+    localStorage.setItem('tam_an_notification_center_items', JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: list }));
+  }
+
+  public markAsRead(id: string) {
+    if (typeof window === 'undefined') return;
+    const list = this.getNotifications().map(item => item.id === id ? ({ ...item, read: true }) : item);
+    localStorage.setItem('tam_an_notification_center_items', JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: list }));
+  }
+
+  public deleteNotification(id: string) {
+    if (typeof window === 'undefined') return;
+    const list = this.getNotifications().filter(item => item.id !== id);
+    localStorage.setItem('tam_an_notification_center_items', JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: list }));
+  }
+
+  public clearNotifications() {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('tam_an_notification_center_items', JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: [] }));
+  }
+
+  public triggerTestWaterNotification() {
+    this.showNotification(
+      '💧 Nhắc nhở uống nước định kỳ',
+      'Đã đến lúc bổ sung 200 - 250ml nước tinh khiết để thanh lọc tế bào, bảo vệ thận và kích hoạt năng lượng!',
+      'water-alert-test',
+      'water',
+      { amount: 250 }
+    );
+  }
+
+  public triggerTestMedicationNotification(medName: string = 'Thuốc tiểu đường (Metformin)') {
+    this.showNotification(
+      `💊 Lịch nhắc uống thuốc & đo chỉ số`,
+      `Đã đến giờ uống thuốc: ${medName} (1 viên) - Dùng sau bữa ăn theo chỉ định của bác sĩ.`,
+      'med-alert-test',
+      'medication',
+      { medName, dosage: '1 viên' }
+    );
+  }
+
+  public triggerTestVitalsNotification(vitalType: string = 'Huyết áp & SpO2') {
+    this.showNotification(
+      `🩺 Lịch kiểm tra chỉ số sinh hiệu`,
+      `Đã đến giờ đo & ghi lại chỉ số: ${vitalType}. Hãy ngồi nghỉ 5 phút trước khi tiến hành đo.`,
+      'vitals-alert-test',
+      'vitals',
+      { vitalType }
+    );
   }
 
   private fallbackNotification(title: string, options: NotificationOptions) {

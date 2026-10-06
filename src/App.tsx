@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'motion/react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { cn } from './lib/utils';
 
 // Views
@@ -32,6 +33,8 @@ import AuthForm from './components/AuthForm';
 import EmergencyModal from './components/EmergencyModal';
 import SupportModal from './components/SupportModal';
 import NotificationSettingsModal from './components/NotificationSettingsModal';
+import NotificationCenterModal from './components/NotificationCenterModal';
+import TopNotificationBanner from './components/TopNotificationBanner';
 import MedicationReminderModal from './components/MedicationReminderModal';
 import MenuAndSettingsDrawer from './components/MenuAndSettingsDrawer';
 import EdgeGestureHandler from './components/EdgeGestureHandler';
@@ -103,14 +106,81 @@ function AIChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 }
 
 function AppContent() {
+  const { language, t } = useLanguage();
   const [activeView, setActiveView] = useState<ViewType>('home');
   const [history, setHistory] = useState<ViewType[]>(['home']);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
+
+  const isEn = language === 'en';
+
+  const viewTitles: Record<ViewType, string> = isEn ? {
+    home: 'Overview',
+    anatomy: '3D Anatomy',
+    disease: 'Disease Lookup',
+    herb: 'Herbal Medicine',
+    health: 'Health & Workout'
+  } : {
+    home: 'Tổng quan',
+    anatomy: 'Giải phẫu học 3D',
+    disease: 'Tra cứu Bệnh lý',
+    herb: 'Dược liệu Việt',
+    health: 'Luyện tập Sức khỏe'
+  };
+
+  // Initialize Theme & Accessibility Font Size on mount & live listeners
+  useEffect(() => {
+    const applyTheme = (theme?: string) => {
+      const savedTheme = theme || localStorage.getItem('tam_an_theme') || 'light';
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (savedTheme === 'auto' && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    const applyFontSize = (size?: string) => {
+      const savedFontSize = size || localStorage.getItem('tam_an_font_size') || 'normal';
+      if (savedFontSize === 'large') {
+        document.documentElement.classList.add('font-scale-large');
+        document.documentElement.classList.remove('font-scale-xlarge');
+        document.documentElement.style.fontSize = '18px';
+        if (document.body) (document.body.style as any).zoom = '1.12';
+      } else if (savedFontSize === 'xlarge') {
+        document.documentElement.classList.add('font-scale-xlarge');
+        document.documentElement.classList.remove('font-scale-large');
+        document.documentElement.style.fontSize = '21px';
+        if (document.body) (document.body.style as any).zoom = '1.25';
+      } else {
+        document.documentElement.classList.remove('font-scale-large', 'font-scale-xlarge');
+        document.documentElement.style.fontSize = '16px';
+        if (document.body) (document.body.style as any).zoom = '1';
+      }
+    };
+
+    applyTheme();
+    applyFontSize();
+
+    const handleThemeEvent = (e: any) => applyTheme(e.detail?.theme);
+    const handleFontEvent = (e: any) => applyFontSize(e.detail?.fontSize);
+
+    window.addEventListener('tam-an-theme-changed', handleThemeEvent);
+    window.addEventListener('tam-an-font-changed', handleFontEvent);
+
+    return () => {
+      window.removeEventListener('tam-an-theme-changed', handleThemeEvent);
+      window.removeEventListener('tam-an-font-changed', handleFontEvent);
+    };
+  }, []);
 
   const [isAIChatPopupOpen, setIsAIChatPopupOpen] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(() => {
+    return reminderService.getNotifications().filter(n => !n.read).length;
+  });
   const [isMedicationReminderOpen, setIsMedicationReminderOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user, profile, loading, logout } = useAuth();
@@ -118,31 +188,28 @@ function AppContent() {
   const [menuInitialTab, setMenuInitialTab] = useState<'navigation' | 'settings'>('navigation');
 
   const isAnonymousUser = !user || user.isAnonymous;
-  const [showPermissionBanner, setShowPermissionBanner] = useState<boolean>(false);
+
+  // Auto-close auth modal when user successfully authenticates
+  useEffect(() => {
+    if (user && !user.isAnonymous && isAuthModalOpen) {
+      setIsAuthModalOpen(false);
+    }
+  }, [user, isAuthModalOpen]);
 
   // Initialize Background Reminders Service for Mobile, Tablet & Desktop
   useEffect(() => {
     reminderService.init(user?.uid);
 
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        const dismissed = localStorage.getItem('tam_an_notification_banner_dismissed');
-        if (!dismissed) {
-          setShowPermissionBanner(true);
-        }
-      }
-    }
+    const updateCount = () => {
+      setUnreadNotifCount(reminderService.getNotifications().filter(n => !n.read).length);
+    };
+    window.addEventListener('app-notifications-updated', updateCount);
+    window.addEventListener('app-new-notification', updateCount);
+    return () => {
+      window.removeEventListener('app-notifications-updated', updateCount);
+      window.removeEventListener('app-new-notification', updateCount);
+    };
   }, [user]);
-
-  const handleEnableNotifications = async () => {
-    await reminderService.requestNotificationPermission();
-    setShowPermissionBanner(false);
-  };
-
-  const handleDismissBanner = () => {
-    setShowPermissionBanner(false);
-    localStorage.setItem('tam_an_notification_banner_dismissed', 'true');
-  };
 
   // Listen for global open AI chat event with optional prompt
   useEffect(() => {
@@ -302,19 +369,19 @@ function AppContent() {
     <div className="flex flex-col min-h-screen bg-bg pb-20 selection:bg-primary/30">
       <div id="top-anchor" className="sr-only" aria-hidden="true" tabIndex={-1} />
       {/* Header with Safe Area Status Bar spacing on Mobile */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 px-3 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),28px)+0.5rem)] sm:pt-3.5 pb-3 sm:pb-3.5 shadow-xs transition-all">
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 px-3 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),28px)+0.5rem)] sm:pt-3.5 pb-3 sm:pb-3.5 shadow-xs transition-all">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
           <div 
             onClick={() => navigateToView('home')}
             className="flex items-center gap-2.5 sm:gap-4 cursor-pointer select-none group"
-            title="Về đầu trang Tổng quan"
+            title={isEn ? "Back to top of Overview" : "Về đầu trang Tổng quan"}
           >
             <div className="w-9 h-9 sm:w-10 sm:h-10 medical-gradient rounded-xl flex items-center justify-center shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
               <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
               <h2 className="font-serif text-base sm:text-xl italic font-light text-slate-900 leading-tight group-hover:text-teal-700 transition-colors">Bác sĩ Tâm An</h2>
-              <p className="text-[8px] sm:text-[9px] text-teal-600 font-bold uppercase tracking-[0.2em]">Expert AI System</p>
+              <p className="text-[8px] sm:text-[9px] text-teal-600 font-bold uppercase tracking-[0.2em]">{t('header.ai_system')}</p>
             </div>
           </div>
           
@@ -323,20 +390,26 @@ function AppContent() {
             <button 
               onClick={() => setIsAIChatPopupOpen(true)}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
-              title="Tư vấn trực tiếp với Bác sĩ AI"
+              title={isEn ? "Direct consultation with AI Doctor" : "Tư vấn trực tiếp với Bác sĩ AI"}
             >
               <Sparkles className="w-3.5 h-3.5 text-teal-600 animate-pulse" />
-              <span className="hidden sm:inline">Bác sĩ AI</span>
+              <span className="hidden sm:inline">{t('header.ask_ai')}</span>
             </button>
 
             <button 
-              onClick={() => setIsNotificationSettingsOpen(true)}
+              onClick={() => setIsNotificationCenterOpen(true)}
               className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer active:scale-95"
-              title="Cài đặt thông báo & nhắc nhở (Uống nước, uống thuốc, đo chỉ số)"
-              aria-label="Cài đặt thông báo & nhắc nhở"
+              title={isEn ? "Notification Center" : "Thanh thông báo"}
+              aria-label={isEn ? "Notification Center" : "Thanh thông báo"}
             >
               <Bell className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-600 hover:text-teal-700 transition-colors" />
-              <span className="absolute top-2 sm:top-2.5 right-2 sm:right-2.5 w-2 h-2 bg-teal-500 rounded-full shadow-[0_0_6px_rgba(13,148,136,0.6)] animate-pulse"></span>
+              {unreadNotifCount > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                  {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                </span>
+              ) : (
+                <span className="absolute top-2 sm:top-2.5 right-2 sm:right-2.5 w-2 h-2 bg-teal-500 rounded-full shadow-[0_0_6px_rgba(13,148,136,0.6)] animate-pulse"></span>
+              )}
             </button>
             <button 
               onClick={() => {
@@ -344,54 +417,14 @@ function AppContent() {
                 setIsMenuOpen(true);
               }}
               className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-700 transition-all shadow-xs active:scale-95 cursor-pointer"
-              title="Menu điều hướng & Cài đặt hệ thống"
-              aria-label="Menu"
+              title={t('drawer.menu')}
+              aria-label={t('drawer.menu')}
             >
               <Menu className="w-5 h-5 text-emerald-700" />
             </button>
           </div>
         </div>
       </header>
-      
-      {/* Background Notification Enable Banner for Mobile & Tablet */}
-      <AnimatePresence>
-        {showPermissionBanner && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 text-white shadow-md z-20 border-b border-teal-500/30"
-          >
-            <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 shadow-xs">
-                  <Bell className="w-4 h-4 text-white animate-bounce" />
-                </div>
-                <p className="font-medium text-[11px] sm:text-xs truncate">
-                  Bật thông báo chạy ngầm trên điện thoại/tablet để không bỏ lỡ lịch uống thuốc, đo chỉ số & uống nước!
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={handleEnableNotifications}
-                  className="bg-white text-teal-800 hover:bg-teal-50 font-bold px-3 py-1.5 rounded-lg text-[10.5px] uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-                >
-                  Bật thông báo
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDismissBanner}
-                  className="text-white/80 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
-                  title="Để sau"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Side Navigation & Medical System Settings Drawer */}
       <AnimatePresence>
@@ -434,14 +467,16 @@ function AppContent() {
           whileTap={{ scale: 0.94 }}
           onClick={() => setIsAIChatPopupOpen(true)}
           className="group flex items-center gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white pl-3.5 pr-4 py-3 rounded-full shadow-[0_8px_25px_rgba(13,148,136,0.35)] border border-white/20 hover:shadow-[0_10px_30px_rgba(13,148,136,0.45)] transition-all cursor-pointer"
-          title="Trò chuyện với Bác sĩ AI Tâm An"
+          title={isEn ? "Chat with AI Doctor Tam An" : "Trò chuyện với Bác sĩ AI Tâm An"}
         >
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-200 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
           </span>
           <MessageSquare className="w-4.5 h-4.5 text-white" />
-          <span className="text-[11px] font-bold uppercase tracking-wider hidden xs:inline sm:inline">Hỏi Bác Sĩ AI</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider hidden xs:inline sm:inline">
+            {isEn ? "Ask AI Doctor" : "Hỏi Bác Sĩ AI"}
+          </span>
         </motion.button>
       </div>
 
@@ -476,6 +511,29 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      {/* Top Floating Push Notification Banner (Mobile & Tablet Screen) */}
+      <TopNotificationBanner
+        onOpenNotificationCenter={() => setIsNotificationCenterOpen(true)}
+      />
+
+      {/* Interactive Mobile & Tablet Notification Center Modal */}
+      <AnimatePresence>
+        {isNotificationCenterOpen && (
+          <NotificationCenterModal
+            isOpen={isNotificationCenterOpen}
+            onClose={() => setIsNotificationCenterOpen(false)}
+            onOpenSettings={() => {
+              setIsNotificationCenterOpen(false);
+              setIsNotificationSettingsOpen(true);
+            }}
+            onOpenMedicationModal={() => {
+              setIsNotificationCenterOpen(false);
+              setIsMedicationReminderOpen(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Notification & Reminder Settings Modal */}
       <AnimatePresence>
         {isNotificationSettingsOpen && (
@@ -497,30 +555,29 @@ function AppContent() {
         )}
       </AnimatePresence>
 
-      {/* Optional Auth Modal Popup */}
+      {/* Fullscreen Auth Page */}
       <AnimatePresence>
         {isAuthModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-sm"
-            >
-              <AuthForm 
-                onClose={() => setIsAuthModalOpen(false)} 
-                onSuccess={() => setIsAuthModalOpen(false)} 
-              />
-            </motion.div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] w-screen h-screen overflow-y-auto bg-slate-50 flex flex-col"
+          >
+            <AuthForm 
+              onClose={() => setIsAuthModalOpen(false)} 
+              onSuccess={() => setIsAuthModalOpen(false)} 
+            />
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-emerald-50/95 sm:bg-emerald-50/90 backdrop-blur-xl border-t border-emerald-200/80 px-2 sm:px-6 py-2 pb-safe shadow-[0_-4px_20px_rgba(5,150,105,0.08)]">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-1">
-          <NavItem active={activeView === 'anatomy'} icon={Activity} label="Cơ thể" onClick={() => navigateToView('anatomy')} />
-          <NavItem active={activeView === 'disease'} icon={BookOpen} label="Bệnh lý" onClick={() => navigateToView('disease')} />
+          <NavItem active={activeView === 'anatomy'} icon={Activity} label={t('nav.anatomy')} onClick={() => navigateToView('anatomy')} />
+          <NavItem active={activeView === 'disease'} icon={BookOpen} label={t('nav.disease')} onClick={() => navigateToView('disease')} />
           
           {/* Nút Tổng quan ở chính giữa */}
           <div className="relative -top-4 px-1 flex flex-col items-center flex-shrink-0">
@@ -530,7 +587,7 @@ function AppContent() {
                 "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(13,148,136,0.35)] transition-all scale-105 hover:scale-115 active:scale-95 cursor-pointer",
                 activeView === 'home' ? "medical-gradient text-white shadow-teal-500/40" : "bg-white text-teal-600 border-2 border-teal-500/30"
               )}
-              title="Tổng quan Sức khỏe"
+              title={isEn ? "Health Overview" : "Tổng quan Sức khỏe"}
             >
               <Home className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -538,12 +595,12 @@ function AppContent() {
               "text-[8px] sm:text-[9.5px] uppercase tracking-wider mt-1",
               activeView === 'home' ? "text-teal-700 font-bold" : "text-slate-600 font-medium"
             )}>
-              Tổng quan
+              {t('nav.home')}
             </span>
           </div>
 
-          <NavItem active={activeView === 'herb'} icon={Leaf} label="Dược liệu" onClick={() => navigateToView('herb')} />
-          <NavItem active={activeView === 'health'} icon={Heart} label="Luyện tập" onClick={() => navigateToView('health')} />
+          <NavItem active={activeView === 'herb'} icon={Leaf} label={t('nav.herb')} onClick={() => navigateToView('herb')} />
+          <NavItem active={activeView === 'health'} icon={Heart} label={t('nav.health')} onClick={() => navigateToView('health')} />
         </div>
       </nav>
 
@@ -586,8 +643,10 @@ function NavItem({ active, icon: Icon, label, onClick }: { active: boolean, icon
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

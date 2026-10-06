@@ -27,7 +27,9 @@
     color: #0F172A;
   }
 
-  .text-white {
+  /* Light mode text contrast overrides (only when NOT in dark mode) */
+  html:not(.dark) .text-white,
+  html:not(.dark) [class*="text-white/"] {
     color: #090D16 !important;
   }
   
@@ -35,7 +37,7 @@
     color: #FFFFFF !important;
   }
   
-  .text-text-dim {
+  html:not(.dark) .text-text-dim {
     color: #334155 !important;
   }
   
@@ -43,14 +45,25 @@
     border-color: rgba(15, 23, 42, 0.10) !important;
   }
 
-  /* Darken general light-toned utility text classes for sharp legibility */
-  .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500, .text-neutral-300, .text-neutral-400, .text-neutral-500, .text-gray-300, .text-gray-400, .text-gray-500 {
+  /* Darken general light-toned utility text classes for sharp legibility in light mode */
+  html:not(.dark) .text-slate-200, 
+  html:not(.dark) .text-slate-300, 
+  html:not(.dark) .text-slate-400, 
+  html:not(.dark) .text-slate-500, 
+  html:not(.dark) .text-neutral-300, 
+  html:not(.dark) .text-neutral-400, 
+  html:not(.dark) .text-neutral-500, 
+  html:not(.dark) .text-gray-300, 
+  html:not(.dark) .text-gray-400, 
+  html:not(.dark) .text-gray-500 {
     color: #1E293B !important;
   }
-  .text-slate-600, .text-slate-700 {
+  html:not(.dark) .text-slate-600, 
+  html:not(.dark) .text-slate-700 {
     color: #1E293B !important;
   }
-  .text-slate-800, .text-slate-900 {
+  html:not(.dark) .text-slate-800, 
+  html:not(.dark) .text-slate-900 {
     color: #090D16 !important;
   }
 
@@ -91,13 +104,46 @@
   .text-pure-white,
   .text-pure-white *,
   .bg-teal-600,
-  .bg-teal-600 *,
+  .bg-teal-600 *:not(.badge-sos-red),
   .bg-teal-700,
-  .bg-teal-700 *,
+  .bg-teal-700 *:not(.badge-sos-red),
   button.bg-teal-600,
-  button.bg-teal-600 *,
+  button.bg-teal-600 *:not(.badge-sos-red),
   button.bg-teal-700,
-  button.bg-teal-700 * {
+  button.bg-teal-700 *:not(.badge-sos-red) {
+    color: #FFFFFF !important;
+  }
+
+  /* Red SOS badge inside emergency buttons/drawers */
+  .badge-sos-red,
+  button .badge-sos-red,
+  .badge-sos-red * {
+    color: #DC2626 !important;
+  }
+
+  /* Emergency Modal Header: Nền xanh, chữ trắng */
+  .emergency-header,
+  .emergency-header h2,
+  .emergency-header p,
+  .emergency-header span,
+  .emergency-header svg,
+  .emergency-header button {
+    color: #FFFFFF !important;
+  }
+  .emergency-header .active-tab-btn,
+  .emergency-header .active-tab-btn span,
+  .emergency-header .active-tab-btn svg {
+    color: #0F766E !important;
+  }
+  .emergency-header .badge-115 {
+    color: #0F766E !important;
+  }
+
+  /* 115 Emergency Call Button: Chữ trắng nổi bật */
+  .btn-call-115,
+  .btn-call-115 *,
+  a.btn-call-115,
+  a.btn-call-115 * {
     color: #FFFFFF !important;
   }
 
@@ -300,4 +346,127 @@
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
 }
+
+/* ========================================================================= */
+/* FONT ACCESSIBILITY SCALING                                               */
+/* ========================================================================= */
+html.font-scale-large {
+  font-size: 18px !important;
+}
+html.font-scale-large body {
+  zoom: 1.12;
+}
+
+html.font-scale-xlarge {
+  font-size: 21px !important;
+}
+html.font-scale-xlarge body {
+  zoom: 1.25;
+}
+
+/* ========================================================================= */
+/* DARK THEME STYLING                                                        */
+/* ========================================================================= */
+html.dark, html.dark body {
+  background-color: #0A0F1D !important;
+  color: #F8FAFC !important;
+  background-image: 
+    radial-gradient(at top left, rgba(13, 148, 136, 0.15) 0px, transparent 55%),
+    radial-gradient(at top right, rgba(14, 165, 233, 0.10) 0px, transparent 50%),
+    radial-gradient(at bottom right, rgba(16, 185, 129, 0.10) 0px, transparent 55%) !important;
+}
+
+html.dark header {
+  background-color: rgba(10, 15, 29, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .bg-bg {
+  background-color: #0A0F1D !important;
+}
+
+html.dark .bg-white,
+html.dark .bg-white\/95,
+html.dark .bg-white\/90,
+html.dark .bg-white\/80,
+html.dark .bg-white\/70,
+html.dark .bg-white\/60,
+html.dark .bg-white\/50 {
+  background-color: #131E32 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 {
+  background-color: #1A2840 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/95,
+html.dark .bg-emerald-50\/90,
+html.dark .bg-emerald-100,
+html.dark .bg-emerald-100\/60 {
+  background-color: #0F2A28 !important;
+  border-color: rgba(20, 184, 166, 0.25) !important;
+}
+
+html.dark .bg-teal-50 {
+  background-color: #0D2B29 !important;
+  border-color: rgba(20, 184, 166, 0.3) !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-white,
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4 {
+  color: #F8FAFC !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-text-dim {
+  color: #94A3B8 !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-100,
+html.dark .border-emerald-200,
+html.dark .border-emerald-200\/80,
+html.dark .border-emerald-200\/70 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark nav.fixed {
+  background-color: rgba(10, 15, 29, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark #navigation-sidebar-drawer {
+  background-color: #0B1322 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+html.dark .submodal-container {
+  background-color: #111C2E !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #F8FAFC !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1A263D !important;
+  color: #F8FAFC !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
 

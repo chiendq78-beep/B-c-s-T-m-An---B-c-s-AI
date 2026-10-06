@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../contexts/LanguageContext';
 import VitalsEntryModal from '../VitalsEntryModal';
 import MedicationReminderModal, { getReminderCategoryInfo, ReminderCategory } from '../MedicationReminderModal';
 import BmiCalculatorCard from '../BmiCalculatorCard';
@@ -37,6 +38,7 @@ interface HomeViewProps {
 
 export default function HomeView({ setActiveView }: HomeViewProps) {
   const { user, profile } = useAuth();
+  const { language, t } = useLanguage();
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
   const [isMedicationModalOpen, setIsMedicationModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -66,11 +68,10 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [showWaterToast, setShowWaterToast] = useState<boolean>(false);
 
-  // Vietnam GMT+7 Time Greeting (Chào buổi sáng, Chào buổi chiều, Chào buổi tối)
+  // Greeting with bilingual support
   const greetingData = useMemo(() => {
     try {
       const now = new Date();
-      // Format time in Asia/Ho_Chi_Minh timezone (GMT+7)
       const vnHourStr = now.toLocaleTimeString('en-US', {
         timeZone: 'Asia/Ho_Chi_Minh',
         hour12: false,
@@ -81,18 +82,18 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
       if (vnHour >= 5 && vnHour < 12) {
         return {
-          greeting: 'Chào buổi sáng',
-          subtitle: 'Chúc bạn một ngày mới an lành, tràn đầy năng lượng.'
+          greeting: t('home.greeting_morning'),
+          subtitle: t('home.subtitle_morning')
         };
       } else if (vnHour >= 12 && vnHour < 18) {
         return {
-          greeting: 'Chào buổi chiều',
-          subtitle: 'Duy trì năng lượng và chăm sóc sức khỏe thật tốt nhé.'
+          greeting: t('home.greeting_afternoon'),
+          subtitle: t('home.subtitle_afternoon')
         };
       } else {
         return {
-          greeting: 'Chào buổi tối',
-          subtitle: 'Thư giãn tinh thần và dưỡng sinh giấc ngủ an lành.'
+          greeting: t('home.greeting_evening'),
+          subtitle: t('home.subtitle_evening')
         };
       }
     } catch {
@@ -100,22 +101,22 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       const vnHour = (now.getUTCHours() + 7) % 24;
       if (vnHour >= 5 && vnHour < 12) {
         return {
-          greeting: 'Chào buổi sáng',
-          subtitle: 'Chúc bạn một ngày mới an lành, tràn đầy năng lượng.'
+          greeting: t('home.greeting_morning'),
+          subtitle: t('home.subtitle_morning')
         };
       } else if (vnHour >= 12 && vnHour < 18) {
         return {
-          greeting: 'Chào buổi chiều',
-          subtitle: 'Duy trì năng lượng và chăm sóc sức khỏe thật tốt nhé.'
+          greeting: t('home.greeting_afternoon'),
+          subtitle: t('home.subtitle_afternoon')
         };
       } else {
         return {
-          greeting: 'Chào buổi tối',
-          subtitle: 'Thư giãn tinh thần và dưỡng sinh giấc ngủ an lành.'
+          greeting: t('home.greeting_evening'),
+          subtitle: t('home.subtitle_evening')
         };
       }
     }
-  }, []);
+  }, [language, t]);
 
   // Close modals on back gesture
   useEffect(() => {
@@ -200,12 +201,14 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
   const testReminderNotification = async () => {
     await reminderService.requestNotificationPermission();
-    reminderService.showNotification(
-      '💧 Đã đến giờ uống nước!',
-      'Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào và đào thải độc tố cơ thể nhé!',
-      'water-alert-test'
-    );
+    reminderService.triggerTestWaterNotification();
     triggerWaterReminder();
+  };
+
+  const testMedicationNotification = async () => {
+    await reminderService.requestNotificationPermission();
+    const activeMed = reminders.find(r => r.enabled);
+    reminderService.triggerTestMedicationNotification(activeMed ? activeMed.medName : 'Thuốc tiểu đường');
   };
 
   const handleUpdateWater = async (difference: number) => {
@@ -317,11 +320,17 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
         setWaterReminderInterval(e.detail.interval);
       }
     };
+    const handleQuickDrink = (e: any) => {
+      const cupsToAdd = e.detail?.cups || 1;
+      handleUpdateWater(cupsToAdd);
+    };
     window.addEventListener('app-health-reminder', handleHealthReminder);
     window.addEventListener('water-reminder-updated', handleWaterUpdated);
+    window.addEventListener('app-quick-drink-water', handleQuickDrink);
     return () => {
       window.removeEventListener('app-health-reminder', handleHealthReminder);
       window.removeEventListener('water-reminder-updated', handleWaterUpdated);
+      window.removeEventListener('app-quick-drink-water', handleQuickDrink);
     };
   }, []);
 
@@ -344,9 +353,9 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
   const intervalOptions = [
     { value: 0.25, label: 'TEST' },
-    { value: 60, label: '1 giờ' },
-    { value: 120, label: '2 giờ' },
-    { value: 180, label: '3 giờ' }
+    { value: 60, label: language === 'en' ? '1 hr' : '1 giờ' },
+    { value: 120, label: language === 'en' ? '2 hrs' : '2 giờ' },
+    { value: 180, label: language === 'en' ? '3 hrs' : '3 giờ' }
   ];
 
   useEffect(() => {
@@ -469,10 +478,12 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             </div>
             <div className="flex-1 space-y-1 text-left">
               <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">
-                Đã đến giờ uống nước!
+                {language === 'en' ? 'Time to Drink Water!' : 'Đã đến giờ uống nước!'}
               </h4>
               <p className="text-xs text-white leading-relaxed font-normal opacity-95">
-                Đã đến chu kỳ nhắc nhở. Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào cơ thể nhé!
+                {language === 'en'
+                  ? 'Hydration interval reached. Replenish with pure water to revitalize cells and promote wellness!'
+                  : 'Đã đến chu kỳ nhắc nhở. Hãy tiếp thêm tinh chất nước tinh khiết để bồi bổ tế bào cơ thể nhé!'}
               </p>
               <div className="flex gap-2 pt-2.5">
                 <button
@@ -484,14 +495,14 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                   className="btn-water-action bg-teal-800 hover:bg-teal-900 text-white font-bold text-[9.5px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-md border border-teal-400/40"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-white" />
-                  Uống ngay 1 cốc (+250ml)
+                  {language === 'en' ? 'Drink 1 cup (+250ml)' : 'Uống ngay 1 cốc (+250ml)'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowWaterToast(false)}
                   className="btn-water-dismiss bg-teal-900/40 hover:bg-teal-900/70 border border-teal-300/30 text-white font-bold text-[9.5px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                 >
-                  Bỏ qua
+                  {language === 'en' ? 'Dismiss' : 'Bỏ qua'}
                 </button>
               </div>
             </div>
@@ -519,11 +530,11 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       <section className="space-y-0.5">
         <h1 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 truncate leading-tight">
           {greetingData.greeting}, {(() => {
-            if (!profile?.fullName || profile.fullName.includes('Người dùng') || profile.fullName === 'Người') {
-              return 'Bạn';
+            if (!profile?.fullName || profile.fullName.includes('Người dùng') || profile.fullName === 'Người' || profile.fullName === 'Bạn') {
+              return t('common.you');
             }
             const parts = profile.fullName.trim().split(' ');
-            return parts[parts.length - 1] || 'Bạn';
+            return parts[parts.length - 1] || t('common.you');
           })()}.
         </h1>
         <p className="text-slate-600 text-xs sm:text-sm truncate">{greetingData.subtitle}</p>
@@ -535,7 +546,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
           {/* Card Header with medium-soft green background */}
           <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 flex items-center justify-between">
             <span className="bg-white/95 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-teal-800 uppercase tracking-wider border border-teal-200 shadow-xs">
-              Sức khỏe hiện tại
+              {t('home.current_health')}
             </span>
             <Calendar className="w-4 h-4 text-teal-700" />
           </div>
@@ -547,7 +558,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                   <Heart className="w-5 h-5 text-teal-600 animate-pulse" />
                 </div>
                 <div>
-                  <p className="text-[9.5px] text-teal-800 uppercase tracking-wider font-bold">Nhịp tim</p>
+                  <p className="text-[9.5px] text-teal-800 uppercase tracking-wider font-bold">{t('home.heart_rate')}</p>
                   <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">72 <span className="text-[10px] text-slate-600 font-semibold">BPM</span></p>
                 </div>
               </div>
@@ -556,7 +567,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                   <Droplets className="w-5 h-5 text-cyan-600" />
                 </div>
                 <div>
-                  <p className="text-[9.5px] text-cyan-800 uppercase tracking-wider font-bold">Cấp nước</p>
+                  <p className="text-[9.5px] text-cyan-800 uppercase tracking-wider font-bold">{t('home.hydration')}</p>
                   <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">{(waterCups * 0.25).toFixed(1)} <span className="text-[10px] text-slate-600 font-semibold">/ 2L</span></p>
                 </div>
               </div>
@@ -565,8 +576,10 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             {/* Visual water progress bar component */}
             <div id="home-water-meter-container" className="space-y-1.5 pt-2.5 border-t border-slate-100">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                <span className="text-slate-600">Mục tiêu cấp nước hàng ngày</span>
-                <span className="text-teal-700 font-mono text-[10px] sm:text-[11px] font-bold">{waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0}% ({waterCups}/{waterGoal} cốc)</span>
+                <span className="text-slate-600">{t('home.water_goal')}</span>
+                <span className="text-teal-700 font-mono text-[10px] sm:text-[11px] font-bold">
+                  {waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0}% ({waterCups}/{waterGoal} {t('home.cups')})
+                </span>
               </div>
               <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
                 <motion.div 
@@ -579,23 +592,25 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               </div>
               <p className="text-[10px] text-slate-600 leading-normal italic font-light">
                 {(waterGoal > 0 ? Math.round((waterCups / waterGoal) * 100) : 0) >= 100 
-                  ? "🎉 Thật xuất sắc! Bạn đã đạt mục tiêu cấp nước lý tưởng cho hôm nay!" 
+                  ? t('home.water_success') 
                   : waterCups > 0 
-                  ? `💧 Bạn đã uống được ${(waterCups * 0.25).toFixed(2)}L nước. Hãy bổ sung thêm ${(Math.max(0, waterGoal - waterCups) * 0.25).toFixed(2)}L nữa nhé.`
-                  : "💡 Chưa ghi nhận cốc nước nào hôm nay. Hãy nạp nhanh cốc nước đầu tiên dưới đây!"}
+                  ? (language === 'en'
+                      ? `💧 You have logged ${(waterCups * 0.25).toFixed(2)}L. Add ${(Math.max(0, waterGoal - waterCups) * 0.25).toFixed(2)}L more to hit your goal.`
+                      : `💧 Bạn đã uống được ${(waterCups * 0.25).toFixed(2)}L nước. Hãy bổ sung thêm ${(Math.max(0, waterGoal - waterCups) * 0.25).toFixed(2)}L nữa nhé.`)
+                  : t('home.water_empty')}
               </p>
 
               {/* Interactive Quick Add Controls for Water */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[9.5px] text-slate-700 uppercase tracking-wider font-bold">Ghi nhận nhanh:</span>
+                  <span className="text-[9.5px] text-slate-700 uppercase tracking-wider font-bold">{t('home.quick_log')}</span>
                   <div className="flex items-center bg-slate-50 border border-slate-200 p-0.5 rounded-lg gap-1.5">
                     <button
                       type="button"
                       disabled={updatingWater}
                       onClick={() => handleUpdateWater(-1)}
                       className="w-7 h-7 flex items-center justify-center hover:bg-white active:scale-95 text-slate-600 hover:text-slate-900 rounded transition-all font-bold cursor-pointer font-mono disabled:opacity-45 text-xs"
-                      title="Bớt 1 cốc nước (250ml)"
+                      title={language === 'en' ? 'Remove 1 cup (250ml)' : 'Bớt 1 cốc nước (250ml)'}
                     >
                       -
                     </button>
@@ -605,17 +620,17 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                       disabled={updatingWater}
                       onClick={() => handleUpdateWater(1)}
                       className="w-7 h-7 flex items-center justify-center hover:bg-white active:scale-95 text-teal-700 hover:text-teal-800 rounded transition-all font-bold cursor-pointer font-mono disabled:opacity-45 text-xs"
-                      title="Thêm 1 cốc nước (250ml)"
+                      title={language === 'en' ? 'Add 1 cup (250ml)' : 'Thêm 1 cốc nước (250ml)'}
                     >
                       +
                     </button>
                   </div>
-                  <span className="text-[9.5px] text-slate-500 italic">cốc (~{waterCups * 250}ml/ly)</span>
+                  <span className="text-[9.5px] text-slate-500 italic">{t('home.cups')} (~{waterCups * 250}ml/{language === 'en' ? 'cup' : 'ly'})</span>
                 </div>
                 {updatingWater && (
                   <span className="text-[9px] text-teal-600 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-ping" />
-                    Đang đồng bộ...
+                    {language === 'en' ? 'Syncing...' : 'Đang đồng bộ...'}
                   </span>
                 )}
               </div>
@@ -625,18 +640,18 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               <button 
                 type="button"
                 onClick={() => setIsReportModalOpen(true)}
-                title="Xuất Báo Cáo Sức Khỏe Chi Tiết"
+                title={language === 'en' ? 'Export Detailed Health Report' : 'Xuất Báo Cáo Sức Khỏe Chi Tiết'}
                 className="bg-white border border-slate-200 text-slate-800 font-bold py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all uppercase tracking-normal sm:tracking-wider text-[9.5px] sm:text-[11px] cursor-pointer text-center shadow-xs whitespace-nowrap overflow-hidden text-ellipsis"
               >
-                Chi tiết
+                {t('home.details')}
               </button>
               <button 
                 type="button"
                 onClick={() => setIsVitalsModalOpen(true)}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl shadow-xs active:scale-[0.98] transition-all uppercase tracking-normal sm:tracking-wider text-[9.5px] sm:text-[11px] flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap overflow-hidden"
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl shadow-xs active:scale-[0.98] transition-all uppercase tracking-normal sm:tracking-wider text-[9.5px] sm:text-[11px] flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap overflow-hidden text-force-white"
               >
                 <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Ghi sinh hiệu</span>
+                <span className="truncate">{t('home.log_vitals')}</span>
               </button>
             </div>
           </div>
@@ -664,8 +679,12 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
               <Bell className="w-4 h-4 text-teal-700 animate-pulse" />
             </div>
             <div>
-              <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 leading-tight">Nhắc nhở uống nước định kỳ</h3>
-              <p className="text-[8.5px] sm:text-[9px] text-teal-800 font-bold uppercase tracking-wider mt-0.5">Bảo vệ sức khỏe & Đào thải độc tố</p>
+              <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                {t('home.water_reminder_title')}
+              </h3>
+              <p className="text-[8.5px] sm:text-[9px] text-teal-800 font-bold uppercase tracking-wider mt-0.5">
+                {t('home.water_reminder_subtitle')}
+              </p>
             </div>
           </div>
           
@@ -694,7 +713,9 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {/* Interval Selection */}
             <div className="space-y-1.5">
-              <label className="text-[9.5px] font-bold text-slate-700 uppercase tracking-wider block">Khoảng thời gian nhắc nhở</label>
+              <label className="text-[9.5px] font-bold text-slate-700 uppercase tracking-wider block">
+                {t('home.reminder_interval')}
+              </label>
               <div className="flex flex-wrap gap-1.5">
                 {intervalOptions.map((opt) => (
                   <button
@@ -722,7 +743,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             {/* Live countdown block */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-xs">
               <span className="text-[9.5px] font-bold text-slate-700 uppercase tracking-wider block">
-                Tiến trình đếm ngược
+                {t('home.countdown')}
               </span>
 
               {waterReminderEnabled ? (
@@ -731,7 +752,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                 </span>
               ) : (
                 <span className="text-xs italic text-slate-500 font-light">
-                  Chưa kích hoạt
+                  {t('home.inactive')}
                 </span>
               )}
             </div>
@@ -745,20 +766,29 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
           {/* Card Header with Title, Count Badge and Action Button */}
           <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900">
-              Lịch nhắc uống thuốc & Đo chỉ số hôm nay
+              {t('home.med_title')}
             </h3>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <span className="bg-white/95 border border-teal-200 text-teal-800 text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap">
-                {reminders.filter(r => r.enabled).length} Đang bật
+                {reminders.filter(r => r.enabled).length} {t('home.active_count')}
               </span>
+              <button
+                type="button"
+                onClick={testMedicationNotification}
+                className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/90 hover:bg-white border border-teal-200 px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all shadow-xs cursor-pointer whitespace-nowrap active:scale-95"
+                title={language === 'en' ? "Test mobile notification" : "Thử thông báo trên thanh trạng thái"}
+              >
+                <Bell className="w-3.5 h-3.5 text-teal-700 animate-pulse" />
+                <span>{language === 'en' ? "Test Notification" : "Thử thông báo"}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setIsMedicationModalOpen(true)}
                 className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/90 hover:bg-white border border-teal-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-teal-700" />
-                <span>Hiệu chỉnh</span>
+                <span>{t('home.customize')}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-teal-700" />
               </button>
             </div>
@@ -771,7 +801,9 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
             {loadingReminders ? (
               <div className="flex flex-col items-center justify-center py-6 space-y-2">
                 <div className="w-5 h-5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-xs text-slate-500 font-medium">Đang tải lịch nhắc nhở...</p>
+                <p className="text-xs text-slate-500 font-medium">
+                  {language === 'en' ? 'Loading reminders...' : 'Đang tải lịch nhắc nhở...'}
+                </p>
               </div>
             ) : reminders.length === 0 ? (
               <div className="text-center py-6 px-4 space-y-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
@@ -779,17 +811,17 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                   <Bell className="w-5 h-5 animate-pulse" />
                 </div>
                 <div className="max-w-md mx-auto">
-                  <p className="text-sm font-bold text-slate-800">Chưa có lịch nhắc nhở nào</p>
+                  <p className="text-sm font-bold text-slate-800">{t('home.no_reminders')}</p>
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                    Thiết lập lịch nhắc đo chỉ số tiểu đường, huyết áp, nhịp tim hoặc uống thuốc để bảo vệ sức khỏe đúng giờ mỗi ngày.
+                    {t('home.no_reminders_desc')}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsMedicationModalOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all uppercase tracking-wider shadow-xs cursor-pointer"
+                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all uppercase tracking-wider shadow-xs cursor-pointer text-force-white"
                 >
-                  + Cài đặt lịch nhắc mới
+                  {t('home.set_new_reminder')}
                 </button>
               </div>
             ) : (
@@ -839,7 +871,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                                 "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
                                 catConfig.tagClass
                               )}>
-                                {catConfig.name}
+                                {language === 'en' ? (catConfig.name_en || catConfig.name) : catConfig.name}
                               </span>
                               <span className={cn(
                                 "text-sm font-bold text-slate-900",
@@ -872,10 +904,10 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                               type="button"
                               onClick={() => setIsVitalsModalOpen(true)}
                               className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              title="Ghi nhận số đo sinh hiệu ngay"
+                              title={language === 'en' ? 'Log vital measurement' : 'Ghi nhận số đo sinh hiệu ngay'}
                             >
                               <Activity className="w-3.5 h-3.5 text-teal-600" />
-                              <span className="hidden sm:inline">Ghi số đo</span>
+                              <span className="hidden sm:inline">{t('home.log_metric')}</span>
                             </button>
                           )}
 
@@ -889,17 +921,17 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" 
                                 : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
                             )}
-                            title={reminder.enabled ? "Tắt nhắc nhở này" : "Bật lại nhắc nhở này"}
+                            title={reminder.enabled ? (language === 'en' ? 'Disable this reminder' : 'Tắt nhắc nhở này') : (language === 'en' ? 'Enable this reminder' : 'Bật lại nhắc nhở này')}
                           >
                             {reminder.enabled ? (
                               <>
                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Đang bật</span>
+                                <span>{t('home.reminder_on')}</span>
                               </>
                             ) : (
                               <>
                                 <Bell className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Đã tắt</span>
+                                <span>{t('home.reminder_off')}</span>
                               </>
                             )}
                           </button>

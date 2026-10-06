@@ -47,8 +47,11 @@ export interface HerbItem {
 export interface HerbCategoryGroup {
   id: string;
   name: string;
+  name_en?: string;
   shortName: string;
+  shortName_en?: string;
   description: string;
+  description_en?: string;
   iconName: string;
   matchedConditions: string;
 }
@@ -57,61 +60,79 @@ export const HERB_GROUPS: HerbCategoryGroup[] = [
   {
     id: 'all',
     name: 'Tất cả vị thuốc',
+    name_en: 'All Herbs',
     shortName: 'Tất cả',
+    shortName_en: 'All',
     description: 'Toàn bộ dược liệu cổ truyền trong kho tàng Đông y',
+    description_en: 'Complete traditional herbal medicine catalog',
     iconName: 'Sparkles',
     matchedConditions: 'Đa dạng thể trạng'
   },
   {
     id: 'bo-khi',
     name: 'Nhóm Bổ khí - Bổ dưỡng',
+    name_en: 'Qi & Energy Tonics',
     shortName: 'Bổ khí dưỡng thể',
+    shortName_en: 'Qi & Vitality',
     description: 'Tăng cường thể lực, bồi bổ nguyên khí, giảm kiệt sức và suy nhược',
+    description_en: 'Boosts stamina, restores vital energy, combats fatigue',
     iconName: 'Zap',
     matchedConditions: 'Mệt mỏi / Kiệt sức, Suy nhược cơ thể'
   },
   {
     id: 'giai-bieu',
     name: 'Nhóm Giải biểu - Phát tán',
+    name_en: 'Diaphoretic & Exterior Release',
     shortName: 'Giải biểu phát tán',
+    shortName_en: 'Exterior Release',
     description: 'Phát hãn giải cảm, tán phong hàn hoặc phong nhiệt, thông đường thở',
+    description_en: 'Relieves common cold, dispels wind-cold and wind-heat, clears airways',
     iconName: 'Wind',
     matchedConditions: 'Cảm sốt / Ớn lạnh, Ho / Rát họng'
   },
   {
     id: 'an-than',
     name: 'Nhóm An thần - Bổ tâm',
+    name_en: 'Calming & Heart Tonics',
     shortName: 'An thần dưỡng tâm',
+    shortName_en: 'Calming & Sleep',
     description: 'Dưỡng tâm định chí, giảm lo âu bồn chồn, điều trị mất ngủ',
+    description_en: 'Calms the mind, eases anxiety and restlessness, treats insomnia',
     iconName: 'Moon',
     matchedConditions: 'Mất ngủ / Lo âu, Hồi hộp giật mình'
   },
   {
     id: 'tru-thap',
     name: 'Nhóm Trừ thấp - Hành khí',
+    name_en: 'Dampness-Dispelling & Qi Regulators',
     shortName: 'Trừ thấp hành khí',
+    shortName_en: 'Dampness & Digestion',
     description: 'Kiện tỳ tiêu thực, trừ ẩm thấp kinh lạc, giảm đầy trướng và nhức mỏi',
+    description_en: 'Invigorates spleen, dispels dampness, eases bloating and muscle aches',
     iconName: 'Droplets',
     matchedConditions: 'Đầy bụng / Khó tiêu, Đau mỏi cơ khớp'
   },
   {
     id: 'thanh-nhiet',
     name: 'Nhóm Thanh nhiệt - Hạ hỏa',
+    name_en: 'Heat-Clearing & Detox',
     shortName: 'Thanh nhiệt hạ hỏa',
+    shortName_en: 'Heat-Clearing',
     description: 'Làm mát cơ thể, giải độc, thanh phế can thận nhiệt, trị nhiệt miệng',
+    description_en: 'Cools internal heat, detoxifies, eases canker sores and inflammation',
     iconName: 'Flame',
     matchedConditions: 'Nóng trong / Nhiệt, Táo bón do nhiệt'
   }
 ];
 
 export const SYMPTOM_FILTER_TAGS = [
-  { id: 'all', label: 'Tất cả', count: 20 },
-  { id: 'met-moi', label: 'Mệt mỏi / Kiệt sức', symptom: 'Mệt mỏi / Kiệt sức', color: 'from-amber-500/20 to-orange-500/20 border-amber-500/40 text-amber-300' },
-  { id: 'cam-sot', label: 'Cảm sốt / Ớn lạnh', symptom: 'Cảm sốt / Ớn lạnh', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/40 text-blue-300' },
-  { id: 'mat-ngu', label: 'Mất ngủ / Lo âu', symptom: 'Mất ngủ / Lo âu', color: 'from-purple-500/20 to-indigo-500/20 border-purple-500/40 text-purple-300' },
-  { id: 'day-bung', label: 'Đầy bụng / Khó tiêu', symptom: 'Đầy bụng / Khó tiêu', color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40 text-emerald-300' },
-  { id: 'nong-trong', label: 'Nóng trong / Nhiệt miệng', symptom: 'Nóng trong / Nhiệt miệng', color: 'from-rose-500/20 to-red-500/20 border-rose-500/40 text-rose-300' },
-  { id: 'dau-khop', label: 'Đau mỏi cơ khớp', symptom: 'Đau mỏi cơ khớp', color: 'from-teal-500/20 to-cyan-500/20 border-teal-500/40 text-teal-300' },
+  { id: 'all', label: 'Tất cả', label_en: 'All', count: 20 },
+  { id: 'met-moi', label: 'Mệt mỏi / Kiệt sức', label_en: 'Fatigue & Exhaustion', symptom: 'Mệt mỏi / Kiệt sức', color: 'from-amber-500/20 to-orange-500/20 border-amber-500/40 text-amber-300' },
+  { id: 'cam-sot', label: 'Cảm sốt / Ớn lạnh', label_en: 'Fever & Chills', symptom: 'Cảm sốt / Ớn lạnh', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/40 text-blue-300' },
+  { id: 'mat-ngu', label: 'Mất ngủ / Lo âu', label_en: 'Insomnia & Anxiety', symptom: 'Mất ngủ / Lo âu', color: 'from-purple-500/20 to-indigo-500/20 border-purple-500/40 text-purple-300' },
+  { id: 'day-bung', label: 'Đầy bụng / Khó tiêu', label_en: 'Bloating & Indigestion', symptom: 'Đầy bụng / Khó tiêu', color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40 text-emerald-300' },
+  { id: 'nong-trong', label: 'Nóng trong / Nhiệt miệng', label_en: 'Internal Heat & Aphthae', symptom: 'Nóng trong / Nhiệt miệng', color: 'from-rose-500/20 to-red-500/20 border-rose-500/40 text-rose-300' },
+  { id: 'dau-khop', label: 'Đau mỏi cơ khớp', label_en: 'Joint & Muscle Ache', symptom: 'Đau mỏi cơ khớp', color: 'from-teal-500/20 to-cyan-500/20 border-teal-500/40 text-teal-300' },
 ];
 
 export const COMPREHENSIVE_HERBS: HerbItem[] = [

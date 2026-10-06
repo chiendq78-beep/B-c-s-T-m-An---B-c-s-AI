@@ -35,6 +35,7 @@ export interface HealthReminder {
 export const REMINDER_CATEGORIES: {
   id: ReminderCategory;
   name: string;
+  name_en: string;
   icon: any;
   colorClass: string;
   bgLight: string;
@@ -46,6 +47,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'medication',
     name: 'Uống thuốc / Dược liệu',
+    name_en: 'Medication / Herbs',
     icon: Pill,
     colorClass: 'text-emerald-600',
     bgLight: 'bg-emerald-50',
@@ -57,6 +59,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'glucose',
     name: 'Tiểu đường / Đường huyết',
+    name_en: 'Blood Glucose',
     icon: Droplets,
     colorClass: 'text-rose-600',
     bgLight: 'bg-rose-50',
@@ -68,6 +71,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'blood_pressure',
     name: 'Huyết áp & Tim mạch',
+    name_en: 'Blood Pressure & Heart',
     icon: Heart,
     colorClass: 'text-blue-600',
     bgLight: 'bg-blue-50',
@@ -79,6 +83,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'spo2',
     name: 'Oxy máu (SpO2)',
+    name_en: 'Blood Oxygen (SpO2)',
     icon: Activity,
     colorClass: 'text-teal-600',
     bgLight: 'bg-teal-50',
@@ -90,6 +95,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'temperature',
     name: 'Thân nhiệt',
+    name_en: 'Body Temperature',
     icon: Thermometer,
     colorClass: 'text-amber-600',
     bgLight: 'bg-amber-50',
@@ -101,6 +107,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'weight',
     name: 'Cân nặng & Thể trạng',
+    name_en: 'Weight & Physique',
     icon: Scale,
     colorClass: 'text-purple-600',
     bgLight: 'bg-purple-50',
@@ -112,6 +119,7 @@ export const REMINDER_CATEGORIES: {
   {
     id: 'other',
     name: 'Chỉ số khác',
+    name_en: 'Other Metric',
     icon: Bell,
     colorClass: 'text-slate-600',
     bgLight: 'bg-slate-50',

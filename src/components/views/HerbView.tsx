@@ -31,6 +31,7 @@ import { db } from '../../lib/firebase';
 import DailySymptomHerbSuggestions from '../DailySymptomHerbSuggestions';
 import HerbDetailModal from '../HerbDetailModal';
 import { registerModal } from '../../utils/modalManager';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   COMPREHENSIVE_HERBS, 
   HERB_GROUPS, 
@@ -220,6 +221,8 @@ interface HerbAIResult {
 }
 
 export default function HerbView() {
+  const { language, t } = useLanguage();
+  const isEn = language === 'en';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [selectedSymptom, setSelectedSymptom] = useState<string>('all');
@@ -454,23 +457,23 @@ export default function HerbView() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[10px] font-bold text-primary uppercase tracking-[0.25em]">
-            Y Học Cổ Truyền • Dược Điển
+            {isEn ? 'Traditional Medicine • Pharmacopoeia' : 'Y Học Cổ Truyền • Dược Điển'}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-3 flex-nowrap">
           <h1 className="font-serif text-xl sm:text-2xl md:text-3xl italic font-light text-white leading-tight truncate">
-            Dược Học Cổ Truyền
+            {isEn ? 'Traditional Herbal Medicine' : 'Dược Học Cổ Truyền'}
           </h1>
 
           <button 
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center justify-center gap-1.5 bg-emerald-600/85 hover:bg-emerald-600 backdrop-blur-md text-white-pure px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-md shadow-emerald-700/25 hover:shadow-lg hover:shadow-emerald-700/35 hover:-translate-y-0.5 active:translate-y-0 transition-all border border-emerald-400/30 cursor-pointer flex-shrink-0 whitespace-nowrap"
-            title="Quét nhận diện dược liệu bằng A.I"
+            title={isEn ? "AI herbal identification" : "Quét nhận diện dược liệu bằng A.I"}
           >
             <Camera className="w-3.5 h-3.5 text-white-pure flex-shrink-0" />
-            <span className="text-white-pure font-medium">Quét A.I</span>
+            <span className="text-white-pure font-medium">{isEn ? 'AI Scan' : 'Quét A.I'}</span>
           </button>
         </div>
 
@@ -493,7 +496,7 @@ export default function HerbView() {
               type="text" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo phương danh, tên tiếng Anh, tính vị, quy kinh..."
+              placeholder={isEn ? "Search by herb name, English name, properties, meridians..." : "Tìm theo phương danh, tên tiếng Anh, tính vị, quy kinh..."}
               className="w-full bg-white/5 border border-border rounded-2xl py-3 pr-4 pl-11 text-xs sm:text-sm text-white placeholder:text-text-dim outline-none focus:ring-1 focus:ring-primary/50 focus:bg-white/10 transition-all font-light shadow-inner"
             />
             {searchTerm && (
@@ -514,10 +517,10 @@ export default function HerbView() {
                 ? "bg-teal-500/20 text-teal-300 border-teal-500/40 shadow-[0_0_15px_rgba(20,184,166,0.2)]"
                 : "bg-white/5 border-border text-text-dim hover:text-white hover:border-white/20"
             )}
-            title="Mở bộ lọc chuyên sâu Đông y"
+            title={isEn ? "Open deep herbal filters" : "Mở bộ lọc chuyên sâu Đông y"}
           >
             <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">Bộ lọc</span>
+            <span className="hidden sm:inline">{isEn ? 'Filters' : 'Bộ lọc'}</span>
             {activeFiltersCount > 0 && (
               <span className="w-5 h-5 rounded-full bg-teal-400 text-slate-950 font-bold text-[10px] flex items-center justify-center">
                 {activeFiltersCount}
@@ -533,10 +536,10 @@ export default function HerbView() {
                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
                 : "bg-white/5 border-border text-text-dim hover:text-white hover:border-white/20"
             )}
-            title="Chỉ hiện vị thuốc đã lưu"
+            title={isEn ? "Only show saved herbs" : "Chỉ hiện vị thuốc đã lưu"}
           >
             <Bookmark className={cn("w-4 h-4", onlyBookmarked ? "fill-amber-400 text-amber-400" : "")} />
-            <span className="hidden md:inline">Đã lưu</span>
+            <span className="hidden md:inline">{isEn ? 'Saved' : 'Đã lưu'}</span>
             {bookmarkedIds.length > 0 && (
               <span className="text-[10px] text-text-dim font-mono">({bookmarkedIds.length})</span>
             )}
@@ -548,14 +551,14 @@ export default function HerbView() {
           <div className="flex items-center justify-between px-1">
             <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-              Lọc Nhanh Theo Thể Trạng / Triệu Chứng:
+              {isEn ? "Quick Filter by Condition / Symptoms:" : "Lọc Nhanh Theo Thể Trạng / Triệu Chứng:"}
             </span>
             {selectedSymptom !== 'all' && (
               <button 
                 onClick={() => setSelectedSymptom('all')}
                 className="text-[10px] text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
-                Xóa lọc thể trạng
+                {isEn ? "Clear filter" : "Xóa lọc thể trạng"}
               </button>
             )}
           </div>
@@ -581,7 +584,7 @@ export default function HerbView() {
                       : "bg-white/[0.03] border-white/10 text-text-dim hover:text-white hover:border-white/20 hover:bg-white/[0.06]"
                   )}
                 >
-                  <span>{tag.label}</span>
+                  <span>{isEn && tag.label_en ? tag.label_en : tag.label}</span>
                   <span className={cn(
                     "text-[10px] font-mono px-1.5 py-0.2 rounded-full",
                     isSelected ? "bg-slate-950/20 text-slate-950 font-bold" : "bg-white/5 text-text-dim"
@@ -607,7 +610,7 @@ export default function HerbView() {
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                    Bộ Lọc Chuyên Sâu Y Học Cổ Truyền
+                    {isEn ? "Advanced Traditional Herbal Medicine Filters" : "Bộ Lọc Chuyên Sâu Y Học Cổ Truyền"}
                   </h3>
                 </div>
 
@@ -618,7 +621,7 @@ export default function HerbView() {
                       className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer font-medium"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      <span>Đặt lại bộ lọc</span>
+                      <span>{isEn ? "Reset filters" : "Đặt lại bộ lọc"}</span>
                     </button>
                   )}
                   <button 
@@ -633,7 +636,7 @@ export default function HerbView() {
               {/* Group Filter */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
-                  1. Nhóm Dược Liệu Tác Dụng:
+                  {isEn ? "1. Functional Category:" : "1. Nhóm Dược Liệu Tác Dụng:"}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {HERB_GROUPS.map(grp => (
@@ -647,7 +650,7 @@ export default function HerbView() {
                           : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white hover:border-white/15"
                       )}
                     >
-                      <span className="truncate">{grp.shortName}</span>
+                      <span className="truncate">{isEn && grp.shortName_en ? grp.shortName_en : grp.shortName}</span>
                       {selectedGroup === grp.id && <Check className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />}
                     </button>
                   ))}
@@ -657,7 +660,7 @@ export default function HerbView() {
               {/* Tứ Khí (Tính) Filter */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
-                  2. Tứ Khí (Tính: Hàn - Lương - Bình - Ôn - Nhiệt):
+                  {isEn ? "2. Four Qi (Nature: Cold - Cool - Neutral - Warm - Hot):" : "2. Tứ Khí (Tính: Hàn - Lương - Bình - Ôn - Nhiệt):"}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -669,7 +672,7 @@ export default function HerbView() {
                         : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                     )}
                   >
-                    Tất cả tính
+                    {isEn ? "All Natures" : "Tất cả tính"}
                   </button>
                   {ALL_NATURES.map(nature => {
                     const style = NATURE_COLOR_MAP[nature];
@@ -685,7 +688,7 @@ export default function HerbView() {
                             : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                         )}
                       >
-                        {nature}
+                        {isEn ? (nature === 'Hàn' ? 'Cold' : nature === 'Lương' ? 'Cool' : nature === 'Bình' ? 'Neutral' : nature === 'Ôn' ? 'Warm' : 'Hot') : nature}
                       </button>
                     );
                   })}
@@ -695,7 +698,7 @@ export default function HerbView() {
               {/* Ngũ Vị Filter */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
-                  3. Ngũ Vị (Vị):
+                  {isEn ? "3. Five Flavors:" : "3. Ngũ Vị (Vị):"}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -707,7 +710,7 @@ export default function HerbView() {
                         : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                     )}
                   >
-                    Tất cả vị
+                    {isEn ? "All Flavors" : "Tất cả vị"}
                   </button>
                   {ALL_TASTES.map(taste => (
                     <button
@@ -720,7 +723,7 @@ export default function HerbView() {
                           : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                       )}
                     >
-                      Vị {taste}
+                      {isEn ? (taste === 'Ngọt' ? 'Sweet' : taste === 'Cay' ? 'Acrid / Pungent' : taste === 'Đắng' ? 'Bitter' : taste === 'Chua' ? 'Sour' : taste === 'Mặn' ? 'Salty' : 'Astringent') : `Vị ${taste}`}
                     </button>
                   ))}
                 </div>
@@ -729,7 +732,7 @@ export default function HerbView() {
               {/* Quy Kinh (12 Kinh Lạc) */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">
-                  4. Quy Kinh Lạc:
+                  {isEn ? "4. Meridians:" : "4. Quy Kinh Lạc:"}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   <button
@@ -741,7 +744,7 @@ export default function HerbView() {
                         : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                     )}
                   >
-                    Tất cả kinh
+                    {isEn ? "All Meridians" : "Tất cả kinh"}
                   </button>
                   {ALL_MERIDIANS.map(meridian => (
                     <button
@@ -754,7 +757,7 @@ export default function HerbView() {
                           : "bg-white/[0.02] border-white/5 text-text-dim hover:text-white"
                       )}
                     >
-                      Kinh {meridian}
+                      {isEn ? (meridian === 'Phế' ? 'Lung' : meridian === 'Tỳ' ? 'Spleen' : meridian === 'Vị' ? 'Stomach' : meridian === 'Tâm' ? 'Heart' : meridian === 'Can' ? 'Liver' : meridian === 'Thận' ? 'Kidney' : meridian === 'Đởm' ? 'Gallbladder' : 'Bladder') : `Kinh ${meridian}`}
                     </button>
                   ))}
                 </div>
@@ -879,7 +882,7 @@ export default function HerbView() {
           <div className="min-w-0">
             <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
               <Leaf className="w-4 h-4 text-primary shrink-0" />
-              <span>Vị Thuốc Cổ Truyền Chuẩn Hóa</span>
+              <span>{isEn ? "Standardized Traditional Remedies" : "Vị Thuốc Cổ Truyền Chuẩn Hóa"}</span>
             </h2>
           </div>
 
@@ -889,7 +892,7 @@ export default function HerbView() {
               className="text-xs text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1 cursor-pointer font-semibold whitespace-nowrap shrink-0"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Bỏ lọc</span>
+              <span>{isEn ? "Clear filters" : "Bỏ lọc"}</span>
             </button>
           )}
         </div>
@@ -899,16 +902,20 @@ export default function HerbView() {
           <div className="bg-panel border border-border rounded-3xl p-10 text-center space-y-4">
             <Leaf className="w-12 h-12 text-text-dim opacity-30 mx-auto" />
             <div className="space-y-1">
-              <h3 className="text-white font-medium text-base">Không tìm thấy vị thuốc phù hợp</h3>
+              <h3 className="text-white font-medium text-base">
+                {isEn ? "No matching medicinal herbs found" : "Không tìm thấy vị thuốc phù hợp"}
+              </h3>
               <p className="text-xs text-text-dim max-w-md mx-auto">
-                Không có dược liệu nào khớp với từ khóa tìm kiếm hoặc các bộ lọc đang chọn. Hãy thử tìm theo tên tiếng Việt hoặc đặt lại bộ lọc.
+                {isEn 
+                  ? "No herbs match your search query or selected filters. Try searching by name or reset filters."
+                  : "Không có dược liệu nào khớp với từ khóa tìm kiếm hoặc các bộ lọc đang chọn. Hãy thử tìm theo tên tiếng Việt hoặc đặt lại bộ lọc."}
               </p>
             </div>
             <button
               onClick={resetAllFilters}
               className="px-4 py-2.5 rounded-xl bg-primary text-slate-950 font-bold text-xs uppercase tracking-wider shadow-sm hover:brightness-110 cursor-pointer"
             >
-              Đặt lại tất cả bộ lọc
+              {isEn ? "Reset all filters" : "Đặt lại tất cả bộ lọc"}
             </button>
           </div>
         ) : (
@@ -927,10 +934,16 @@ export default function HerbView() {
                     <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-emerald-50/70 border-b border-teal-100/70 px-3.5 sm:px-4 py-2 sm:py-2.5 transition-colors group-hover:from-emerald-100/60 group-hover:to-teal-100/60">
                       <div className="flex items-baseline justify-between gap-2">
                         <h3 className="font-serif text-[15px] sm:text-base italic font-semibold text-slate-800 group-hover:text-teal-900 transition-colors truncate">
-                          {herb.name_vi}
+                          {isEn ? (herb.name_en || herb.name_vi) : herb.name_vi}
                         </h3>
                         <span className="text-[8px] sm:text-[8.5px] text-teal-700 font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/90 border border-teal-200/80 shadow-2xs shrink-0 whitespace-nowrap">
-                          {herb.groupName.split(' - ')[0]}
+                          {isEn ? (
+                            herb.groupId === 'bo-khi' ? 'Qi Tonic' :
+                            herb.groupId === 'giai-bieu' ? 'Exterior Release' :
+                            herb.groupId === 'an-than' ? 'Calming' :
+                            herb.groupId === 'tru-thap' ? 'Dampness' :
+                            herb.groupId === 'thanh-nhiet' ? 'Heat Clearing' : herb.groupName.split(' - ')[0]
+                          ) : herb.groupName.split(' - ')[0]}
                         </span>
                       </div>
                       <p className="text-[9px] sm:text-[9.5px] text-teal-700/80 font-mono italic truncate mt-0.5 font-light">
@@ -947,15 +960,21 @@ export default function HerbView() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                       
-                      {/* Botanical Family & English Name Badge */}
+                      {/* Botanical Family & Subtitle Badge */}
                       <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
                         <span className="text-[8px] sm:text-[8.5px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-teal-800 border border-teal-200/70 shadow-2xs">
                           {herb.family}
                         </span>
-                        {herb.name_en && (
-                          <span className="text-[8.5px] sm:text-[9px] font-normal tracking-normal px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-amber-900 border border-amber-200/70 shadow-2xs">
-                            {herb.name_en}
+                        {isEn ? (
+                          <span className="text-[8.5px] sm:text-[9px] font-normal tracking-normal px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-teal-900 border border-teal-200/70 shadow-2xs">
+                            {herb.name_vi}
                           </span>
+                        ) : (
+                          herb.name_en && (
+                            <span className="text-[8.5px] sm:text-[9px] font-normal tracking-normal px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-amber-900 border border-amber-200/70 shadow-2xs">
+                              {herb.name_en}
+                            </span>
+                          )
                         )}
                       </div>
 
@@ -967,14 +986,14 @@ export default function HerbView() {
                             ? 'bg-amber-50 text-amber-600 border-amber-300' 
                             : 'bg-white/90 text-slate-700 border-slate-200/80 hover:bg-white hover:text-slate-950'
                         }`}
-                        title={isSaved ? 'Đã lưu trữ' : 'Lưu trữ vị thuốc'}
+                        title={isSaved ? (isEn ? 'Saved' : 'Đã lưu trữ') : (isEn ? 'Save herb' : 'Lưu trữ vị thuốc')}
                       >
                         <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
                       </button>
 
                       {/* Part Used on bottom left of image */}
                       <div className="absolute bottom-2 left-2.5 text-[8.5px] sm:text-[9px] font-mono flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-slate-800 border border-slate-200/70 shadow-2xs">
-                        <span className="text-primary font-semibold">Bộ phận:</span>
+                        <span className="text-primary font-semibold">{isEn ? 'Part:' : 'Bộ phận:'}</span>
                         <span className="truncate max-w-[180px] text-slate-700 font-normal">{herb.partUsed}</span>
                       </div>
                     </div>
@@ -989,7 +1008,7 @@ export default function HerbView() {
                       {/* Matched symptoms text */}
                       <div className="space-y-0.5 pt-0.5">
                         <span className="text-[8px] sm:text-[8.5px] font-medium text-slate-500 uppercase tracking-wider block">
-                          Tương thích thể trạng:
+                          {isEn ? 'Target Conditions:' : 'Tương thích thể trạng:'}
                         </span>
                         <p className="text-[11px] sm:text-xs text-slate-800 font-normal leading-relaxed">
                           {herb.matchedSymptoms.slice(0, 3).join(' • ')}
@@ -1005,14 +1024,14 @@ export default function HerbView() {
                       className="text-teal-700 hover:text-teal-900 flex items-center gap-1 font-medium transition-colors cursor-pointer py-0.5"
                     >
                       <MessageSquare className="w-3 h-3 text-teal-600" />
-                      <span>Hỏi Bác sĩ AI</span>
+                      <span>{isEn ? 'Ask AI Doctor' : 'Hỏi Bác sĩ AI'}</span>
                     </button>
 
                     <button
                       onClick={() => setSelectedHerbForModal(herb)}
                       className="text-slate-600 hover:text-teal-800 flex items-center gap-0.5 font-medium transition-colors cursor-pointer group-hover:translate-x-0.5 py-0.5"
                     >
-                      <span>Chi tiết</span>
+                      <span>{isEn ? 'Details' : 'Chi tiết'}</span>
                       <ChevronRight className="w-3 h-3 text-teal-600" />
                     </button>
                   </div>
@@ -1032,22 +1051,24 @@ export default function HerbView() {
           <div>
             <h3 className="font-serif text-xl sm:text-2xl font-bold text-white flex items-center gap-3">
               <Calendar className="w-5 h-5 text-primary" />
-              Dược Thảo Theo Mùa & Tiết Khí
+              {isEn ? "Seasonal Herbs & Solar Terms" : "Dược Thảo Theo Mùa & Tiết Khí"}
             </h3>
             <p className="text-[10px] text-text-dim font-bold uppercase tracking-widest mt-1">
-              Khuyến nghị bồi dưỡng theo vòng tuần hoàn thiên nhiên 12 tháng
+              {isEn 
+                ? "Wellness recommendations aligned with the 12-month natural cycle" 
+                : "Khuyến nghị bồi dưỡng theo vòng tuần hoàn thiên nhiên 12 tháng"}
             </p>
           </div>
           <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-xl font-bold flex items-center gap-1.5 self-start md:self-auto shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            Hôm nay: Tháng {new Date().getMonth() + 1} ({new Date().getMonth() + 1 >= 1 && new Date().getMonth() + 1 <= 3 ? 'Kinh Trập - Xuân phân' : new Date().getMonth() + 1 >= 4 && new Date().getMonth() + 1 <= 6 ? 'Mộc dục - Hạ chí' : new Date().getMonth() + 1 >= 7 && new Date().getMonth() + 1 <= 9 ? 'Bạch lộ - Thu phân' : 'Tiểu tuyết - Đông chí'})
+            {isEn ? `Today: Month ${new Date().getMonth() + 1}` : `Hôm nay: Tháng ${new Date().getMonth() + 1}`} ({new Date().getMonth() + 1 >= 1 && new Date().getMonth() + 1 <= 3 ? (isEn ? 'Spring Awakening' : 'Kinh Trập - Xuân phân') : new Date().getMonth() + 1 >= 4 && new Date().getMonth() + 1 <= 6 ? (isEn ? 'Summer Solstice' : 'Mộc dục - Hạ chí') : new Date().getMonth() + 1 >= 7 && new Date().getMonth() + 1 <= 9 ? (isEn ? 'Autumn Equinox' : 'Bạch lộ - Thu phân') : (isEn ? 'Winter Solstice' : 'Tiểu tuyết - Đông chí')})
           </span>
         </div>
 
         {/* 12-Month Navigation */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-text-dim uppercase tracking-wider block px-1">
-            Khám phá 12 Tháng dược thảo cổ truyền
+            {isEn ? "Explore 12 Months of Traditional Herbal Remedies" : "Khám phá 12 Tháng dược thảo cổ truyền"}
           </label>
           <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
@@ -1067,14 +1088,14 @@ export default function HerbView() {
                       ? cn(styles.bgAccent, styles.borderAccent, styles.accentText, "ring-1 ring-primary/20 shadow-lg")
                       : "bg-white/[0.01] border-white/5 text-text-dim hover:text-white hover:border-white/10"
                   )}
-                  title={`Tháng ${m} - ${monthHerb?.herbName}`}
+                  title={`${isEn ? 'Month' : 'Tháng'} ${m} - ${monthHerb?.herbName}`}
                 >
-                  <span className="text-[11px] leading-none">T.{m}</span>
+                  <span className="text-[11px] leading-none">{isEn ? `M.${m}` : `T.${m}`}</span>
                   {isCurrentSystemMonth && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-slate-900 shadow-sm animate-pulse" title="Tháng hiện tại" />
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-slate-900 shadow-sm animate-pulse" title={isEn ? "Current month" : "Tháng hiện tại"} />
                   )}
                   <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-950 text-[8px] font-sans font-normal text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30 border border-white/5 shadow-xl">
-                    {monthHerb?.herbName} ({monthHerb?.season})
+                    {monthHerb?.herbName} ({isEn ? (monthHerb?.season === 'Mùa Xuân' ? 'Spring' : monthHerb?.season === 'Mùa Hạ' ? 'Summer' : monthHerb?.season === 'Mùa Thu' ? 'Autumn' : 'Winter') : monthHerb?.season})
                   </span>
                 </button>
               );
@@ -1104,7 +1125,7 @@ export default function HerbView() {
                   
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className={cn("text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full", styles.badge)}>
-                      {activeHerb.season}
+                      {isEn ? (activeHerb.season === 'Mùa Xuân' ? 'Spring' : activeHerb.season === 'Mùa Hạ' ? 'Summer' : activeHerb.season === 'Mùa Thu' ? 'Autumn' : 'Winter') : activeHerb.season}
                     </span>
                     <span className="bg-slate-950/60 backdrop-blur-md border border-white/5 p-1 rounded-full text-white">
                       <Sun className="w-3 h-3 text-amber-400" />
@@ -1112,7 +1133,9 @@ export default function HerbView() {
                   </div>
 
                   <div className="absolute bottom-3 left-3 right-3 text-left">
-                    <p className="text-[8px] font-mono font-bold text-primary uppercase tracking-widest">Tiết khí trọng điểm</p>
+                    <p className="text-[8px] font-mono font-bold text-primary uppercase tracking-widest">
+                      {isEn ? "Solar Term Focus" : "Tiết khí trọng điểm"}
+                    </p>
                     <p className="text-xs text-white font-medium line-clamp-1">{activeHerb.focus}</p>
                   </div>
                 </div>
@@ -1130,7 +1153,9 @@ export default function HerbView() {
                     </div>
 
                     <div className="space-y-1">
-                      <p className="text-[9px] font-bold text-text-dim uppercase tracking-wider">Cơ chế hoạt động & Trị liệu chủ đạo</p>
+                      <p className="text-[9px] font-bold text-text-dim uppercase tracking-wider">
+                        {isEn ? "Action & Main Therapeutics" : "Cơ chế hoạt động & Trị liệu chủ đạo"}
+                      </p>
                       <p className="text-xs text-text-dim leading-relaxed font-light">
                         {activeHerb.benefit}
                       </p>
@@ -1141,7 +1166,9 @@ export default function HerbView() {
                   <div className="bg-primary/[0.02] border border-primary/10 rounded-2xl p-4 space-y-2">
                     <div className="flex items-center gap-2 text-primary">
                       <Sparkles className="w-4 h-4 animate-pulse text-primary" />
-                      <span className="text-[9.5px] uppercase font-bold tracking-widest">Kinh nghiệm chế biến cổ truyền</span>
+                      <span className="text-[9.5px] uppercase font-bold tracking-widest">
+                        {isEn ? "Traditional Apothecary Wisdom" : "Kinh nghiệm chế biến cổ truyền"}
+                      </span>
                     </div>
                     <p className="text-[11.5px] text-white/90 font-light leading-relaxed">
                       {activeHerb.tip}
@@ -1160,38 +1187,38 @@ export default function HerbView() {
           <div>
             <h3 className="font-serif text-xl italic font-light text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-primary" />
-              <span>Liệu Pháp Phối Ngũ Kinh Điển</span>
+              <span>{isEn ? "Classical Herbal Prescriptions" : "Liệu Pháp Phối Ngũ Kinh Điển"}</span>
             </h3>
             <p className="text-[10px] text-text-dim font-bold uppercase tracking-wider">
-              Các bài thuốc mẫu mực theo nguyên tắc Quân - Thần - Tá - Sứ
+              {isEn ? "Balanced formulations adhering to sovereign, minister, assistant, and courier principles" : "Các bài thuốc mẫu mực theo nguyên tắc Quân - Thần - Tá - Sứ"}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RecipeCard 
-            title="Tứ quân tử thang"
-            indication="Đại bổ nguyên khí tỳ vị, trị mệt mỏi suy nhược, ăn uống không tiêu"
-            ingredients={['Nhân sâm (Quân)', 'Bạch truật (Thần)', 'Bạch linh (Tá)', 'Chích Cam thảo (Sứ)']}
-            dosage="Sắc ấm ngày 1 thang chia làm 2 lần"
+            title={isEn ? "Four Gentlemen Decoction (Si Jun Zi Tang)" : "Tứ quân tử thang"}
+            indication={isEn ? "Tonifies spleen qi, restores vital stamina, eases chronic fatigue and indigestion" : "Đại bổ nguyên khí tỳ vị, trị mệt mỏi suy nhược, ăn uống không tiêu"}
+            ingredients={isEn ? ['Asian Ginseng (Monarch)', 'Atractylodes (Minister)', 'Poria (Assistant)', 'Honey Licorice (Envoy)'] : ['Nhân sâm (Quân)', 'Bạch truật (Thần)', 'Bạch linh (Tá)', 'Chích Cam thảo (Sứ)']}
+            dosage={isEn ? "Decoct 1 packet daily, divide into 2 warm doses" : "Sắc ấm ngày 1 thang chia làm 2 lần"}
           />
           <RecipeCard 
-            title="Ngân kiều tán"
-            indication="Tán phong nhiệt giải cảm, trị cảm sốt nhiệt, đau rát họng, phát ban"
-            ingredients={['Kim ngân hoa (Quân)', 'Liên kiều (Quân)', 'Bạc hà (Thần)', 'Cát cánh (Tá)', 'Cam thảo (Sứ)']}
-            dosage="Sắc nước uống ấm lúc đang sốt nhẹ phát ban"
+            title={isEn ? "Yin Qiao Powder (Yin Qiao San)" : "Ngân kiều tán"}
+            indication={isEn ? "Clears wind-heat, relieves fever, soothes sore throat, dispels rash" : "Tán phong nhiệt giải cảm, trị cảm sốt nhiệt, đau rát họng, phát ban"}
+            ingredients={isEn ? ['Honeysuckle (Monarch)', 'Forsythia (Monarch)', 'Mint (Minister)', 'Platycodon (Assistant)', 'Licorice (Envoy)'] : ['Kim ngân hoa (Quân)', 'Liên kiều (Quân)', 'Bạc hà (Thần)', 'Cát cánh (Tá)', 'Cam thảo (Sứ)']}
+            dosage={isEn ? "Drink warm during mild fever or onset of rash" : "Sắc nước uống ấm lúc đang sốt nhẹ phát ban"}
           />
           <RecipeCard 
-            title="Toan táo nhân thang"
-            indication="Dưỡng tâm an thần, trị mất ngủ triền miên, bồn chồn lo âu, đổ mồ hôi trộm"
-            ingredients={['Toan táo nhân sao đen', 'Tri mẫu', 'Phục linh', 'Xuyên khung', 'Cam thảo']}
-            dosage="Uống 1 chén ấm trước khi đi ngủ 1 giờ"
+            title={isEn ? "Sour Jujube Decoction (Suan Zao Ren Tang)" : "Toan táo nhân thang"}
+            indication={isEn ? "Nourishes heart yin, calms the mind, treats persistent insomnia, anxiety, night sweats" : "Dưỡng tâm an thần, trị mất ngủ triền miên, bồn chồn lo âu, đổ mồ hôi trộm"}
+            ingredients={isEn ? ['Roasted Jujube Seed', 'Anemarrhena', 'Poria', 'Chuanxiong', 'Licorice'] : ['Toan táo nhân sao đen', 'Tri mẫu', 'Phục linh', 'Xuyên khung', 'Cam thảo']}
+            dosage={isEn ? "Drink 1 warm cup 1 hour before sleep" : "Uống 1 chén ấm trước khi đi ngủ 1 giờ"}
           />
           <RecipeCard 
-            title="Nhị trần thang"
-            indication="Táo thấp hóa đờm lí khí, trị ho nhiều đờm bọt trắng, đầy trướng bụng buồn nôn"
-            ingredients={['Trần bì lâu năm', 'Bán hạ chế', 'Phục linh', 'Cam thảo', 'Gừng tươi']}
-            dosage="Sắc nước uống chia 2 lần ấm trong ngày"
+            title={isEn ? "Two Cured Herbs Decoction (Er Chen Tang)" : "Nhị trần thang"}
+            indication={isEn ? "Dries dampness, transforms phlegm, regulates qi, eases cough and nausea" : "Táo thấp hóa đờm lí khí, trị ho nhiều đờm bọt trắng, đầy trướng bụng buồn nôn"}
+            ingredients={isEn ? ['Aged Tangerine Peel', 'Prepared Pinellia', 'Poria', 'Licorice', 'Fresh Ginger'] : ['Trần bì lâu năm', 'Bán hạ chế', 'Phục linh', 'Cam thảo', 'Gừng tươi']}
+            dosage={isEn ? "Decoct and drink warm in 2 doses during the day" : "Sắc nước uống chia 2 lần ấm trong ngày"}
           />
         </div>
       </section>
@@ -1228,8 +1255,13 @@ function RecipeCard({
   ingredients: string[]; 
   dosage: string;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   const handleConsult = () => {
-    const prompt = `Chào Bác sĩ Tâm An, xin tư vấn chi tiết về bài thuốc cổ truyền: ${title}. Thành phần gồm: ${ingredients.join(', ')}. Cách gia giảm liều dùng cho thể trạng người Việt như thế nào?`;
+    const prompt = isEn
+      ? `Hello AI Doctor Tam An, please provide clinical guidance on the traditional formula: ${title}. Ingredients: ${ingredients.join(', ')}. What are the recommended dosage adjustments for modern lifestyle?`
+      : `Chào Bác sĩ Tâm An, xin tư vấn chi tiết về bài thuốc cổ truyền: ${title}. Thành phần gồm: ${ingredients.join(', ')}. Cách gia giảm liều dùng cho thể trạng người Việt như thế nào?`;
     window.dispatchEvent(new CustomEvent('app-open-ai-chat', { detail: { prompt } }));
   };
 
@@ -1244,12 +1276,13 @@ function RecipeCard({
           className="text-[10px] text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1 hover:underline cursor-pointer"
         >
           <MessageSquare className="w-3 h-3" />
-          <span>Hỏi Bác sĩ AI</span>
+          <span>{isEn ? "Ask AI Doctor" : "Hỏi Bác sĩ AI"}</span>
         </button>
       </div>
 
       <p className="text-xs text-text-dim italic leading-snug">
-        Chủ trị: {indication}
+        <span className="font-semibold text-slate-300">{isEn ? "Indications: " : "Chủ trị: "}</span>
+        {indication}
       </p>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1264,7 +1297,7 @@ function RecipeCard({
       </div>
 
       <div className="text-[11px] bg-emerald-700 text-white-pure p-2.5 rounded-xl border border-emerald-600 font-normal">
-        <span className="font-bold text-white-pure">Cách dùng: </span>
+        <span className="font-bold text-white-pure">{isEn ? "Usage & Dosage: " : "Cách dùng: "}</span>
         <span className="text-white-pure">{dosage}</span>
       </div>
     </div>

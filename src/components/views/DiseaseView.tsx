@@ -32,6 +32,7 @@ import DiseaseDetailView from './DiseaseDetailView';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { registerModal } from '../../utils/modalManager';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   COMPREHENSIVE_DISEASES, 
   SPECIALTY_CATEGORIES, 
@@ -60,6 +61,8 @@ const ICON_MAP: Record<string, any> = {
 const ITEMS_PER_PAGE = 10;
 
 export default function DiseaseView({ setActiveView }: { setActiveView: (view: any) => void }) {
+  const { language, t } = useLanguage();
+  const isEn = language === 'en';
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSeverity, setActiveSeverity] = useState('all');
@@ -350,32 +353,46 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
     setSearchTerm('');
   };
 
-  const hasActiveFilters = activeCategory !== 'all' || activeSeverity !== 'all' || activeAgeGroup !== 'all' || onlyBookmarked || searchTerm !== '';
+  const handleSelectDisease = (disease: DiseaseItem) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
+    setSelectedDisease(disease);
+  };
 
-  if (selectedDisease) {
-    return (
-      <DiseaseDetailView 
-        disease={selectedDisease as any} 
-        onBack={() => setSelectedDisease(null)} 
-        onHerbClick={() => setActiveView('herb')}
-        onExerciseClick={() => setActiveView('health')}
-      />
-    );
-  }
+  const hasActiveFilters = activeCategory !== 'all' || activeSeverity !== 'all' || activeAgeGroup !== 'all' || onlyBookmarked || searchTerm !== '';
 
   const activeCategoryObj = SPECIALTY_CATEGORIES.find(c => c.id === activeCategory) || SPECIALTY_CATEGORIES[0];
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-bg min-h-full pb-28">
+      {/* Full-Screen Disease Detail View Modal / Overlay */}
+      <AnimatePresence>
+        {selectedDisease && (
+          <DiseaseDetailView 
+            disease={selectedDisease as any} 
+            onBack={() => setSelectedDisease(null)} 
+            onHerbClick={() => {
+              setSelectedDisease(null);
+              setActiveView('herb');
+            }}
+            onExerciseClick={() => {
+              setSelectedDisease(null);
+              setActiveView('health');
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header & Title */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight">Thư viện Bệnh lý</h2>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {isEn ? 'Disease & Clinical Library' : 'Thư viện Bệnh lý'}
+            </h2>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-500/10 text-teal-400 border border-teal-500/20">
-                <Stethoscope className="w-3 h-3 text-teal-400" />
-                Chuẩn Y Khoa ICD-10
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200">
+                <Stethoscope className="w-3 h-3 text-teal-600" />
+                {isEn ? 'ICD-10 Clinical Standard' : 'Chuẩn Y Khoa ICD-10'}
               </span>
             </div>
           </div>
@@ -383,9 +400,9 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
 
         {/* Smart Search Bar with Auto-complete */}
         <div ref={searchContainerRef} className="relative z-30">
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <div className="flex-1 relative group">
-              <Search className="absolute left-4 top-3.5 w-4.5 h-4.5 text-text-dim group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-dim group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
                 value={searchTerm}
@@ -394,13 +411,13 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Tra cứu tên bệnh, triệu chứng (ví dụ: đau đầu, ho, sốt) hoặc mã ICD-10..."
-                className="w-full bg-white/5 border border-border focus:border-primary/50 rounded-2xl py-3 pr-10 pl-12 text-sm text-white placeholder:text-text-dim outline-none focus:ring-2 focus:ring-primary/20 transition-all font-light shadow-inner"
+                placeholder={isEn ? "Search disease name, symptoms (headache, cough, fever) or ICD-10..." : "Tra cứu tên bệnh, triệu chứng (ví dụ: đau đầu, ho, sốt)..."}
+                className="w-full h-9 sm:h-10 bg-white/5 border border-border focus:border-primary/50 rounded-xl pr-9 pl-9 text-xs sm:text-[13px] text-white placeholder:text-text-dim/80 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-light shadow-inner"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3.5 top-3.5 w-5 h-5 flex items-center justify-center text-text-dim hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 flex items-center justify-center text-text-dim hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -411,17 +428,17 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
-                "px-3.5 sm:px-4 h-12 rounded-2xl border flex items-center gap-2 transition-all shadow-md cursor-pointer",
+                "px-2.5 sm:px-3 h-9 sm:h-10 rounded-xl border flex items-center gap-1.5 transition-all shadow-xs cursor-pointer",
                 showFilters || (hasActiveFilters && (activeSeverity !== 'all' || activeAgeGroup !== 'all' || onlyBookmarked))
-                  ? "bg-primary text-bg border-primary shadow-[0_0_15px_rgba(45,212,191,0.3)] font-bold" 
+                  ? "bg-primary text-bg border-primary shadow-[0_0_12px_rgba(45,212,191,0.25)] font-bold" 
                   : "bg-white/5 text-text-dim border-white/10 hover:text-white hover:border-primary/30"
               )}
-              title="Bộ lọc nâng cao"
+              title={isEn ? "Advanced filters" : "Bộ lọc nâng cao"}
             >
-              <Filter className="w-4.5 h-4.5" />
-              <span className="text-xs hidden sm:inline">Bộ lọc</span>
+              <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs hidden sm:inline">{isEn ? 'Filters' : 'Bộ lọc'}</span>
               {(activeSeverity !== 'all' || activeAgeGroup !== 'all' || onlyBookmarked) && (
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
               )}
             </button>
           </div>
@@ -436,15 +453,15 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                 className="absolute left-0 right-0 top-full mt-2 bg-panel/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-40"
               >
                 <div className="p-2 border-b border-white/5 flex items-center justify-between text-[10px] text-text-dim uppercase tracking-wider font-bold px-3">
-                  <span>Gợi ý y khoa ({suggestions.length})</span>
-                  <span>Bấm để mở chi tiết</span>
+                  <span>{isEn ? `Medical Suggestions (${suggestions.length})` : `Gợi ý y khoa (${suggestions.length})`}</span>
+                  <span>{isEn ? 'Click to open details' : 'Bấm để mở chi tiết'}</span>
                 </div>
                 <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
                   {suggestions.map((sug, idx) => (
                     <button
                       key={idx}
                       onClick={() => {
-                        setSelectedDisease(sug.disease);
+                        handleSelectDisease(sug.disease);
                         setShowSuggestions(false);
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors flex items-center justify-between group cursor-pointer"
@@ -457,10 +474,10 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                             sug.type === 'icd' ? "bg-teal-500/20 text-teal-300 border border-teal-500/30" :
                             "bg-primary/20 text-primary border border-primary/30"
                           )}>
-                            {sug.type === 'symptom' ? 'Triệu chứng' : sug.type === 'icd' ? 'Mã ICD' : 'Bệnh lý'}
+                            {sug.type === 'symptom' ? (isEn ? 'Symptom' : 'Triệu chứng') : sug.type === 'icd' ? 'ICD' : (isEn ? 'Disease' : 'Bệnh lý')}
                           </span>
                           <h5 className="text-sm font-medium text-white group-hover:text-primary transition-colors truncate">
-                            {sug.title}
+                            {isEn ? (sug.disease.name_en || sug.title) : sug.title}
                           </h5>
                         </div>
                         <p className="text-[11px] text-text-dim mt-0.5 truncate">{sug.subtitle}</p>
@@ -553,7 +570,9 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
               {/* Bookmarked Filter & Sorting */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">Đã lưu & Yêu thích</p>
+                  <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">
+                    {isEn ? 'Bookmarks & Favorites' : 'Đã lưu & Yêu thích'}
+                  </p>
                   <button
                     onClick={() => setOnlyBookmarked(!onlyBookmarked)}
                     className={cn(
@@ -565,24 +584,26 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                   >
                     <div className="flex items-center gap-2">
                       <Bookmark className={cn("w-4 h-4", onlyBookmarked && "fill-amber-400 text-amber-400")} />
-                      <span>Chỉ xem bệnh đã lưu ({bookmarkedIds.length})</span>
+                      <span>{isEn ? `Bookmarked only (${bookmarkedIds.length})` : `Chỉ xem bệnh đã lưu (${bookmarkedIds.length})`}</span>
                     </div>
                     {onlyBookmarked && <Check className="w-4 h-4 text-amber-400" />}
                   </button>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">Sắp xếp danh sách</p>
+                  <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">
+                    {isEn ? 'Sort Disease List' : 'Sắp xếp danh sách'}
+                  </p>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 cursor-pointer"
                   >
-                    <option value="alphabetical" className="bg-slate-900 text-white">Tên bệnh (A → Z)</option>
-                    <option value="alphabetical-desc" className="bg-slate-900 text-white">Tên bệnh (Z → A)</option>
-                    <option value="severity-desc" className="bg-slate-900 text-white">Mức độ nguy cơ (Cao → Thấp)</option>
-                    <option value="severity-asc" className="bg-slate-900 text-white">Mức độ nguy cơ (Thấp → Cao)</option>
-                    <option value="icd" className="bg-slate-900 text-white">Mã chuẩn ICD-10</option>
+                    <option value="alphabetical" className="bg-slate-900 text-white">{isEn ? 'Disease Name (A → Z)' : 'Tên bệnh (A → Z)'}</option>
+                    <option value="alphabetical-desc" className="bg-slate-900 text-white">{isEn ? 'Disease Name (Z → A)' : 'Tên bệnh (Z → A)'}</option>
+                    <option value="severity-desc" className="bg-slate-900 text-white">{isEn ? 'Severity (High → Low)' : 'Mức độ nguy cơ (Cao → Thấp)'}</option>
+                    <option value="severity-asc" className="bg-slate-900 text-white">{isEn ? 'Severity (Low → High)' : 'Mức độ nguy cơ (Thấp → Cao)'}</option>
+                    <option value="icd" className="bg-slate-900 text-white">{isEn ? 'ICD-10 Code' : 'Mã chuẩn ICD-10'}</option>
                   </select>
                 </div>
               </div>
@@ -594,13 +615,13 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                   className="flex items-center gap-1.5 text-xs text-text-dim hover:text-white transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Xóa tất cả bộ lọc</span>
+                  <span>{isEn ? 'Reset all filters' : 'Xóa tất cả bộ lọc'}</span>
                 </button>
                 <button 
                   onClick={() => setShowFilters(false)}
                   className="px-4 py-1.5 rounded-xl bg-primary text-bg font-bold text-xs uppercase tracking-wider shadow-sm hover:brightness-110 transition-all cursor-pointer"
                 >
-                  Áp dụng ({filteredDiseases.length})
+                  {isEn ? `Apply (${filteredDiseases.length})` : `Áp dụng (${filteredDiseases.length})`}
                 </button>
               </div>
             </div>
@@ -612,13 +633,13 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">
-            12 NHÓM CHUYÊN KHOA:
+            {isEn ? '12 SPECIALTY DEPARTMENTS:' : '12 NHÓM CHUYÊN KHOA:'}
           </p>
           <button
             onClick={() => setShowCategoryModal(true)}
             className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
           >
-            <span>Xem danh sách</span>
+            <span>{isEn ? 'View all' : 'Xem danh sách'}</span>
             <ChevronRight className="w-3 h-3" />
           </button>
         </div>
@@ -640,7 +661,7 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                 )}
               >
                 <Icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", isActive ? "text-bg" : "text-primary")} />
-                <span>{cat.shortName}</span>
+                <span>{isEn ? (cat.shortName_en || cat.shortName) : cat.shortName}</span>
                 <span className={cn(
                   "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
                   isActive ? "bg-bg/25 text-bg" : "bg-white/10 text-text-dim group-hover:text-white"
@@ -657,7 +678,9 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
       <div className="flex items-center justify-between px-1 pt-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-white">
-            {activeCategoryObj.id === 'all' ? 'Tất cả chuyên khoa' : `Khoa: ${activeCategoryObj.name}`}
+            {activeCategoryObj.id === 'all' 
+              ? (isEn ? 'All Specialties' : 'Tất cả chuyên khoa') 
+              : (isEn ? `Department: ${activeCategoryObj.name_en || activeCategoryObj.name}` : `Khoa: ${activeCategoryObj.name}`)}
           </span>
         </div>
 
@@ -666,7 +689,7 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
             onClick={resetFilters}
             className="text-[11px] text-teal-400 hover:text-teal-300 underline font-medium cursor-pointer"
           >
-            Bỏ lọc
+            {isEn ? 'Clear filters' : 'Bỏ lọc'}
           </button>
         )}
       </div>
@@ -687,7 +710,7 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                     initial={{ opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    onClick={() => setSelectedDisease(disease)}
+                    onClick={() => handleSelectDisease(disease)}
                     className="w-full bg-panel hover:bg-panel/90 p-5 rounded-2xl border border-border shadow-lg transition-all duration-200 group hover:border-primary/40 cursor-pointer relative overflow-hidden"
                   >
                     {/* Top Row: Specialty Icon, Disease Name, Category Tag, Bookmark */}
@@ -706,21 +729,19 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                         {/* Title & Metadata */}
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-serif text-lg sm:text-xl font-bold text-white group-hover:text-primary transition-colors">
-                              {disease.name_vi}
+                            <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900 group-hover:text-primary transition-colors">
+                              {isEn ? (disease.name_en || disease.name_vi) : disease.name_vi}
                             </h3>
-                            {disease.name_en && (
-                              <span className="text-[11px] text-text-dim italic font-light hidden sm:inline">
-                                ({disease.name_en})
-                              </span>
-                            )}
+                            <span className="text-[11px] text-slate-600 font-light hidden sm:inline">
+                              {isEn ? `(${disease.name_vi})` : (disease.name_en ? `(${disease.name_en})` : '')}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="font-mono text-[10px] font-semibold text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-500/30">
-                              Mã ICD-10: {disease.icd10}
+                            <span className="font-mono text-[10px] font-semibold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-300">
+                              ICD-10: {disease.icd10}
                             </span>
-                            <span className="text-[9px] font-bold uppercase text-primary/80 px-2 py-0.5 bg-primary/10 rounded border border-primary/20 tracking-wider">
-                              {disease.category}
+                            <span className="text-[9px] font-bold uppercase text-teal-800 px-2 py-0.5 bg-teal-50 rounded border border-teal-200 tracking-wider">
+                              {isEn ? (categoryConfig?.name_en || disease.category) : disease.category}
                             </span>
                           </div>
                         </div>
@@ -732,31 +753,31 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                         className={cn(
                           "w-9 h-9 rounded-xl flex items-center justify-center border transition-all cursor-pointer flex-shrink-0",
                           isBookmarked 
-                            ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-xs" 
-                            : "bg-white/5 text-text-dim border-transparent hover:text-white hover:border-white/10"
+                            ? "bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-xs" 
+                            : "bg-slate-100 text-slate-600 border-transparent hover:text-slate-900 hover:border-slate-300"
                         )}
-                        title={isBookmarked ? "Bỏ lưu bệnh này" : "Lưu bệnh để theo dõi"}
+                        title={isBookmarked ? (isEn ? "Remove bookmark" : "Bỏ lưu bệnh này") : (isEn ? "Save to bookmarks" : "Lưu bệnh để theo dõi")}
                       >
                         <Bookmark className={cn("w-4 h-4", isBookmarked && "fill-amber-400")} />
                       </button>
                     </div>
 
                     {/* Middle: Short Description */}
-                    <p className="text-xs sm:text-sm text-text-dim font-light leading-relaxed mt-3 line-clamp-2">
+                    <p className="text-xs sm:text-sm text-slate-800 font-normal leading-relaxed mt-3 line-clamp-2">
                       {disease.description}
                     </p>
 
-                    {/* Symptoms List (joined with *) */}
+                    {/* Symptoms List */}
                     {disease.symptoms && disease.symptoms.length > 0 && (
                       <div className="mt-3.5 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-dim uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                           <Activity className="w-3 h-3 text-primary" />
-                          <span>Triệu chứng chính:</span>
+                          <span>{isEn ? 'Key symptoms:' : 'Triệu chứng chính:'}</span>
                         </div>
-                        <p className="text-xs text-text-dim font-light leading-relaxed">
+                        <p className="text-xs text-slate-800 font-normal leading-relaxed">
                           {disease.symptoms.map((symptom, idx) => (
                             <span key={idx}>
-                              {idx > 0 && <span className="text-teal-500 mx-1.5 font-normal">*</span>}
+                              {idx > 0 && <span className="text-teal-600 mx-1.5 font-normal">•</span>}
                               <span>{symptom}</span>
                             </span>
                           ))}
@@ -768,23 +789,23 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                     <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
                       {/* Mức độ nguy cơ */}
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">Mức độ:</span>
+                        <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">{isEn ? 'Severity:' : 'Mức độ:'}</span>
                         {disease.severity === 'mild' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                            Nhẹ
+                            {isEn ? 'Mild' : 'Nhẹ'}
                           </span>
                         )}
                         {disease.severity === 'moderate' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                            Cần theo dõi
+                            {isEn ? 'Moderate / Monitor' : 'Cần theo dõi'}
                           </span>
                         )}
                         {disease.severity === 'severe' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-                            Nguy hiểm - Cần khám ngay
+                            {isEn ? 'Severe / Urgent care' : 'Nguy hiểm - Cần khám ngay'}
                           </span>
                         )}
                       </div>
@@ -797,7 +818,7 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 hover:text-teal-200 border border-teal-500/30 text-[11px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer group/btn"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-teal-400 group-hover/btn:scale-110 transition-transform" />
-                          <span>Hỏi Bác sĩ AI về bệnh này →</span>
+                          <span>{isEn ? 'Consult AI Doctor →' : 'Hỏi Bác sĩ AI về bệnh này →'}</span>
                         </button>
 
                         <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-text-dim group-hover:text-primary transition-colors">
@@ -817,15 +838,15 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                   onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
                   className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer"
                 >
-                  Xem thêm bệnh lý (+{Math.min(ITEMS_PER_PAGE, filteredDiseases.length - visibleCount)})
+                  {isEn ? `Load more diseases (+${Math.min(ITEMS_PER_PAGE, filteredDiseases.length - visibleCount)})` : `Xem thêm bệnh lý (+${Math.min(ITEMS_PER_PAGE, filteredDiseases.length - visibleCount)})`}
                 </button>
                 <p className="text-[11px] text-text-dim">
-                  Đã tải {visibleCount} / {filteredDiseases.length} kết quả
+                  {isEn ? `Showing ${visibleCount} of ${filteredDiseases.length} results` : `Đã tải ${visibleCount} / ${filteredDiseases.length} kết quả`}
                 </p>
               </div>
             ) : (
-              <p className="text-center text-xs text-text-dim py-4 italic">
-                Đã hiển thị toàn bộ {filteredDiseases.length} bệnh lý phù hợp
+              <p className="text-center text-xs text-text-dim py-4">
+                {isEn ? `Showing all ${filteredDiseases.length} matching diseases` : `Đã hiển thị toàn bộ ${filteredDiseases.length} bệnh lý phù hợp`}
               </p>
             )}
           </>
@@ -835,16 +856,16 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
               <Search className="w-7 h-7" />
             </div>
             <div className="space-y-1">
-              <p className="text-white font-serif text-lg italic">Không tìm thấy bệnh lý phù hợp</p>
+              <p className="text-white font-serif text-lg">{isEn ? 'No matching diseases found' : 'Không tìm thấy bệnh lý phù hợp'}</p>
               <p className="text-xs text-text-dim font-light max-w-sm mx-auto">
-                Không có kết quả nào khớp với từ khóa "{searchTerm}" hoặc bộ lọc hiện tại.
+                {isEn ? `No records match "${searchTerm}" or the selected filters.` : `Không có kết quả nào khớp với từ khóa "${searchTerm}" hoặc bộ lọc hiện tại.`}
               </p>
             </div>
             <button
               onClick={resetFilters}
               className="px-4 py-2 rounded-xl bg-primary text-bg font-bold text-xs uppercase tracking-wider shadow-sm hover:brightness-110 transition-all cursor-pointer"
             >
-              Đặt lại tất cả bộ lọc
+              {isEn ? 'Reset all filters' : 'Đặt lại tất cả bộ lọc'}
             </button>
           </div>
         )}
@@ -938,7 +959,7 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-serif text-lg italic font-bold">Chẩn đoán Sơ bộ cùng Bác sĩ AI</h4>
+              <h4 className="font-serif text-lg font-bold">Chẩn đoán Sơ bộ cùng Bác sĩ AI</h4>
               <p className="text-[10px] text-primary font-bold uppercase tracking-[0.2em] mt-0.5">Medical Expert System</p>
             </div>
           </div>

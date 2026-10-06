@@ -22,25 +22,27 @@ export interface DiseaseItem {
 export interface SpecialtyCategory {
   id: string;
   name: string;
+  name_en?: string;
   shortName: string;
+  shortName_en?: string;
   iconName: string;
   count: number;
 }
 
 export const SPECIALTY_CATEGORIES: SpecialtyCategory[] = [
-  { id: 'all', name: 'Tất cả khoa', shortName: 'Tất cả', iconName: 'Activity', count: 48 },
-  { id: 'respiratory', name: 'Hô hấp', shortName: 'Hô hấp', iconName: 'Wind', count: 6 },
-  { id: 'cardiovascular', name: 'Tuần hoàn – Tim mạch', shortName: 'Tim mạch', iconName: 'Heart', count: 5 },
-  { id: 'gastrointestinal', name: 'Tiêu hóa', shortName: 'Tiêu hóa', iconName: 'Salad', count: 4 },
-  { id: 'hepatobiliary', name: 'Gan – Mật – Tụy', shortName: 'Gan Mật', iconName: 'Layers', count: 5 },
-  { id: 'musculoskeletal', name: 'Cơ xương khớp', shortName: 'Xương khớp', iconName: 'Bone', count: 6 },
-  { id: 'neurology', name: 'Thần kinh – Tâm thần', shortName: 'Thần kinh', iconName: 'Brain', count: 6 },
-  { id: 'nephrology', name: 'Thận – Tiết niệu – Sinh dục', shortName: 'Thận - Tiết niệu', iconName: 'Droplets', count: 5 },
-  { id: 'endocrinology', name: 'Nội tiết – Chuyển hóa', shortName: 'Nội tiết', iconName: 'Flame', count: 4 },
-  { id: 'ent_eye', name: 'Tai Mũi Họng – Mắt', shortName: 'TMH & Mắt', iconName: 'Eye', count: 5 },
-  { id: 'dermatology', name: 'Da liễu', shortName: 'Da liễu', iconName: 'Sparkles', count: 6 },
-  { id: 'obgyn_andrology', name: 'Sản - Phụ khoa / Nam khoa', shortName: 'Sản - Nam khoa', iconName: 'Users', count: 4 },
-  { id: 'oncology_hematology', name: 'Ung bướu & Huyết học', shortName: 'Ung bướu', iconName: 'ShieldAlert', count: 2 },
+  { id: 'all', name: 'Tất cả khoa', name_en: 'All Specialties', shortName: 'Tất cả', shortName_en: 'All', iconName: 'Activity', count: 48 },
+  { id: 'respiratory', name: 'Hô hấp', name_en: 'Respiratory', shortName: 'Hô hấp', shortName_en: 'Respiratory', iconName: 'Wind', count: 6 },
+  { id: 'cardiovascular', name: 'Tuần hoàn – Tim mạch', name_en: 'Cardiovascular', shortName: 'Tim mạch', shortName_en: 'Cardio', iconName: 'Heart', count: 5 },
+  { id: 'gastrointestinal', name: 'Tiêu hóa', name_en: 'Gastrointestinal', shortName: 'Tiêu hóa', shortName_en: 'GI Tract', iconName: 'Salad', count: 4 },
+  { id: 'hepatobiliary', name: 'Gan – Mật – Tụy', name_en: 'Hepatobiliary', shortName: 'Gan Mật', shortName_en: 'Liver/Bile', iconName: 'Layers', count: 5 },
+  { id: 'musculoskeletal', name: 'Cơ xương khớp', name_en: 'Musculoskeletal', shortName: 'Xương khớp', shortName_en: 'Ortho/Joints', iconName: 'Bone', count: 6 },
+  { id: 'neurology', name: 'Thần kinh – Tâm thần', name_en: 'Neurology & Psych', shortName: 'Thần kinh', shortName_en: 'Neuro', iconName: 'Brain', count: 6 },
+  { id: 'nephrology', name: 'Thận – Tiết niệu – Sinh dục', name_en: 'Nephrology & Urology', shortName: 'Thận - Tiết niệu', shortName_en: 'Urology', iconName: 'Droplets', count: 5 },
+  { id: 'endocrinology', name: 'Nội tiết – Chuyển hóa', name_en: 'Endocrinology', shortName: 'Nội tiết', shortName_en: 'Endocrine', iconName: 'Flame', count: 4 },
+  { id: 'ent_eye', name: 'Tai Mũi Họng – Mắt', name_en: 'ENT & Ophthalmology', shortName: 'TMH & Mắt', shortName_en: 'ENT & Eye', iconName: 'Eye', count: 5 },
+  { id: 'dermatology', name: 'Da liễu', name_en: 'Dermatology', shortName: 'Da liễu', shortName_en: 'Skin', iconName: 'Sparkles', count: 6 },
+  { id: 'obgyn_andrology', name: 'Sản - Phụ khoa / Nam khoa', name_en: 'OB/GYN & Andrology', shortName: 'Sản - Nam khoa', shortName_en: 'OB/GYN', iconName: 'Users', count: 4 },
+  { id: 'oncology_hematology', name: 'Ung bướu & Huyết học', name_en: 'Oncology & Hematology', shortName: 'Ung bướu', shortName_en: 'Oncology', iconName: 'ShieldAlert', count: 2 },
 ];
 
 export const COMPREHENSIVE_DISEASES: DiseaseItem[] = [

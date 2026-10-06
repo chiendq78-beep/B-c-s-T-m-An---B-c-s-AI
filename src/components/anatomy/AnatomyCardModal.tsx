@@ -26,6 +26,7 @@ import { AnatomyPartData } from '../../data/anatomyData';
 import { registerModal } from '../../utils/modalManager';
 import AnatomyIllustrationViewer from './AnatomyIllustrationViewer';
 import Anatomy3DViewer from './Anatomy3DViewer';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface AnatomyCardModalProps {
   part: AnatomyPartData | null;
@@ -40,6 +41,8 @@ export default function AnatomyCardModal({
   onNavigateToDisease,
   onAskAIDoctor
 }: AnatomyCardModalProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [activeTab, setActiveTab] = useState<'standard' | 'interactive_3d' | 'faq'>('standard');
   const [model3dAngle, setModel3dAngle] = useState(0);
 
@@ -73,14 +76,18 @@ export default function AnatomyCardModal({
     }
   };
 
+  const partName = isEn ? (part.name_en || part.name_vi) : part.name_vi;
+
   const handleSymptomClick = (symptom: string) => {
-    const prompt = `Tôi đang có triệu chứng "${symptom}" liên quan đến ${part.name_vi} (${part.name_latin || ''}). Bác sĩ AI hãy phân tích các nguyên nhân tiềm ẩn, mức độ nguy hiểm và hướng dẫn theo dõi/thăm khám chi tiết giúp tôi.`;
+    const prompt = isEn
+      ? `I have the symptom "${symptom}" related to ${part.name_en || part.name_vi} (${part.name_latin || ''}). AI Doctor, please analyze potential causes, severity levels, and detailed monitoring/examination advice.`
+      : `Tôi đang có triệu chứng "${symptom}" liên quan đến ${part.name_vi} (${part.name_latin || ''}). Bác sĩ AI hãy phân tích các nguyên nhân tiềm ẩn, mức độ nguy hiểm và hướng dẫn theo dõi/thăm khám chi tiết giúp tôi.`;
     handleAskAIWithPrompt(prompt);
   };
 
   const handleGoToDiseaseView = (diseaseName?: string) => {
     if (onNavigateToDisease) {
-      onNavigateToDisease(diseaseName || part.commonDiseases[0] || 'Bệnh lý tim mạch');
+      onNavigateToDisease(diseaseName || part.commonDiseases[0] || (isEn ? 'Cardiovascular Disease' : 'Bệnh lý tim mạch'));
     }
   };
 
@@ -97,12 +104,12 @@ export default function AnatomyCardModal({
         <div className="px-4 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-3.5 pb-3 sm:pb-3.5 border-b border-slate-200 bg-gradient-to-r from-teal-50 via-emerald-50/30 to-slate-50 flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-teal-500/20 flex-shrink-0">
-              {part.name_vi.charAt(0)}
+              {partName.charAt(0)}
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate">
-                  {part.name_vi}
+                  {partName}
                 </h2>
                 {part.name_latin && (
                   <span className="text-[10px] sm:text-xs italic text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg font-mono border border-teal-200 font-semibold whitespace-nowrap">
@@ -111,7 +118,7 @@ export default function AnatomyCardModal({
                 )}
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
-                {part.name_en || 'Human Anatomy Structure'} • Mã: <span className="font-semibold text-slate-700">{part.code}</span>
+                {(isEn ? part.name_vi : (part.name_en || 'Human Anatomy Structure'))} • {isEn ? 'Code' : 'Mã'}: <span className="font-semibold text-slate-700">{part.code}</span>
               </p>
             </div>
           </div>
@@ -119,7 +126,7 @@ export default function AnatomyCardModal({
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={onClose}
-              aria-label="Đóng cửa sổ"
+              aria-label={isEn ? "Close window" : "Đóng cửa sổ"}
               className="w-9 h-9 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <X className="w-5 h-5" />
@@ -140,7 +147,7 @@ export default function AnatomyCardModal({
             >
               <span className="flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-teal-600" />
-                <span>10 Mục Chuẩn Hóa Y Khoa</span>
+                <span>{isEn ? "10 Clinical Sections" : "10 Mục Chuẩn Hóa Y Khoa"}</span>
               </span>
             </button>
 
@@ -154,7 +161,7 @@ export default function AnatomyCardModal({
             >
               <span className="flex items-center gap-1.5">
                 <Crosshair className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Minh Họa 3D / Xoay Không Gian</span>
+                <span>{isEn ? "3D Model / Spatial Rotation" : "Minh Họa 3D / Xoay Không Gian"}</span>
               </span>
             </button>
 
@@ -168,18 +175,22 @@ export default function AnatomyCardModal({
             >
               <span className="flex items-center gap-1.5">
                 <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Hỏi Đáp Bác Sĩ AI ({part.aiQuestionSuggestions?.length || 3})</span>
+                <span>{isEn ? `AI Doctor Q&A (${part.aiQuestionSuggestions?.length || 3})` : `Hỏi Đáp Bác Sĩ AI (${part.aiQuestionSuggestions?.length || 3})`}</span>
               </span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => handleAskAIWithPrompt(`Tư vấn chuyên sâu toàn diện về ${part.name_vi} (${part.name_latin || ''}) cho tôi.`)}
+              onClick={() => handleAskAIWithPrompt(
+                isEn 
+                  ? `Provide a comprehensive medical consultation about ${part.name_en || part.name_vi} (${part.name_latin || ''}).` 
+                  : `Tư vấn chuyên sâu toàn diện về ${part.name_vi} (${part.name_latin || ''}) cho tôi.`
+              )}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] sm:text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Hỏi Bác sĩ AI ngay</span>
+              <span>{isEn ? "Ask AI Doctor" : "Hỏi Bác sĩ AI ngay"}</span>
             </button>
           </div>
         </div>
@@ -208,10 +219,12 @@ export default function AnatomyCardModal({
               <div className="bg-white p-4 sm:p-5 rounded-2xl border border-teal-200 shadow-xs space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-teal-600" />
-                  <span>⑩ Danh Sách Câu Hỏi Thường Gặp & Tình Huống Lâm Sàng</span>
+                  <span>{isEn ? "⑩ Frequently Asked Questions & Clinical Scenarios" : "⑩ Danh Sách Câu Hỏi Thường Gặp & Tình Huống Lâm Sàng"}</span>
                 </h3>
                 <p className="text-xs text-slate-600">
-                  Chọn một câu hỏi dưới đây để mở cuộc hội chẩn trực tiếp với Bác sĩ AI Tâm An:
+                  {isEn 
+                    ? "Select a question below to consult directly with AI Doctor Tâm An:" 
+                    : "Chọn một câu hỏi dưới đây để mở cuộc hội chẩn trực tiếp với Bác sĩ AI Tâm An:"}
                 </p>
                 <div className="space-y-2 pt-1">
                   {part.aiQuestionSuggestions?.map((q, idx) => (
@@ -238,7 +251,7 @@ export default function AnatomyCardModal({
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">1</span>
-                    <span>Định nghĩa</span>
+                    <span>{isEn ? "Definition" : "Định nghĩa"}</span>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
                     {part.definition}
@@ -249,7 +262,7 @@ export default function AnatomyCardModal({
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">2</span>
-                    <span>Vị trí giải phẫu</span>
+                    <span>{isEn ? "Anatomical Location" : "Vị trí giải phẫu"}</span>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700 leading-relaxed flex items-start gap-2">
                     <MapPin className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
@@ -263,10 +276,10 @@ export default function AnatomyCardModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-                    <span>Hình ảnh minh họa giải phẫu</span>
+                    <span>{isEn ? "Anatomical Illustration" : "Hình ảnh minh họa giải phẫu"}</span>
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    Minh họa y khoa đa chế độ
+                    {isEn ? "Multi-mode Medical Illustration" : "Minh họa y khoa đa chế độ"}
                   </span>
                 </div>
                 
@@ -283,7 +296,7 @@ export default function AnatomyCardModal({
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">4</span>
-                    <span>Cấu trúc cơ bản</span>
+                    <span>{isEn ? "Basic Structure" : "Cấu trúc cơ bản"}</span>
                   </div>
                   <div className="space-y-2">
                     {part.structures.map((st, idx) => (
@@ -303,7 +316,7 @@ export default function AnatomyCardModal({
                 <div className="bg-teal-50/60 rounded-2xl p-4 sm:p-5 border border-teal-200/80 shadow-xs space-y-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-teal-950 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">5</span>
-                    <span>Chức năng sinh học</span>
+                    <span>{isEn ? "Biological Functions" : "Chức năng sinh học"}</span>
                   </div>
                   <ul className="space-y-2">
                     {part.functions.map((fn, idx) => (
@@ -321,13 +334,13 @@ export default function AnatomyCardModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">6</span>
-                    <span>Bệnh lý liên quan</span>
+                    <span>{isEn ? "Related Pathologies" : "Bệnh lý liên quan"}</span>
                   </div>
                   <button
                     onClick={() => handleGoToDiseaseView()}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
                   >
-                    <span>Mở thư viện bệnh học</span>
+                    <span>{isEn ? "Open Disease Library" : "Mở thư viện bệnh học"}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -336,17 +349,17 @@ export default function AnatomyCardModal({
                   {/* Bệnh phổ biến */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
                     <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                      Bệnh thường gặp
+                      {isEn ? "Common Diseases" : "Bệnh thường gặp"}
                     </span>
                     <ul className="space-y-1.5">
                       {part.commonDiseases.map((d, idx) => (
                         <li key={idx} className="flex items-center justify-between text-xs text-slate-800 py-1.5 border-b border-slate-200/70 last:border-none">
                           <span className="font-medium">{d}</span>
                           <button
-                            onClick={() => handleAskAIWithPrompt(`Phân tích bệnh "${d}" ở ${part.name_vi}`)}
+                            onClick={() => handleAskAIWithPrompt(isEn ? `Analyze disease "${d}" of ${partName}` : `Phân tích bệnh "${d}" ở ${part.name_vi}`)}
                             className="text-[11px] text-teal-600 hover:text-teal-800 font-semibold cursor-pointer"
                           >
-                            Hỏi AI
+                            {isEn ? "Ask AI" : "Hỏi AI"}
                           </button>
                         </li>
                       ))}
@@ -356,17 +369,17 @@ export default function AnatomyCardModal({
                   {/* Bệnh nguy hiểm */}
                   <div className="bg-rose-50/80 p-4 rounded-xl border border-rose-200 space-y-2.5">
                     <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider block">
-                      Bệnh nguy hiểm / Cấp tính
+                      {isEn ? "Critical / Acute Conditions" : "Bệnh nguy hiểm / Cấp tính"}
                     </span>
                     <ul className="space-y-1.5">
                       {part.criticalDiseases.map((d, idx) => (
                         <li key={idx} className="flex items-center justify-between text-xs text-rose-950 py-1.5 border-b border-rose-200/70 last:border-none">
                           <span className="font-semibold">{d}</span>
                           <button
-                            onClick={() => handleAskAIWithPrompt(`Cảnh báo và xử trí cấp cứu bệnh nguy hiểm "${d}" ở ${part.name_vi}`)}
+                            onClick={() => handleAskAIWithPrompt(isEn ? `Emergency warning and management for critical condition "${d}" of ${partName}` : `Cảnh báo và xử trí cấp cứu bệnh nguy hiểm "${d}" ở ${part.name_vi}`)}
                             className="text-[11px] text-rose-700 hover:text-rose-900 font-bold cursor-pointer"
                           >
-                            Cảnh báo
+                            {isEn ? "Warning" : "Cảnh báo"}
                           </button>
                         </li>
                       ))}
@@ -379,7 +392,7 @@ export default function AnatomyCardModal({
               <div className="bg-amber-50/60 rounded-2xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-950 uppercase tracking-wider">
                   <span className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold">7</span>
-                  <span>Dấu hiệu thường gặp (Bấm vào triệu chứng để Bác sĩ AI phân tích)</span>
+                  <span>{isEn ? "Common Symptoms (Click to analyze with AI Doctor)" : "Dấu hiệu thường gặp (Bấm vào triệu chứng để Bác sĩ AI phân tích)"}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {part.commonSymptoms.map((symp, idx) => (
@@ -400,7 +413,7 @@ export default function AnatomyCardModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-red-800 font-bold text-xs sm:text-sm uppercase tracking-wider">
                     <span className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold">8</span>
-                    <span>Dấu hiệu cảnh báo nguy hiểm (Cần đi khám ngay / Cấp cứu 115)</span>
+                    <span>{isEn ? "Danger Warning Signs (Emergency / 115 Immediate Care)" : "Dấu hiệu cảnh báo nguy hiểm (Cần đi khám ngay / Cấp cứu 115)"}</span>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-bold uppercase tracking-widest">
                     SOS 115
@@ -413,7 +426,7 @@ export default function AnatomyCardModal({
 
                 <div className="space-y-2">
                   <span className="text-xs font-bold text-red-800 block">
-                    Danh mục triệu chứng báo động đỏ:
+                    {isEn ? "Red flag symptoms list:" : "Danh mục triệu chứng báo động đỏ:"}
                   </span>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {part.redFlags.map((flag, idx) => (
@@ -431,10 +444,10 @@ export default function AnatomyCardModal({
                     className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
                   >
                     <PhoneCall className="w-4 h-4" />
-                    <span>Gọi Cấp Cứu 115 Ngay</span>
+                    <span>{isEn ? "Call Emergency 115" : "Gọi Cấp Cứu 115 Ngay"}</span>
                   </a>
                   <span className="text-[11px] text-red-800 font-medium text-center sm:text-left">
-                    Nếu gặp các dấu hiệu đỏ trên, hãy nhanh chóng tới cơ sở y tế gần nhất!
+                    {isEn ? "If experiencing any of the red flag symptoms above, seek immediate medical attention!" : "Nếu gặp các dấu hiệu đỏ trên, hãy nhanh chóng tới cơ sở y tế gần nhất!"}
                   </span>
                 </div>
               </div>
@@ -443,7 +456,7 @@ export default function AnatomyCardModal({
               <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-4 sm:p-5 border border-teal-200 shadow-xs space-y-3">
                 <div className="flex items-center gap-2 text-teal-950 font-bold text-xs sm:text-sm uppercase tracking-wider">
                   <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">9</span>
-                  <span>Gợi ý câu hỏi cho Bác sĩ AI Tâm An</span>
+                  <span>{isEn ? "AI Doctor Consultation Prompts" : "Gợi ý câu hỏi cho Bác sĩ AI Tâm An"}</span>
                 </div>
                 <div className="space-y-2">
                   {part.aiQuestionSuggestions.map((prompt, idx) => (
@@ -469,7 +482,7 @@ export default function AnatomyCardModal({
                   <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200 shadow-xs space-y-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-emerald-950 uppercase tracking-wider">
                       <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">10a</span>
-                      <span>Thảo dược bổ trợ (YHCT)</span>
+                      <span>{isEn ? "Supportive Herbs (Traditional Medicine)" : "Thảo dược bổ trợ (YHCT)"}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 pt-1">
                       {part.relatedHerbs.map((herb, idx) => (
@@ -489,7 +502,7 @@ export default function AnatomyCardModal({
                   <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                       <span className="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center text-[10px] font-bold">10b</span>
-                      <span>Thói quen vàng dưỡng thể</span>
+                      <span>{isEn ? "Golden Wellness Habits" : "Thói quen vàng dưỡng thể"}</span>
                     </div>
                     <ul className="space-y-1.5 pt-1">
                       {part.healthTips.map((tip, idx) => (
@@ -509,13 +522,15 @@ export default function AnatomyCardModal({
         {/* Footer Bar */}
         <div className="px-4 sm:px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3 flex-shrink-0">
           <span className="text-[11px] text-slate-500 truncate">
-            Chu trình: <strong className="text-teal-700">CƠ THỂ → HỆ CƠ QUAN → BỘ PHẬN → BỆNH LÝ → BÁC SĨ AI</strong>
+            {isEn 
+              ? <>Clinical Pathway: <strong className="text-teal-700">BODY → SYSTEM → ORGAN → PATHOLOGY → AI DOCTOR</strong></>
+              : <>Chu trình: <strong className="text-teal-700">CƠ THỂ → HỆ CƠ QUAN → BỘ PHẬN → BỆNH LÝ → BÁC SĨ AI</strong></>}
           </span>
           <button
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-slate-200 flex items-center gap-1.5"
           >
-            <span>Đóng</span>
+            <span>{isEn ? "Close" : "Đóng"}</span>
           </button>
         </div>
       </motion.div>

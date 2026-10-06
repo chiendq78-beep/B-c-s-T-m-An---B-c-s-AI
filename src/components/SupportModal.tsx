@@ -98,92 +98,87 @@ export default function SupportModal({ isOpen, onClose, onOpenAIChat }: SupportM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-6 overflow-hidden">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[100] w-screen h-screen flex flex-col bg-white overflow-hidden select-none">
+      {/* Modal Dialog Fullscreen */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-md cursor-pointer"
-      />
-
-      {/* Modal Dialog */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 10 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-        className="relative w-full h-full lg:h-auto lg:max-w-xl lg:max-h-[90vh] bg-white rounded-none lg:rounded-3xl shadow-2xl border-0 lg:border lg:border-teal-100 overflow-hidden z-10 my-auto flex flex-col"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 15 }}
+        transition={{ duration: 0.2 }}
+        className="w-full h-full min-h-screen bg-white flex flex-col overflow-hidden"
       >
-        {/* Teal Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-white p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 relative overflow-hidden flex-shrink-0 shadow-md">
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
-                <HelpCircle className="w-6 h-6 text-white" />
+        {/* Teal Header: Nền xanh, chữ trắng */}
+        <div className="emergency-header bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-force-white p-4 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),16px)+0.5rem)] relative overflow-hidden flex-shrink-0 shadow-md">
+          <div className="max-w-2xl mx-auto w-full">
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner flex-shrink-0">
+                  <HelpCircle className="w-6 h-6 text-force-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-force-white tracking-wide">TRUNG TÂM HỖ TRỢ & GÓP Ý</h2>
+                  <p className="text-teal-50 text-xs mt-0.5 font-medium opacity-90">Bác sĩ Tâm An AI • Đồng hành cùng sức khỏe gia đình bạn</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-white tracking-wide">TRUNG TÂM HỖ TRỢ & HƯỚNG DẪN</h2>
-                <p className="text-teal-100 text-xs mt-0.5 font-medium">Bác sĩ Tâm An AI • Đồng hành cùng sức khỏe gia đình bạn</p>
-              </div>
+
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-force-white flex items-center justify-center transition-all cursor-pointer border border-white/20 flex-shrink-0 active:scale-95"
+                title="Đóng (Esc)"
+              >
+                <X className="w-5 h-5 text-force-white" />
+              </button>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer border border-white/20"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Navigation Sub-tabs */}
-          <div className="flex gap-1.5 mt-4 bg-black/20 p-1 rounded-xl backdrop-blur-sm border border-white/15 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('guide')}
-              className={cn(
-                "flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'guide' ? "bg-white text-teal-800 shadow-sm font-black" : "text-white/80 hover:text-white"
-              )}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Hướng dẫn</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('faq')}
-              className={cn(
-                "flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'faq' ? "bg-white text-teal-800 shadow-sm font-black" : "text-white/80 hover:text-white"
-              )}
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Hỏi đáp (FAQ)</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('contact')}
-              className={cn(
-                "flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'contact' ? "bg-white text-teal-800 shadow-sm font-black" : "text-white/80 hover:text-white"
-              )}
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Liên hệ</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('feedback')}
-              className={cn(
-                "flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'feedback' ? "bg-white text-teal-800 shadow-sm font-black" : "text-white/80 hover:text-white"
-              )}
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Góp ý</span>
-            </button>
+            {/* Navigation Sub-tabs */}
+            <div className="flex gap-1.5 mt-4 bg-teal-950/25 p-1 rounded-xl backdrop-blur-sm border border-white/20 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setActiveTab('guide')}
+                className={cn(
+                  "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'guide' ? "active-tab-btn bg-white text-teal-800 shadow-sm font-black" : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Hướng dẫn</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('faq')}
+                className={cn(
+                  "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'faq' ? "active-tab-btn bg-white text-teal-800 shadow-sm font-black" : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Hỏi đáp (FAQ)</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('contact')}
+                className={cn(
+                  "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'contact' ? "active-tab-btn bg-white text-teal-800 shadow-sm font-black" : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Liên hệ</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className={cn(
+                  "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'feedback' ? "active-tab-btn bg-white text-teal-800 shadow-md font-black" : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Góp ý</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto w-full space-y-5">
           
           {/* TAB 1: USER GUIDE */}
           {activeTab === 'guide' && (
@@ -388,19 +383,22 @@ export default function SupportModal({ isOpen, onClose, onOpenAIChat }: SupportM
             </div>
           )}
 
+          </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-          <span className="text-[10px] text-slate-500 font-medium">
-            Phiên bản: Tâm An Expert AI v2.6.0
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-          >
-            Đóng
-          </button>
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0 pb-[calc(max(env(safe-area-inset-bottom,0px),12px)+0.5rem)]">
+          <div className="max-w-2xl mx-auto w-full flex items-center justify-between">
+            <span className="text-[10px] text-slate-500 font-medium">
+              Phiên bản: Tâm An Expert AI v2.6.0
+            </span>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95 shadow-2xs"
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

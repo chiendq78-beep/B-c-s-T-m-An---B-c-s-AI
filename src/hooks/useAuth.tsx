@@ -4,6 +4,8 @@ import {
   User, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   signInAnonymously,
   createUserWithEmailAndPassword,
@@ -18,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (forceRedirect?: boolean) => Promise<void>;
   signInAsDemoAdmin: () => Promise<void>;
   signUpWithEmail: (email: string, password: string, fullName: string, role: 'admin' | 'user') => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -34,6 +36,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Check for redirect result on app load (standard mobile & PWA redirect flow)
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('tam_an_google_redirecting');
+        }
+        if (!isMounted) return;
+        if (result && result.user) {
+          console.log("Standard Google redirect sign-in successful:", result.user.email);
+        }
+      })
+      .catch((error) => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('tam_an_google_redirecting');
+        }
+        console.warn("Google getRedirectResult error on mobile/tablet:", error);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         if (!isMounted) return;
@@ -43,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile({
               id: currentUser.uid,
               email: '',
-              fullName: 'Người dùng Trải nghiệm',
+              fullName: 'Người dùng',
               is_active: true,
               role: 'user',
               createdAt: new Date().toISOString(),
@@ -93,6 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (isMounted) setLoading(false);
       } else {
+        // If a Google redirect is in progress on mobile/tablet, do not prematurely sign in anonymously
+        const isPendingRedirect = typeof window !== 'undefined' && sessionStorage.getItem('tam_an_google_redirecting') === 'true';
+        if (isPendingRedirect) {
+          return;
+        }
+
         // Automatically authenticate anonymously in background so app starts directly without login barrier
         try {
           const anonCred = await signInAnonymously(auth);
@@ -101,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile({
               id: anonCred.user.uid,
               email: '',
-              fullName: 'Người dùng Trải nghiệm',
+              fullName: 'Người dùng',
               is_active: true,
               role: 'user',
               createdAt: new Date().toISOString(),
@@ -115,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile({
               id: 'guest_local',
               email: '',
-              fullName: 'Người dùng Trải nghiệm',
+              fullName: 'Người dùng',
               is_active: true,
               role: 'user',
               createdAt: new Date().toISOString()
@@ -132,29 +159,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (forceRedirect = false) => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    provider.addScope('email');
+    provider.addScope('profile');
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+
+    // If explicit redirect is requested
+    if (forceRedirect) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('tam_an_google_redirecting', 'true');
+      }
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
+    // Try popup first - standard across mobile and tablet when triggered by user tap
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (popupError: any) {
+      console.warn("Google signInWithPopup note:", popupError);
+      // If popup was blocked by browser and not in an iframe, attempt redirect
+      if (
+        popupError.code === 'auth/popup-blocked' &&
+        typeof window !== 'undefined' &&
+        window.self === window.top
+      ) {
+        sessionStorage.setItem('tam_an_google_redirecting', 'true');
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      throw popupError;
+    }
   };
 
   const signInAsDemoAdmin = async () => {
     setLoading(true);
     try {
-      const credential = await signInAnonymously(auth);
-      const u = credential.user;
+      let u = auth.currentUser;
+      if (!u || u.isAnonymous) {
+        const credential = await signInAnonymously(auth);
+        u = credential.user;
+      }
       const adminProfile: UserProfile = {
         id: u.uid,
-        email: 'admin-demo@taman.vn',
-        fullName: 'Quản trị viên (Demo)',
+        email: 'chiendq78@gmail.com',
+        fullName: 'Bác sĩ Chiến (Quản trị viên)',
         is_active: true,
         role: 'admin',
         createdAt: new Date().toISOString(),
       };
-      await setDoc(doc(db, 'users', u.uid), adminProfile);
-      await setDoc(doc(db, 'admins', u.uid), { promotedAt: new Date().toISOString() });
+      await setDoc(doc(db, 'users', u.uid), adminProfile, { merge: true });
+      await setDoc(doc(db, 'admins', u.uid), { promotedAt: new Date().toISOString(), email: 'chiendq78@gmail.com' }, { merge: true });
+      setUser(u);
       setProfile(adminProfile);
     } catch (error) {
       console.error("Error signing in as demo admin:", error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -208,7 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile({
         id: cred.user.uid,
         email: '',
-        fullName: 'Người dùng Trải nghiệm',
+        fullName: 'Người dùng',
         is_active: true,
         role: 'user',
         createdAt: new Date().toISOString(),
@@ -219,7 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile({
         id: 'guest_local',
         email: '',
-        fullName: 'Người dùng Trải nghiệm',
+        fullName: 'Người dùng',
         is_active: true,
         role: 'user',
         createdAt: new Date().toISOString(),

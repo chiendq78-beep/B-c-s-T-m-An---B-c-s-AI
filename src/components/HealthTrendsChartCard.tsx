@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../contexts/LanguageContext';
 import { cn } from '../lib/utils';
 
 interface HealthTrendsChartCardProps {
@@ -41,6 +42,7 @@ export default function HealthTrendsChartCard({
   onNavigateToHealth 
 }: HealthTrendsChartCardProps) {
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const [activeMetric, setActiveMetric] = useState<'heartRate' | 'bloodPressure' | 'spo2' | 'activity'>('heartRate');
   const [timeRange, setTimeRange] = useState<'7d' | '14d' | '30d'>('7d');
   const [vitalsList, setVitalsList] = useState<any[]>([]);
@@ -218,13 +220,14 @@ export default function HealthTrendsChartCard({
     const avgDia = Math.round(diaValues.reduce((a, b) => a + b, 0) / diaValues.length);
 
     // Trend comparison between first half and second half
-    let trendStatus = 'Ổn định';
+    const isEn = language === 'en';
+    let trendStatus = isEn ? 'Stable' : 'Ổn định';
     if (hrValues.length >= 4) {
       const half = Math.floor(hrValues.length / 2);
       const firstHalfAvg = hrValues.slice(0, half).reduce((a, b) => a + b, 0) / half;
       const secondHalfAvg = hrValues.slice(half).reduce((a, b) => a + b, 0) / (hrValues.length - half);
-      if (secondHalfAvg - firstHalfAvg > 3) trendStatus = 'Tăng nhẹ';
-      else if (firstHalfAvg - secondHalfAvg > 3) trendStatus = 'Giảm nhẹ';
+      if (secondHalfAvg - firstHalfAvg > 3) trendStatus = isEn ? 'Slightly Rising' : 'Tăng nhẹ';
+      else if (firstHalfAvg - secondHalfAvg > 3) trendStatus = isEn ? 'Slightly Decreasing' : 'Giảm nhẹ';
     }
 
     return {
@@ -236,57 +239,68 @@ export default function HealthTrendsChartCard({
       avgSys,
       avgDia
     };
-  }, [filteredData]);
+  }, [filteredData, language]);
 
   // Metric configurations
-  const metricConfigs = {
-    heartRate: {
-      title: 'Nhịp Tim (Heart Rate)',
-      unit: 'BPM',
-      color: '#f43f5e',
-      gradientId: 'heartRateGrad',
-      safeMin: 60,
-      safeMax: 100,
-      safeLabel: '60 - 100 BPM (Chuẩn nghỉ ngơi)',
-      dataKey: 'heartRate',
-      desc: 'Nhịp tim đo khi nghỉ ngơi phản ánh sức bền cơ tim và mức độ căng thẳng thần kinh thực vật.'
-    },
-    bloodPressure: {
-      title: 'Huyết Áp (Blood Pressure)',
-      unit: 'mmHg',
-      color: '#06b6d4',
-      gradientId: 'bpGrad',
-      safeMin: 90,
-      safeMax: 130,
-      safeLabel: '< 120/80 mmHg (Lý tưởng)',
-      dataKey: 'bloodPressureSystolic',
-      secondaryDataKey: 'bloodPressureDiastolic',
-      desc: 'Áp lực máu động mạch tối đa (tâm thu) và tối thiểu (tâm trương).'
-    },
-    spo2: {
-      title: 'Oxy Trong Máu (SpO2)',
-      unit: '%',
-      color: '#10b981',
-      gradientId: 'spo2Grad',
-      safeMin: 95,
-      safeMax: 100,
-      safeLabel: '≥ 95% (Bình thường)',
-      dataKey: 'spo2',
-      desc: 'Độ bão hòa oxy trong máu động mạch, chỉ số sống còn của hệ hô hấp và tuần hoàn.'
-    },
-    activity: {
-      title: 'Nước Uống & Giấc Ngủ',
-      unit: 'Cốc (250ml)',
-      color: '#8b5cf6',
-      gradientId: 'activityGrad',
-      safeMin: 6,
-      safeMax: 10,
-      safeLabel: '8 Cốc nước (2.0L) & 7-8h ngủ',
-      dataKey: 'waterCups',
-      secondaryDataKey: 'sleepHours',
-      desc: 'Thói quen duy trì nước và thời lượng phục hồi năng lượng mỗi ngày.'
-    }
-  };
+  const metricConfigs = useMemo(() => {
+    const isEn = language === 'en';
+    return {
+      heartRate: {
+        title: isEn ? 'Heart Rate' : 'Nhịp Tim (Heart Rate)',
+        unit: 'BPM',
+        color: '#f43f5e',
+        gradientId: 'heartRateGrad',
+        safeMin: 60,
+        safeMax: 100,
+        safeLabel: isEn ? '60 - 100 BPM (Resting Normal)' : '60 - 100 BPM (Chuẩn nghỉ ngơi)',
+        dataKey: 'heartRate',
+        desc: isEn 
+          ? 'Resting heart rate reflects myocardial efficiency and autonomic nervous balance.'
+          : 'Nhịp tim đo khi nghỉ ngơi phản ánh sức bền cơ tim và mức độ căng thẳng thần kinh thực vật.'
+      },
+      bloodPressure: {
+        title: isEn ? 'Blood Pressure' : 'Huyết Áp (Blood Pressure)',
+        unit: 'mmHg',
+        color: '#06b6d4',
+        gradientId: 'bpGrad',
+        safeMin: 90,
+        safeMax: 130,
+        safeLabel: isEn ? '< 120/80 mmHg (Ideal)' : '< 120/80 mmHg (Lý tưởng)',
+        dataKey: 'bloodPressureSystolic',
+        secondaryDataKey: 'bloodPressureDiastolic',
+        desc: isEn
+          ? 'Peak arterial systolic pressure and resting diastolic pressure.'
+          : 'Áp lực máu động mạch tối đa (tâm thu) và tối thiểu (tâm trương).'
+      },
+      spo2: {
+        title: isEn ? 'Blood Oxygen (SpO2)' : 'Oxy Trong Máu (SpO2)',
+        unit: '%',
+        color: '#10b981',
+        gradientId: 'spo2Grad',
+        safeMin: 95,
+        safeMax: 100,
+        safeLabel: isEn ? '≥ 95% (Optimal)' : '≥ 95% (Bình thường)',
+        dataKey: 'spo2',
+        desc: isEn
+          ? 'Arterial blood oxygen saturation, a vital metric for respiratory and circulatory health.'
+          : 'Độ bão hòa oxy trong máu động mạch, chỉ số sống còn của hệ hô hấp và tuần hoàn.'
+      },
+      activity: {
+        title: isEn ? 'Hydration & Sleep' : 'Nước Uống & Giấc Ngủ',
+        unit: isEn ? 'Cups (250ml)' : 'Cốc (250ml)',
+        color: '#8b5cf6',
+        gradientId: 'activityGrad',
+        safeMin: 6,
+        safeMax: 10,
+        safeLabel: isEn ? '8 Cups (2.0L) & 7-8h Sleep' : '8 Cốc nước (2.0L) & 7-8h ngủ',
+        dataKey: 'waterCups',
+        secondaryDataKey: 'sleepHours',
+        desc: isEn
+          ? 'Daily hydration replenishment and restful sleep restorative duration.'
+          : 'Thói quen duy trì nước và thời lượng phục hồi năng lượng mỗi ngày.'
+      }
+    };
+  }, [language]);
 
   const curConfig = metricConfigs[activeMetric];
 
@@ -294,6 +308,7 @@ export default function HealthTrendsChartCard({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      const isEn = language === 'en';
       return (
         <div className="bg-slate-950/95 border border-white/10 p-3 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-1.5 min-w-[170px]">
           <div className="flex items-center justify-between border-b border-white/10 pb-1 text-[10px] text-text-dim">
@@ -305,7 +320,7 @@ export default function HealthTrendsChartCard({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-text-dim flex items-center gap-1">
-                  <Heart className="w-3.5 h-3.5 text-rose-400" /> Nhịp tim:
+                  <Heart className="w-3.5 h-3.5 text-rose-400" /> {isEn ? 'Heart rate:' : 'Nhịp tim:'}
                 </span>
                 <span className="font-mono font-bold text-rose-400 text-sm">{data.heartRate} BPM</span>
               </div>
@@ -313,7 +328,11 @@ export default function HealthTrendsChartCard({
                 "text-[9px] px-2 py-0.5 rounded-full inline-block font-medium",
                 data.heartRate >= 60 && data.heartRate <= 100 ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"
               )}>
-                {data.heartRate >= 60 && data.heartRate <= 100 ? 'Nhịp tim bình thường' : data.heartRate > 100 ? 'Nhịp tim hơi nhanh' : 'Nhịp tim chậm'}
+                {data.heartRate >= 60 && data.heartRate <= 100 
+                  ? (isEn ? 'Normal heart rate' : 'Nhịp tim bình thường') 
+                  : data.heartRate > 100 
+                  ? (isEn ? 'Elevated heart rate' : 'Nhịp tim hơi nhanh') 
+                  : (isEn ? 'Low heart rate' : 'Nhịp tim chậm')}
               </span>
             </div>
           )}
@@ -321,11 +340,11 @@ export default function HealthTrendsChartCard({
           {activeMetric === 'bloodPressure' && (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-text-dim">Tâm thu:</span>
+                <span className="text-text-dim">{isEn ? 'Systolic:' : 'Tâm thu:'}</span>
                 <span className="font-mono font-bold text-cyan-400">{data.bloodPressureSystolic} mmHg</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-dim">Tâm trương:</span>
+                <span className="text-text-dim">{isEn ? 'Diastolic:' : 'Tâm trương:'}</span>
                 <span className="font-mono font-bold text-teal-400">{data.bloodPressureDiastolic} mmHg</span>
               </div>
             </div>
@@ -344,15 +363,19 @@ export default function HealthTrendsChartCard({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-text-dim flex items-center gap-1">
-                  <Droplets className="w-3 h-3 text-cyan-400" /> Nước:
+                  <Droplets className="w-3 h-3 text-cyan-400" /> {isEn ? 'Water:' : 'Nước:'}
                 </span>
-                <span className="font-mono font-bold text-cyan-400">{data.waterCups} cốc ({data.waterCups * 250}ml)</span>
+                <span className="font-mono font-bold text-cyan-400">
+                  {data.waterCups} {isEn ? 'cups' : 'cốc'} ({data.waterCups * 250}ml)
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-dim flex items-center gap-1">
-                  <Moon className="w-3 h-3 text-purple-400" /> Giấc ngủ:
+                  <Moon className="w-3 h-3 text-purple-400" /> {isEn ? 'Sleep:' : 'Giấc ngủ:'}
                 </span>
-                <span className="font-mono font-bold text-purple-400">{data.sleepHours} giờ</span>
+                <span className="font-mono font-bold text-purple-400">
+                  {data.sleepHours} {isEn ? 'hrs' : 'giờ'}
+                </span>
               </div>
             </div>
           )}
@@ -361,6 +384,8 @@ export default function HealthTrendsChartCard({
     }
     return null;
   };
+
+  const isEn = language === 'en';
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="home-health-trends-chart-section">
@@ -372,10 +397,10 @@ export default function HealthTrendsChartCard({
           </div>
           <div>
             <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-              Xu Hướng Sức Khỏe & Nhịp Tim
+              {t('trends.title')}
             </h3>
             <p className="text-[8.5px] sm:text-[9px] text-teal-800 font-bold uppercase tracking-wider mt-0.5">
-              Phân tích dữ liệu sinh hiệu đa chiều
+              {t('trends.subtitle')}
             </p>
           </div>
         </div>
@@ -394,7 +419,11 @@ export default function HealthTrendsChartCard({
                   : "text-slate-600 hover:text-slate-900"
               )}
             >
-              {r === '7d' ? '7 Ngày' : r === '14d' ? '14 Ngày' : '30 Ngày'}
+              {r === '7d' 
+                ? (isEn ? '7 Days' : '7 Ngày') 
+                : r === '14d' 
+                ? (isEn ? '14 Days' : '14 Ngày') 
+                : (isEn ? '30 Days' : '30 Ngày')}
             </button>
           ))}
         </div>
@@ -415,7 +444,7 @@ export default function HealthTrendsChartCard({
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">Nhịp tim</span>
+            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.hr')}</span>
             <Heart className={cn("w-3.5 h-3.5", activeMetric === 'heartRate' ? "text-rose-400" : "text-text-dim")} />
           </div>
           <div className="flex items-baseline gap-1">
@@ -435,7 +464,7 @@ export default function HealthTrendsChartCard({
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">Huyết áp</span>
+            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.bp')}</span>
             <Activity className={cn("w-3.5 h-3.5", activeMetric === 'bloodPressure' ? "text-cyan-400" : "text-text-dim")} />
           </div>
           <div className="flex items-baseline gap-1">
@@ -455,7 +484,7 @@ export default function HealthTrendsChartCard({
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">SpO2 Oxy</span>
+            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.spo2')}</span>
             <Wind className={cn("w-3.5 h-3.5", activeMetric === 'spo2' ? "text-emerald-400" : "text-text-dim")} />
           </div>
           <div className="flex items-baseline gap-1">
@@ -475,12 +504,16 @@ export default function HealthTrendsChartCard({
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">Thói quen</span>
+            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.activity')}</span>
             <Droplets className={cn("w-3.5 h-3.5", activeMetric === 'activity' ? "text-purple-400" : "text-text-dim")} />
           </div>
           <div className="flex items-baseline justify-between gap-1 w-full">
-            <span className="text-sm font-mono font-bold text-white truncate">Nước & Ngủ</span>
-            <span className="text-[9px] text-text-dim font-mono shrink-0">Chu kỳ</span>
+            <span className="text-sm font-mono font-bold text-white truncate">
+              {isEn ? 'Water & Sleep' : 'Nước & Ngủ'}
+            </span>
+            <span className="text-[9px] text-text-dim font-mono shrink-0">
+              {isEn ? 'Cycle' : 'Chu kỳ'}
+            </span>
           </div>
         </button>
       </div>
@@ -508,7 +541,7 @@ export default function HealthTrendsChartCard({
               <span className="text-white/20">|</span>
               <span className="text-text-dim">Max: <strong className="text-rose-400">{stats.maxHeartRate}</strong></span>
               <span className="text-white/20">|</span>
-              <span className="text-text-dim">Xu hướng: <strong className="text-primary">{stats.trendStatus}</strong></span>
+              <span className="text-text-dim">{isEn ? 'Trend:' : 'Xu hướng:'} <strong className="text-primary">{stats.trendStatus}</strong></span>
             </div>
           )}
         </div>
@@ -569,13 +602,13 @@ export default function HealthTrendsChartCard({
               {/* Reference Lines for Standard Ranges */}
               {activeMetric === 'heartRate' && (
                 <>
-                  <ReferenceLine y={100} stroke="#f43f5e50" strokeDasharray="3 3" label={{ value: 'Giới hạn trên 100 BPM', fill: '#f43f5e', fontSize: 9, position: 'insideTopRight' }} />
-                  <ReferenceLine y={60} stroke="#10b98150" strokeDasharray="3 3" label={{ value: 'Giới hạn dưới 60 BPM', fill: '#10b981', fontSize: 9, position: 'insideBottomRight' }} />
+                  <ReferenceLine y={100} stroke="#f43f5e50" strokeDasharray="3 3" label={{ value: isEn ? 'Upper limit 100 BPM' : 'Giới hạn trên 100 BPM', fill: '#f43f5e', fontSize: 9, position: 'insideTopRight' }} />
+                  <ReferenceLine y={60} stroke="#10b98150" strokeDasharray="3 3" label={{ value: isEn ? 'Lower limit 60 BPM' : 'Giới hạn dưới 60 BPM', fill: '#10b981', fontSize: 9, position: 'insideBottomRight' }} />
                 </>
               )}
 
               {activeMetric === 'spo2' && (
-                <ReferenceLine y={95} stroke="#10b98160" strokeDasharray="3 3" label={{ value: 'Ngưỡng an toàn ≥ 95%', fill: '#10b981', fontSize: 9, position: 'insideTopRight' }} />
+                <ReferenceLine y={95} stroke="#10b98160" strokeDasharray="3 3" label={{ value: isEn ? 'Safe threshold ≥ 95%' : 'Ngưỡng an toàn ≥ 95%', fill: '#10b981', fontSize: 9, position: 'insideTopRight' }} />
               )}
 
               {activeMetric === 'bloodPressure' ? (
@@ -586,7 +619,7 @@ export default function HealthTrendsChartCard({
                     stroke="#06b6d4" 
                     strokeWidth={2.5} 
                     fill="url(#bpGrad)" 
-                    name="Tâm thu"
+                    name={isEn ? "Systolic" : "Tâm thu"}
                   />
                   <Area 
                     type="monotone" 
@@ -594,7 +627,7 @@ export default function HealthTrendsChartCard({
                     stroke="#14b8a6" 
                     strokeWidth={2} 
                     fill="url(#bpDiaGrad)" 
-                    name="Tâm trương"
+                    name={isEn ? "Diastolic" : "Tâm trương"}
                   />
                 </>
               ) : activeMetric === 'activity' ? (
@@ -605,7 +638,7 @@ export default function HealthTrendsChartCard({
                     stroke="#8b5cf6" 
                     strokeWidth={2.5} 
                     fill="url(#activityGrad)" 
-                    name="Nước (cốc)"
+                    name={isEn ? "Water (cups)" : "Nước (cốc)"}
                   />
                   <Area 
                     type="monotone" 
@@ -613,7 +646,7 @@ export default function HealthTrendsChartCard({
                     stroke="#38bdf8" 
                     strokeWidth={2} 
                     fillOpacity={0}
-                    name="Giấc ngủ (giờ)"
+                    name={isEn ? "Sleep (hours)" : "Giấc ngủ (giờ)"}
                   />
                 </>
               ) : (
@@ -633,7 +666,11 @@ export default function HealthTrendsChartCard({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-white/5">
           <div className="flex items-center gap-2 text-xs text-text-dim font-light">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Biểu đồ tự động cập nhật mỗi khi bạn ghi sinh hiệu hoặc nhật ký</span>
+            <span>
+              {isEn 
+                ? 'Trends automatically update as you log vitals and health journals' 
+                : 'Biểu đồ tự động cập nhật mỗi khi bạn ghi sinh hiệu hoặc nhật ký'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -644,7 +681,7 @@ export default function HealthTrendsChartCard({
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl bg-primary text-bg font-bold text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>Ghi sinh hiệu</span>
+                <span>{t('home.log_vitals')}</span>
               </button>
             )}
 
@@ -654,7 +691,7 @@ export default function HealthTrendsChartCard({
                 onClick={onNavigateToHealth}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium text-xs border border-white/10 active:scale-95 transition-all cursor-pointer"
               >
-                Nhật ký chi tiết
+                {isEn ? 'Detailed Journal' : 'Nhật ký chi tiết'}
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}

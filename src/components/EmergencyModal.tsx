@@ -8,7 +8,6 @@ import {
   Heart, 
   X, 
   ShieldAlert, 
-  UserCheck, 
   Flame, 
   Zap, 
   Activity, 
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { useAuth } from '../hooks/useAuth';
 import { registerModal } from '../utils/modalManager';
 
 interface EmergencyModalProps {
@@ -120,8 +118,7 @@ const MAJOR_HOSPITALS = [
 ];
 
 export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps) {
-  const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'call' | 'firstaid' | 'medicalId'>('call');
+  const [activeTab, setActiveTab] = useState<'call' | 'firstaid'>('call');
   const [selectedGuide, setSelectedGuide] = useState<FirstAidGuide | null>(FIRST_AID_GUIDES[0]);
   
   // Location detection
@@ -129,14 +126,8 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [copiedLocation, setCopiedLocation] = useState(false);
   const [locating, setLocating] = useState(false);
-
-  // Medical ID state stored in localStorage
-  const [bloodType, setBloodType] = useState(() => localStorage.getItem('emergency_bloodType') || 'Chưa cập nhật');
-  const [allergies, setAllergies] = useState(() => localStorage.getItem('emergency_allergies') || 'Không rõ');
-  const [conditions, setConditions] = useState(() => localStorage.getItem('emergency_conditions') || 'Không');
-  const [emergencyContactName, setEmergencyContactName] = useState(() => localStorage.getItem('emergency_contactName') || '');
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState(() => localStorage.getItem('emergency_contactPhone') || '');
-  const [isEditingMedicalId, setIsEditingMedicalId] = useState(false);
+  const [emergencyContactName] = useState(() => localStorage.getItem('emergency_contactName') || '');
+  const [emergencyContactPhone] = useState(() => localStorage.getItem('emergency_contactPhone') || '');
 
   const fetchLocation = () => {
     if (!navigator.geolocation) {
@@ -179,16 +170,6 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
     }
   };
 
-  const handleSaveMedicalId = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('emergency_bloodType', bloodType);
-    localStorage.setItem('emergency_allergies', allergies);
-    localStorage.setItem('emergency_conditions', conditions);
-    localStorage.setItem('emergency_contactName', emergencyContactName);
-    localStorage.setItem('emergency_contactPhone', emergencyContactPhone);
-    setIsEditingMedicalId(false);
-  };
-
   useEffect(() => {
     if (!isOpen) return;
     const unregister = registerModal('emergency-modal', onClose);
@@ -205,141 +186,121 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-6 overflow-hidden">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[100] w-screen h-screen flex flex-col bg-white overflow-hidden select-none">
+      {/* Modal Card Fullscreen */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md cursor-pointer"
-      />
-
-      {/* Modal Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 10 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-        className="relative w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-xl bg-white rounded-none lg:rounded-3xl shadow-2xl border-0 lg:border lg:border-rose-200 overflow-hidden z-10 my-auto flex flex-col"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 15 }}
+        transition={{ duration: 0.2 }}
+        className="w-full h-full min-h-screen bg-white flex flex-col overflow-hidden"
       >
-        {/* Urgent Red Header */}
-        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white p-5 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),24px)+0.75rem)] lg:pt-6 relative overflow-hidden flex-shrink-0 shadow-lg">
-          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner animate-pulse">
-                <ShieldAlert className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-white tracking-wide">CẤP CỨU Y TẾ KHẨN CẤP</h2>
-                  <span className="px-2 py-0.5 rounded-full bg-white text-rose-700 text-[10px] font-black tracking-widest uppercase">
-                    115
-                  </span>
+        {/* Urgent Teal Green Header: Nền xanh, chữ trắng */}
+        <div className="emergency-header bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-force-white p-4 sm:p-6 pt-[calc(max(env(safe-area-inset-top,0px),16px)+0.5rem)] relative overflow-hidden flex-shrink-0 shadow-lg">
+          <div className="max-w-2xl mx-auto w-full">
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner animate-pulse flex-shrink-0">
+                  <ShieldAlert className="w-6 h-6 sm:w-7 sm:h-7 text-force-white" />
                 </div>
-                <p className="text-rose-100 text-xs mt-0.5 font-medium">Hỗ trợ khẩn cấp 24/7 & Hướng dẫn sơ cứu tức thì</p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-force-white tracking-wide">HỖ TRỢ Y TẾ</h2>
+                    <span className="badge-115 px-2 py-0.5 rounded-full bg-white text-teal-800 text-[10px] font-black tracking-widest uppercase shadow-2xs">
+                      115
+                    </span>
+                  </div>
+                  <p className="text-teal-50 text-xs mt-0.5 font-medium opacity-90">Hỗ trợ khẩn cấp 24/7 & Hướng dẫn sơ cứu tức thì</p>
+                </div>
               </div>
+
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-force-white flex items-center justify-center transition-all cursor-pointer border border-white/20 flex-shrink-0 active:scale-95"
+                title="Đóng (Esc)"
+              >
+                <X className="w-5 h-5 text-force-white" />
+              </button>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer border border-white/20"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Quick tabs */}
-          <div className="flex gap-2 mt-4 bg-black/20 p-1 rounded-xl backdrop-blur-sm border border-white/15">
-            <button
-              onClick={() => setActiveTab('call')}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'call' 
-                  ? "bg-white text-rose-700 shadow-md font-black" 
-                  : "text-white/80 hover:text-white"
-              )}
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Gọi 115 & Hotline</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('firstaid')}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'firstaid' 
-                  ? "bg-white text-rose-700 shadow-md font-black" 
-                  : "text-white/80 hover:text-white"
-              )}
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Sơ cứu khẩn cấp</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('medicalId')}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                activeTab === 'medicalId' 
-                  ? "bg-white text-rose-700 shadow-md font-black" 
-                  : "text-white/80 hover:text-white"
-              )}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Hồ sơ SOS</span>
-            </button>
+            {/* Quick tabs */}
+            <div className="flex gap-1.5 sm:gap-2 mt-4 bg-teal-950/25 p-1 rounded-xl backdrop-blur-sm border border-white/20">
+              <button
+                onClick={() => setActiveTab('call')}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'call' 
+                    ? "active-tab-btn bg-white text-teal-800 shadow-md font-black" 
+                    : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Gọi 115 & Hotline</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('firstaid')}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  activeTab === 'firstaid' 
+                    ? "active-tab-btn bg-white text-teal-800 shadow-md font-black" 
+                    : "text-force-white/90 hover:text-force-white"
+                )}
+              >
+                <Stethoscope className="w-3.5 h-3.5" />
+                <span>Sơ cứu khẩn cấp</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-          
-          {/* TAB 1: CALL 115 & HOTLINES */}
-          {activeTab === 'call' && (
-            <div className="space-y-5">
-              {/* Giant One-Touch 115 Button */}
-              <div className="text-center bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 shadow-sm">
-                <p className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-3">
-                  NHẤN ĐỂ GỌI TRỰC TIẾP CẤP CỨU Y TẾ
-                </p>
-                <a
-                  href="tel:115"
-                  className="inline-flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 text-white rounded-2xl font-black text-xl sm:text-2xl shadow-[0_8px_30px_rgba(225,29,72,0.4)] transition-all transform active:scale-95 group border-2 border-white cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-bounce">
-                    <PhoneCall className="w-6 h-6 text-white" />
-                  </div>
-                  <span>GỌI 115 NGAY (MIỄN PHÍ)</span>
-                </a>
-                <p className="text-[11px] text-slate-500 mt-3 font-medium">
-                  Trực đài tiếp nhận 24/7 trên toàn quốc • Hỗ trợ điều phối xe cứu thương gần nhất
-                </p>
-              </div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto w-full space-y-5">
+            {/* TAB 1: CALL 115 & HOTLINES */}
+            {activeTab === 'call' && (
+              <div className="space-y-5">
+                {/* Giant One-Touch 115 Button */}
+                <div className="text-center bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 shadow-sm">
+                  <p className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-3">
+                    NHẤN ĐỂ GỌI TRỰC TIẾP CẤP CỨU Y TẾ
+                  </p>
+                  <a
+                    href="tel:115"
+                    className="btn-call-115 inline-flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 text-force-white rounded-2xl font-black text-xl sm:text-2xl shadow-[0_8px_30px_rgba(225,29,72,0.4)] transition-all transform active:scale-95 group border-2 border-white cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-bounce">
+                      <PhoneCall className="w-6 h-6 text-force-white" />
+                    </div>
+                    <span className="text-force-white">GỌI 115 NGAY (MIỄN PHÍ)</span>
+                  </a>
+                  <p className="text-[11px] text-slate-500 mt-3 font-medium">
+                    Trực đài tiếp nhận 24/7 trên toàn quốc • Hỗ trợ điều phối xe cứu thương gần nhất
+                  </p>
+                </div>
 
-              {/* Live Location Helper Card */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+              {/* Live Location Helper Card: Nền xanh nhạt */}
+              <div className="bg-emerald-50/75 border border-emerald-200/90 rounded-2xl p-4 space-y-2.5 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-rose-600" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
                     Vị trí hiện tại của bạn (Đọc cho trực đài 115)
                   </span>
                   <button
                     onClick={fetchLocation}
                     disabled={locating}
-                    className="text-[10px] text-teal-700 hover:underline font-bold cursor-pointer"
+                    className="text-[10px] text-teal-700 hover:text-teal-900 hover:underline font-bold cursor-pointer"
                   >
                     {locating ? 'Đang cập nhật...' : 'Làm mới GPS'}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 gap-2">
+                <div className="flex items-center justify-between bg-white/95 p-3 rounded-xl border border-emerald-200/80 gap-2 shadow-2xs">
                   <span className="text-xs text-slate-800 font-medium select-all break-all">
                     {locationText}
                   </span>
                   <button
                     onClick={copyLocationToClipboard}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 flex-shrink-0 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/70 rounded-lg text-xs font-bold flex items-center gap-1 flex-shrink-0 transition-colors cursor-pointer active:scale-95"
                     title="Sao chép tọa độ"
                   >
                     {copiedLocation ? (
@@ -349,7 +310,7 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
                       </>
                     ) : (
                       <>
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy className="w-3.5 h-3.5 text-emerald-700" />
                         <span>Sao chép</span>
                       </>
                     )}
@@ -473,160 +434,22 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
             </div>
           )}
 
-          {/* TAB 3: MEDICAL SOS ID */}
-          {activeTab === 'medicalId' && (
-            <div className="space-y-4">
-              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-start gap-3">
-                <UserCheck className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider">Thẻ Y tế Khẩn cấp Cá nhân</h4>
-                  <p className="text-[11px] text-teal-800 mt-0.5 leading-relaxed">
-                    Thông tin này giúp y bác sĩ cấp cứu nhận diện nhanh nhóm máu, tiền sử dị ứng và liên hệ người thân khi xảy ra tai nạn bất ngờ.
-                  </p>
-                </div>
-              </div>
-
-              {!isEditingMedicalId ? (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Họ và tên</span>
-                      <span className="text-sm font-bold text-slate-800 mt-0.5 block">{profile?.fullName || 'Người dùng'}</span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Nhóm máu</span>
-                      <span className="text-sm font-bold text-rose-600 mt-0.5 block">{bloodType}</span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Dị ứng thuốc/thực phẩm</span>
-                      <span className="text-xs font-semibold text-slate-800 mt-0.5 block">{allergies}</span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Bệnh lý nền</span>
-                      <span className="text-xs font-semibold text-slate-800 mt-0.5 block">{conditions}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Người liên hệ khẩn cấp</span>
-                      <span className="text-xs font-bold text-slate-800 mt-0.5 block">
-                        {emergencyContactName || 'Chưa thiết lập'} - {emergencyContactPhone || 'Chưa có SĐT'}
-                      </span>
-                    </div>
-                    {emergencyContactPhone && (
-                      <a
-                        href={`tel:${emergencyContactPhone}`}
-                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                      </a>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => setIsEditingMedicalId(true)}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    Chỉnh sửa thông tin Thẻ SOS
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSaveMedicalId} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">Nhóm máu</label>
-                      <select
-                        value={bloodType}
-                        onChange={(e) => setBloodType(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500"
-                      >
-                        <option value="Chưa cập nhật">Chưa xác định</option>
-                        <option value="A+">Nhóm A (Rh+)</option>
-                        <option value="A-">Nhóm A (Rh-)</option>
-                        <option value="B+">Nhóm B (Rh+)</option>
-                        <option value="B-">Nhóm B (Rh-)</option>
-                        <option value="AB+">Nhóm AB (Rh+)</option>
-                        <option value="AB-">Nhóm AB (Rh-)</option>
-                        <option value="O+">Nhóm O (Rh+)</option>
-                        <option value="O-">Nhóm O (Rh-)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">Dị ứng thuốc</label>
-                      <input
-                        type="text"
-                        value={allergies}
-                        onChange={(e) => setAllergies(e.target.value)}
-                        placeholder="VD: Dị ứng Penicillin, Aspirin..."
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">Bệnh lý nền đang điều trị</label>
-                      <input
-                        type="text"
-                        value={conditions}
-                        onChange={(e) => setConditions(e.target.value)}
-                        placeholder="VD: Tiểu đường type 2, Cao huyết áp, Đặt Stent mạch vành..."
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">Tên người thân</label>
-                      <input
-                        type="text"
-                        value={emergencyContactName}
-                        onChange={(e) => setEmergencyContactName(e.target.value)}
-                        placeholder="VD: Mẹ / Vợ / Chồng..."
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">SĐT người thân</label>
-                      <input
-                        type="tel"
-                        value={emergencyContactPhone}
-                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                        placeholder="VD: 0912345678"
-                        className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingMedicalId(false)}
-                      className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold cursor-pointer"
-                    >
-                      Lưu thông tin SOS
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
+          </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-          <p className="text-[10px] text-slate-500">
-            * Trong tình huống khẩn cấp, luôn ưu tiên gọi ngay 115 trước tiên.
-          </p>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-          >
-            Đóng
-          </button>
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0 pb-[calc(max(env(safe-area-inset-bottom,0px),12px)+0.5rem)]">
+          <div className="max-w-2xl mx-auto w-full flex items-center justify-between">
+            <p className="text-[10px] text-slate-500 font-medium">
+              * Trong tình huống khẩn cấp, luôn ưu tiên gọi ngay 115 trước tiên.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95 shadow-2xs"
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

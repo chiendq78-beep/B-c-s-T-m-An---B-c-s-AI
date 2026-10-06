@@ -11,6 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { AnatomyPartData } from '../../data/anatomyData';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const maleAnatomyImg = new URL('../../assets/images/male_anatomy_figure_1788081873538.jpg', import.meta.url).href;
 const femaleAnatomyImg = new URL('../../assets/images/female_anatomy_figure_1788081894873.jpg', import.meta.url).href;
@@ -32,6 +33,8 @@ export default function InteractiveBodyMap({
   onSelectPart,
   selectedSystemId
 }: InteractiveBodyMapProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [depthMode, setDepthMode] = useState<'composite' | 'xray' | 'thermal'>('composite');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -80,10 +83,14 @@ export default function InteractiveBodyMap({
             </div>
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
-                Mô Hình Giải Phẫu Cơ Thể Người ({gender === 'male' ? 'Nam Giới' : 'Nữ Giới'})
+                {isEn 
+                  ? `Human Body 3D Anatomy Model (${gender === 'male' ? 'Male' : 'Female'})` 
+                  : `Mô Hình Giải Phẫu Cơ Thể Người (${gender === 'male' ? 'Nam Giới' : 'Nữ Giới'})`}
               </h2>
               <p className="text-[11px] text-teal-400 truncate hidden xs:block">
-                Chế độ toàn màn hình • Nhấp vào điểm phát sáng để chọn cơ quan
+                {isEn 
+                  ? "Fullscreen Mode • Click glowing hotspots to inspect organs" 
+                  : "Chế độ toàn màn hình • Nhấp vào điểm phát sáng để chọn cơ quan"}
               </p>
             </div>
           </div>
@@ -101,7 +108,7 @@ export default function InteractiveBodyMap({
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Nam Giới
+                {isEn ? "Male" : "Nam Giới"}
               </button>
               <button
                 type="button"
@@ -112,16 +119,16 @@ export default function InteractiveBodyMap({
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Nữ Giới
+                {isEn ? "Female" : "Nữ Giới"}
               </button>
             </div>
 
             {/* Depth Modes */}
             <div className="flex items-center bg-slate-900 rounded-xl p-0.5 border border-slate-800">
               {[
-                { id: 'composite', label: 'Chuẩn' },
-                { id: 'xray', label: 'X-Quang' },
-                { id: 'thermal', label: 'Nhiệt Sinh Học' },
+                { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
+                { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
+                { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt Sinh Học' },
               ].map(f => (
                 <button
                   key={f.id}
@@ -143,10 +150,10 @@ export default function InteractiveBodyMap({
               type="button"
               onClick={() => setIsFullscreen(false)}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-rose-500/30"
-              title="Đóng chế độ toàn màn hình (Esc)"
+              title={isEn ? "Exit fullscreen (Esc)" : "Đóng chế độ toàn màn hình (Esc)"}
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Đóng</span>
+              <span>{isEn ? "Close" : "Đóng"}</span>
               <span className="hidden sm:inline text-rose-200 text-xs font-mono font-normal">(Esc)</span>
             </button>
           </div>
@@ -162,7 +169,7 @@ export default function InteractiveBodyMap({
                 gender === 'male' ? 'bg-teal-600 text-white' : 'text-slate-400'
               }`}
             >
-              Nam
+              {isEn ? "Male" : "Nam"}
             </button>
             <button
               type="button"
@@ -171,15 +178,15 @@ export default function InteractiveBodyMap({
                 gender === 'female' ? 'bg-rose-600 text-white' : 'text-slate-400'
               }`}
             >
-              Nữ
+              {isEn ? "Female" : "Nữ"}
             </button>
           </div>
 
           <div className="flex items-center bg-slate-900 rounded-xl p-0.5 border border-slate-800">
             {[
-              { id: 'composite', label: 'Chuẩn' },
-              { id: 'xray', label: 'X-Quang' },
-              { id: 'thermal', label: 'Nhiệt' },
+              { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
+              { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
+              { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt' },
             ].map(f => (
               <button
                 key={f.id}
@@ -234,7 +241,7 @@ export default function InteractiveBodyMap({
                     className={`group relative flex items-center justify-center transition-transform active:scale-95 cursor-pointer ${
                       isSelected ? 'scale-130 z-40' : 'hover:scale-120'
                     }`}
-                    title={part.name_vi}
+                    title={isEn ? (part.name_en || part.name_vi) : part.name_vi}
                   >
                     <span className="relative flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center">
                       <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-70 ${
@@ -249,7 +256,7 @@ export default function InteractiveBodyMap({
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:flex items-center px-3 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-bold whitespace-nowrap shadow-xl border border-teal-500/40 pointer-events-none z-50">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-                        <span>{part.name_vi}</span>
+                        <span>{isEn ? (part.name_en || part.name_vi) : part.name_vi}</span>
                         {part.name_latin && <span className="text-teal-300 font-serif italic text-[10px]">({part.name_latin})</span>}
                       </span>
                     </div>
@@ -265,9 +272,13 @@ export default function InteractiveBodyMap({
           {selectedPart ? (
             <div className="flex-1 flex items-center justify-between gap-3 bg-slate-900/90 border border-teal-500/30 rounded-xl px-3.5 py-2 shadow-lg">
               <div className="min-w-0">
-                <span className="text-[10px] uppercase font-bold text-teal-400 tracking-wider">Đang chọn:</span>
+                <span className="text-[10px] uppercase font-bold text-teal-400 tracking-wider">
+                  {isEn ? 'Selected:' : 'Đang chọn:'}
+                </span>
                 <div className="flex items-center gap-2 truncate">
-                  <span className="text-xs sm:text-sm font-bold text-white truncate">{selectedPart.name_vi}</span>
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">
+                    {isEn ? (selectedPart.name_en || selectedPart.name_vi) : selectedPart.name_vi}
+                  </span>
                   {selectedPart.name_latin && (
                     <span className="text-[10px] text-slate-400 italic truncate hidden sm:inline">({selectedPart.name_latin})</span>
                   )}
@@ -281,14 +292,18 @@ export default function InteractiveBodyMap({
                 }}
                 className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
               >
-                <span>Xem chi tiết</span>
+                <span>{isEn ? 'View details' : 'Xem chi tiết'}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <div className="text-xs text-slate-400 flex items-center gap-2">
               <Info className="w-4 h-4 text-teal-400 shrink-0" />
-              <span>Nhấp vào điểm chấm bất kỳ trên cơ thể để chọn và xem cấu trúc giải phẫu.</span>
+              <span>
+                {isEn 
+                  ? 'Click any hotspot on the body to select and inspect anatomical structures.' 
+                  : 'Nhấp vào điểm chấm bất kỳ trên cơ thể để chọn và xem cấu trúc giải phẫu.'}
+              </span>
             </div>
           )}
 
@@ -296,10 +311,10 @@ export default function InteractiveBodyMap({
             type="button"
             onClick={() => setIsFullscreen(false)}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-800 transition-colors cursor-pointer shrink-0"
-            title="Thu nhỏ về giao diện thường"
+            title={isEn ? "Exit fullscreen (Esc)" : "Thu nhỏ về giao diện thường"}
           >
             <Minimize2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Thu nhỏ</span>
+            <span className="hidden sm:inline">{isEn ? 'Minimize' : 'Thu nhỏ'}</span>
           </button>
         </div>
       </div>
@@ -308,7 +323,7 @@ export default function InteractiveBodyMap({
 
   // Regular Embedded View Mode (Embedded on the page)
   return (
-    <div className="w-full bg-white rounded-2xl p-2 sm:p-3 border border-slate-200 shadow-sm transition-all">
+    <div className="w-full bg-white rounded-2xl p-2 sm:p-3 border border-slate-200 shadow-sm transition-all overflow-hidden">
       {/* Top Floating Controls Bar */}
       <div className="flex items-center justify-between gap-2 pb-2.5 mb-1.5 border-b border-slate-100 flex-wrap">
         {/* Gender Toggle */}
@@ -322,7 +337,7 @@ export default function InteractiveBodyMap({
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white'
             }`}
           >
-            Nam Giới
+            {isEn ? "Male" : "Nam Giới"}
           </button>
           <button
             type="button"
@@ -333,16 +348,16 @@ export default function InteractiveBodyMap({
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white'
             }`}
           >
-            Nữ Giới
+            {isEn ? "Female" : "Nữ Giới"}
           </button>
         </div>
 
         {/* Optical Depth Filters */}
         <div className="flex items-center bg-slate-100/90 rounded-xl p-0.5 border border-slate-200 shadow-2xs">
           {[
-            { id: 'composite', label: 'Chuẩn' },
-            { id: 'xray', label: 'X-Quang' },
-            { id: 'thermal', label: 'Nhiệt' },
+            { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
+            { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
+            { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt' },
           ].map(f => (
             <button
               key={f.id}
@@ -356,17 +371,6 @@ export default function InteractiveBodyMap({
             </button>
           ))}
         </div>
-
-        {/* Fullscreen Button */}
-        <button
-          type="button"
-          onClick={() => setIsFullscreen(true)}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 hover:text-teal-900 rounded-xl border border-teal-200 text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ml-auto"
-          title="Mở toàn màn hình mô hình cơ thể"
-        >
-          <Maximize2 className="w-3.5 h-3.5 text-teal-600" />
-          <span>Toàn màn hình</span>
-        </button>
       </div>
 
       {/* Main Canvas Stage (Chính diện, không nghiêng) */}
@@ -403,7 +407,7 @@ export default function InteractiveBodyMap({
               <div
                 key={part.id}
                 style={{ top, left }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-auto"
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto"
               >
                 <button
                   type="button"
@@ -412,9 +416,9 @@ export default function InteractiveBodyMap({
                     onSelectPart(part);
                   }}
                   className={`group relative flex items-center justify-center transition-transform active:scale-95 cursor-pointer ${
-                    isSelected ? 'scale-125 z-40' : 'hover:scale-115'
+                    isSelected ? 'scale-125 z-20' : 'hover:scale-115'
                   }`}
-                  title={part.name_vi}
+                  title={isEn ? (part.name_en || part.name_vi) : part.name_vi}
                 >
                   <span className="relative flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center">
                     <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${
@@ -426,10 +430,10 @@ export default function InteractiveBodyMap({
                   </span>
 
                   {/* Hotspot Floating Tooltip Label */}
-                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex items-center px-2.5 py-1 rounded-lg bg-white text-slate-800 text-[11px] font-bold whitespace-nowrap shadow-lg border border-slate-200 pointer-events-none z-50">
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex items-center px-2.5 py-1 rounded-lg bg-white text-slate-800 text-[11px] font-bold whitespace-nowrap shadow-lg border border-slate-200 pointer-events-none z-20">
                     <span className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
-                      <span>{part.name_vi}</span>
+                      <span>{isEn ? (part.name_en || part.name_vi) : part.name_vi}</span>
                     </span>
                   </div>
                 </button>
@@ -441,14 +445,14 @@ export default function InteractiveBodyMap({
         {/* Bottom Floating Hint & Fullscreen Action */}
         <div className="absolute bottom-2.5 left-2.5 right-2.5 z-20 flex items-center justify-between pointer-events-none">
           <div className="px-2.5 py-1 bg-white/85 backdrop-blur-xs rounded-lg border border-slate-200/80 text-[10.5px] text-slate-600 font-medium shadow-2xs">
-            💡 Chạm vào điểm sáng để mở cơ quan
+            {isEn ? "💡 Click glowing hotspots to open organ" : "💡 Chạm vào điểm sáng để mở cơ quan"}
           </div>
 
           <button
             type="button"
             onClick={() => setIsFullscreen(true)}
             className="p-1.5 bg-white/90 backdrop-blur-md text-slate-700 hover:text-teal-700 hover:bg-white rounded-xl border border-slate-200 transition-colors cursor-pointer shadow-xs pointer-events-auto"
-            title="Xem toàn màn hình"
+            title={isEn ? "View fullscreen" : "Xem toàn màn hình"}
           >
             <Maximize2 className="w-4 h-4 text-teal-600" />
           </button>
