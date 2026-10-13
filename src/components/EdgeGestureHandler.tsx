@@ -120,14 +120,14 @@ export default function EdgeGestureHandler({
       }
       const popped = popTopModal();
       if (popped) {
-        showToast('Đã đóng thẻ / cửa sổ', 'close');
+        showToast('Đã đóng / Quay lại trang trước', 'close');
       } else if (hasActiveModalOrDrawer) {
         closeActiveModalOrDrawer();
         showToast('Đã đóng cửa sổ', 'close');
       } else {
         const backEvent = new CustomEvent('app-back-press', { cancelable: true });
         window.dispatchEvent(backEvent);
-        showToast('Đã đóng thẻ', 'close');
+        showToast('Đã quay lại trang trước', 'close');
       }
       try {
         if (navigator.vibrate) navigator.vibrate([20, 30]);
@@ -429,17 +429,25 @@ export default function EdgeGestureHandler({
                   <div className="flex flex-col text-left select-none">
                     <span className="text-[11px] font-black uppercase tracking-wider leading-none">
                       {activeMode === 'close_modal'
-                        ? (swipeState.isTriggered ? 'Thả để đóng thẻ' : 'Đóng thẻ / cửa sổ')
+                        ? (swipeState.isTriggered ? 'Thả để quay lại' : 'Đóng / Thoát thẻ')
                         : activeMode === 'navigate_back'
                           ? (swipeState.isTriggered ? `Thả để về ${previousViewTitle || 'Tổng quan'}` : `Quay lại ${previousViewTitle || 'Tổng quan'}`)
                           : activeMode === 'exit_immediate'
                             ? (swipeState.isTriggered ? 'Thả để đóng ứng dụng ngay' : 'Đóng ứng dụng (Lần 2)')
-                            : (swipeState.isTriggered ? 'Thả để xác nhận đóng' : 'Đóng ứng dụng (S-TimeTable)')}
+                            : (swipeState.isTriggered ? 'Thả để xác nhận đóng' : 'Đóng ứng dụng')}
                     </span>
                     <span className="text-[9px] opacity-80 mt-0.5 font-medium whitespace-nowrap">
                       {swipeState.isTriggered
-                        ? (activeMode === 'exit_immediate' ? 'Đã xác nhận • Thả để đóng' : 'Đã kích hoạt cử chỉ')
-                        : (activeMode === 'exit_immediate' ? 'Vuốt lần 2 để đóng app' : 'Vuốt mép để đóng app')}
+                        ? (activeMode === 'close_modal'
+                            ? 'Đã kích hoạt • Thả để về trang trước'
+                            : activeMode === 'exit_immediate'
+                              ? 'Đã xác nhận • Thả để đóng app'
+                              : 'Đã kích hoạt cử chỉ')
+                        : (activeMode === 'close_modal'
+                            ? 'Vuốt mép để về trang trước'
+                            : activeMode === 'exit_immediate'
+                              ? 'Vuốt lần 2 để đóng app'
+                              : 'Vuốt mép để đóng app')}
                     </span>
                   </div>
                 </div>
@@ -476,17 +484,25 @@ export default function EdgeGestureHandler({
                   <div className="flex flex-col text-right select-none">
                     <span className="text-[11px] font-black uppercase tracking-wider leading-none">
                       {activeMode === 'close_modal'
-                        ? (swipeState.isTriggered ? 'Thả để đóng thẻ' : 'Đóng thẻ / cửa sổ')
+                        ? (swipeState.isTriggered ? 'Thả để quay lại' : 'Đóng / Thoát thẻ')
                         : activeMode === 'navigate_back'
                           ? (swipeState.isTriggered ? `Thả để về ${previousViewTitle || 'Tổng quan'}` : `Quay lại ${previousViewTitle || 'Tổng quan'}`)
                           : activeMode === 'exit_immediate'
                             ? (swipeState.isTriggered ? 'Thả để đóng ứng dụng ngay' : 'Đóng ứng dụng (Lần 2)')
-                            : (swipeState.isTriggered ? 'Thả để xác nhận đóng' : 'Đóng ứng dụng (S-TimeTable)')}
+                            : (swipeState.isTriggered ? 'Thả để xác nhận đóng' : 'Đóng ứng dụng')}
                     </span>
                     <span className="text-[9px] opacity-80 mt-0.5 font-medium whitespace-nowrap">
                       {swipeState.isTriggered
-                        ? (activeMode === 'exit_immediate' ? 'Đã xác nhận • Thả để đóng' : 'Đã kích hoạt cử chỉ')
-                        : (activeMode === 'exit_immediate' ? 'Vuốt lần 2 để đóng app' : 'Vuốt mép để đóng app')}
+                        ? (activeMode === 'close_modal'
+                            ? 'Đã kích hoạt • Thả để về trang trước'
+                            : activeMode === 'exit_immediate'
+                              ? 'Đã xác nhận • Thả để đóng app'
+                              : 'Đã kích hoạt cử chỉ')
+                        : (activeMode === 'close_modal'
+                            ? 'Vuốt mép để về trang trước'
+                            : activeMode === 'exit_immediate'
+                              ? 'Vuốt lần 2 để đóng app'
+                              : 'Vuốt mép để đóng app')}
                     </span>
                   </div>
 
@@ -568,7 +584,7 @@ export default function EdgeGestureHandler({
         {toastMessage && (
           <div className="fixed top-18 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none px-4 w-full max-w-sm flex justify-center">
             <motion.div
-              key={toastMessage.id}
+              key={toastMessage.id || 'gesture-toast-msg'}
               initial={{ opacity: 0, y: -20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -15, scale: 0.9 }}

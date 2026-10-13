@@ -19,6 +19,7 @@ import {
   Sparkles,
   Loader2,
   MessageSquare,
+  Play,
   X
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -164,37 +165,38 @@ export default function DiseaseDetailView({ disease, onBack, onHerbClick, onExer
       aria-modal="true"
       aria-label={disease.name_vi}
     >
-      {/* Full-Screen Top Navigation Bar */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/90 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      {/* Full-Screen Top Navigation Bar with Mobile Safe Area / Status Bar Clearance & Light Green Header */}
+      <div className="sticky top-0 z-30 bg-[#f0fdfa]/95 backdrop-blur-xl border-b border-teal-200/90 px-2.5 sm:px-6 pt-[calc(max(env(safe-area-inset-top,0px),44px)+0.5rem)] sm:pt-3 pb-2 sm:pb-2.5 flex items-center justify-between gap-2 sm:gap-3 shadow-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
           <button 
             ref={topFocusRef}
             onClick={onBack}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-slate-950 transition-all border border-slate-200 active:scale-95 cursor-pointer flex-shrink-0"
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-800 hover:text-slate-950 transition-all border border-teal-200 shadow-2xs active:scale-95 cursor-pointer flex-shrink-0"
             title={isEn ? "Back to Disease Library" : "Quay lại Thư viện Bệnh lý"}
             aria-label={isEn ? "Back to Disease Library" : "Quay lại Thư viện Bệnh lý"}
           >
-            <ChevronLeft className="w-5 h-5 text-teal-600" />
-            <span className="text-xs font-semibold hidden xs:inline">{isEn ? "Back" : "Quay lại"}</span>
+            <ChevronLeft className="w-4.5 h-4.5 text-teal-700" />
+            <span className="text-xs font-semibold hidden md:inline">{isEn ? "Back" : "Quay lại"}</span>
           </button>
           
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-slate-950 leading-tight truncate">{disease.name_vi}</h2>
-              {disease.name_en && (
-                <span className="text-xs text-slate-600 hidden md:inline truncate">
-                  ({disease.name_en})
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-[9.5px] text-teal-700 font-bold uppercase tracking-[0.2em]">{disease.category}</p>
-              {disease.icd10 && (
-                <span className="text-[9.5px] font-mono font-bold text-teal-900 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-300">
-                  ICD-10: {disease.icd10}
-                </span>
-              )}
-            </div>
+          {/* Title and metadata in 1 single line */}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden flex-nowrap flex-1">
+            <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-950 leading-tight truncate whitespace-nowrap">
+              {disease.name_vi}
+            </h2>
+            {disease.name_en && (
+              <span className="text-[11px] text-slate-600 hidden lg:inline truncate whitespace-nowrap shrink-0">
+                ({disease.name_en})
+              </span>
+            )}
+            <span className="text-[8px] sm:text-[8.5px] font-bold uppercase text-teal-800 bg-white/90 px-1.5 py-0.5 rounded border border-teal-300 tracking-normal whitespace-nowrap shrink-0">
+              {disease.category}
+            </span>
+            {disease.icd10 && (
+              <span className="text-[7.5px] sm:text-[8px] font-mono font-bold text-teal-900 bg-teal-100/90 px-1.5 py-0.5 rounded border border-teal-300 whitespace-nowrap shrink-0 hidden xs:inline">
+                ICD-10: {disease.icd10}
+              </span>
+            )}
           </div>
         </div>
 
@@ -206,28 +208,28 @@ export default function DiseaseDetailView({ disease, onBack, onHerbClick, onExer
                 : `Chào Bác sĩ Tâm An, tôi đang tìm hiểu chi tiết về bệnh: ${disease.name_vi} (${disease.category}${disease.icd10 ? `, ICD-10: ${disease.icd10}` : ''}). Xin bác sĩ giải thích sâu hơn về cơ chế bệnh sinh, phác đồ điều trị và cách phòng ngừa tái phát.`;
               window.dispatchEvent(new CustomEvent('app-open-ai-chat', { detail: { prompt } }));
             }}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white border border-teal-700 text-[11px] sm:text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
             title={isEn ? "Consult with AI Doctor about this disease" : "Tư vấn với Bác sĩ AI về bệnh này"}
           >
-            <MessageSquare className="w-4 h-4 text-teal-600" />
-            <span className="hidden sm:inline">{isEn ? "Ask AI Doctor" : "Hỏi Bác sĩ AI"}</span>
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{isEn ? "Ask AI" : "Hỏi Bác sĩ AI"}</span>
           </button>
           
           <button 
             onClick={handleShare}
-            className="w-8.5 h-8.5 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 transition-all border border-slate-200 cursor-pointer active:scale-95"
+            className="w-8 h-8 sm:w-8.5 sm:h-8.5 flex items-center justify-center rounded-xl bg-white/90 hover:bg-white text-slate-700 hover:text-slate-950 transition-all border border-teal-200 cursor-pointer active:scale-95 shadow-2xs"
             title={isEn ? "Share" : "Chia sẻ"}
           >
-            <Share className="w-4 h-4" />
+            <Share className="w-3.5 h-3.5" />
           </button>
 
           <button 
             onClick={onBack}
-            className="w-8.5 h-8.5 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 transition-all border border-slate-200 hover:border-rose-300 cursor-pointer active:scale-95"
+            className="w-8 h-8 sm:w-8.5 sm:h-8.5 flex items-center justify-center rounded-xl bg-white/90 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition-all border border-teal-200 hover:border-rose-300 cursor-pointer active:scale-95 shadow-2xs"
             title={isEn ? "Close full-screen" : "Đóng toàn màn hình"}
             aria-label={isEn ? "Close full-screen" : "Đóng toàn màn hình"}
           >
-            <X className="w-4.5 h-4.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -389,7 +391,7 @@ export default function DiseaseDetailView({ disease, onBack, onHerbClick, onExer
                   <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1.5">
                     {disease.relatedHerbs.map((herb, i) => (
                       <button 
-                        key={i}
+                        key={`rel-herb-${herb}-${i}`}
                         onClick={() => onHerbClick?.(herb)}
                         className="flex-shrink-0 bg-white border border-slate-200 hover:border-teal-500 px-3.5 py-2 rounded-xl text-[10.5px] font-bold text-slate-900 uppercase tracking-wider hover:text-teal-700 shadow-2xs transition-all cursor-pointer"
                       >
@@ -401,25 +403,46 @@ export default function DiseaseDetailView({ disease, onBack, onHerbClick, onExer
               )}
 
               {disease.relatedExercises && disease.relatedExercises.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-950">{isEn ? "Therapeutic Workouts" : "Luyện tập trị liệu"}</h3>
-                    <Dumbbell className="w-4 h-4 text-indigo-600" />
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-[11px] sm:text-xs font-bold text-slate-950 uppercase tracking-wider">
+                        {isEn ? "Therapeutic Workouts" : "Luyện tập trị liệu"}
+                      </h3>
+                      <span className="text-[9px] font-semibold text-teal-700 bg-teal-50 border border-teal-200/80 px-1.5 py-0.5 rounded-full">
+                        {isEn ? "Linked" : "Liên kết Luyện tập"}
+                      </span>
+                    </div>
+                    <Dumbbell className="w-3.5 h-3.5 text-teal-600" />
                   </div>
-                  <div className="grid gap-2.5">
+                  <div className="grid gap-2">
                     {disease.relatedExercises.map((ex, i) => (
                       <button 
-                        key={i}
+                        key={`rel-ex-${ex}-${i}`}
                         onClick={() => onExerciseClick?.(ex)}
-                        className="w-full bg-white border border-slate-200 hover:border-teal-400 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center justify-between group shadow-2xs transition-all cursor-pointer"
+                        className="w-full bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/20 px-3 py-2 sm:py-2.5 rounded-xl flex items-center justify-between group shadow-2xs hover:shadow-xs transition-all cursor-pointer text-left"
+                        title={isEn ? `Open "${ex}" on Workout Library` : `Mở bài tập "${ex}" trên trang Luyện tập`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-teal-50 rounded-xl flex items-center justify-center text-teal-700 border border-teal-200">
-                            <Activity className="w-4 h-4" />
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 bg-teal-50 group-hover:bg-teal-600 rounded-lg flex items-center justify-center text-teal-700 group-hover:text-white border border-teal-200 transition-all shrink-0">
+                            <Activity className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-xs font-semibold text-slate-950 group-hover:text-teal-700 transition-colors">{ex}</span>
+                          <div className="min-w-0">
+                            <span className="text-[11px] sm:text-xs font-semibold text-slate-900 group-hover:text-teal-700 transition-colors block truncate">
+                              {ex}
+                            </span>
+                            <span className="text-[9px] text-teal-600 font-medium flex items-center gap-1 mt-0.5">
+                              <Play className="w-2 h-2 fill-current" />
+                              {isEn ? "Workout Library • Start routine" : "Trang Luyện tập • Mở bài tập ngay"}
+                            </span>
+                          </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+                        <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-teal-600">
+                          <span className="text-[10px] font-bold text-teal-700 hidden sm:inline">
+                            {isEn ? "Practice now" : "Tập ngay"}
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
                       </button>
                     ))}
                   </div>

@@ -286,10 +286,10 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
               <div id="journal-status-section" className="space-y-4">
                 <label id="journal-mood-label" className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">1. Tâm trạng hôm nay</label>
                 <div id="journal-mood-grid" className="grid grid-cols-5 gap-2">
-                  {moodsList.map((m) => (
+                  {moodsList.map((m, mIdx) => (
                     <button
                       id={`journal-mood-btn-${m.name}`}
-                      key={m.name}
+                      key={`journal-mood-${m.name}-${mIdx}`}
                       type="button"
                       onClick={() => setMood(m.name)}
                       className={cn(
@@ -310,10 +310,10 @@ export default function JournalEntryModal({ isOpen, onClose, onSuccess }: Journa
               <div id="journal-energy-section" className="space-y-3">
                 <label id="journal-energy-label" className="text-[10px] font-bold text-text-dim uppercase tracking-wider block">2. Mức năng lượng</label>
                 <div id="journal-energy-grid" className="grid grid-cols-2 gap-2">
-                  {energiesList.map((e) => (
+                  {energiesList.map((e, eIdx) => (
                     <button
                       id={`journal-energy-btn-${e.name}`}
-                      key={e.name}
+                      key={`journal-energy-${e.name}-${eIdx}`}
                       type="button"
                       onClick={() => setEnergy(e.name)}
                       className={cn(

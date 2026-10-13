@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  X, Bell, Droplets, Pill, Activity, Check, Trash2, Settings
+  X, Bell, Droplets, Pill, Activity, Check, Trash2, Settings, AlertTriangle, Plus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { reminderService, AppNotificationItem } from '../services/reminderService';
+import { reminderService, AppNotificationItem, isVitalsOrMetric } from '../services/reminderService';
 import { registerModal } from '../utils/modalManager';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -36,6 +36,7 @@ export default function NotificationCenterModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    reminderService.ensureActiveRemindersInNotificationCenter();
     setNotifications(reminderService.getNotifications());
 
     const handleUpdate = (e: any) => {
@@ -82,14 +83,27 @@ export default function NotificationCenterModal({
     showFeedback(isEn ? 'Marked all as read' : 'Đã đánh dấu đã đọc tất cả');
   };
 
-  const handleClearAll = () => {
+  const [itemToDelete, setItemToDelete] = useState<AppNotificationItem | null>(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+
+  const handleConfirmDeleteItem = () => {
+    if (!itemToDelete) return;
+    reminderService.deleteNotification(itemToDelete.id);
+    setNotifications(prev => prev.filter(n => n.id !== itemToDelete.id));
+    showFeedback(isEn ? 'Notification deleted' : 'Đã xóa thông báo');
+    setItemToDelete(null);
+  };
+
+  const handleConfirmClearAll = () => {
     reminderService.clearNotifications();
     setNotifications([]);
     showFeedback(isEn ? 'Cleared notifications history' : 'Đã xóa toàn bộ lịch sử thông báo');
+    setShowClearAllConfirm(false);
   };
 
   const handleDrinkWaterAction = (notifId: string) => {
     reminderService.markAsRead(notifId);
+    reminderService.recordWaterIntake(250);
     window.dispatchEvent(new CustomEvent('app-quick-drink-water', { detail: { cups: 1 } }));
     if (onDrinkWaterSuccess) onDrinkWaterSuccess();
     showFeedback(isEn ? '💧 Added 250ml water to today record!' : '💧 Đã ghi nhận thêm 250ml nước vào hồ sơ hôm nay!');
@@ -106,10 +120,20 @@ export default function NotificationCenterModal({
     onClose();
   };
 
+  // Helper to categorize each notification accurately between Water, Vitals/Metrics, and Medication
+  const getNotificationCategoryType = (item: AppNotificationItem): 'water' | 'vitals' | 'medication' | 'general' => {
+    if (item.type === 'water') return 'water';
+    if (item.type === 'vitals' || isVitalsOrMetric(item.metadata?.category, item.metadata?.medName || item.title, item.id)) {
+      return 'vitals';
+    }
+    if (item.type === 'medication') return 'medication';
+    return 'general';
+  };
+
   // Filtered notifications
   const filteredNotifications = notifications.filter(item => {
     if (activeTab === 'all') return true;
-    return item.type === activeTab;
+    return getNotificationCategoryType(item) === activeTab;
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -123,7 +147,7 @@ export default function NotificationCenterModal({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.97, opacity: 0, y: 10 }}
         transition={{ duration: 0.18 }}
-        className="bg-[#fafcfb] sm:bg-white rounded-none sm:rounded-3xl w-full h-full sm:max-w-2xl sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-0 sm:border sm:border-emerald-100/90"
+        className="bg-[#FAF9F5] rounded-none sm:rounded-3xl w-full h-full sm:max-w-2xl sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-0 sm:border sm:border-slate-200"
       >
         {/* ========================================================================= */}
         {/* HEADER BAR (Streamlined, Light White Background, Green Text)              */}
@@ -155,19 +179,7 @@ export default function NotificationCenterModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                onOpenSettings();
-              }}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95"
-              title={isEn ? "Configure Reminder Cycles" : "Cài đặt chu kỳ nhắc nhở"}
-            >
-              <Settings className="w-4 h-4 text-emerald-700" />
-              <span className="hidden sm:inline">{isEn ? "Settings" : "Cài đặt"}</span>
-            </button>
-
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}
@@ -183,6 +195,7 @@ export default function NotificationCenterModal({
         <AnimatePresence>
           {actionFeedback && (
             <motion.div
+              key="notification-action-feedback"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -194,79 +207,99 @@ export default function NotificationCenterModal({
         </AnimatePresence>
 
         {/* ========================================================================= */}
-        {/* FILTER TABS (Streamlined & Clean)                                         */}
+        {/* FILTER TABS & ACTIONS (Color-coded by notification type)                 */}
         {/* ========================================================================= */}
-        <div className="px-4 sm:px-6 py-2 border-b border-emerald-100/80 bg-white flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('all')}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap",
-              activeTab === 'all'
-                ? "bg-emerald-600 text-white shadow-2xs"
-                : "bg-slate-50 text-emerald-900/80 hover:bg-emerald-50 border border-emerald-100/60"
-            )}
-          >
-            {isEn ? "All" : "Tất cả"} ({notifications.length})
-          </button>
+        <div className="px-4 sm:px-6 py-2 border-b border-slate-200/80 bg-white flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs text-force-white",
+                activeTab === 'all'
+                  ? "bg-teal-600 hover:bg-teal-700 text-white text-force-white ring-2 ring-teal-400/50"
+                  : "bg-teal-600 hover:bg-teal-700 text-white text-force-white opacity-90"
+              )}
+            >
+              <span className="text-white text-force-white">{isEn ? "All" : "Tất cả"} ({notifications.length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('water')}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
-              activeTab === 'water'
-                ? "bg-cyan-700 text-white shadow-2xs"
-                : "bg-cyan-50/70 text-cyan-900 hover:bg-cyan-100/80 border border-cyan-200/60"
-            )}
-          >
-            <Droplets className="w-3.5 h-3.5 text-cyan-600" />
-            <span>{isEn ? "Water" : "Uống nước"}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('water')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
+                activeTab === 'water'
+                  ? "bg-sky-600 text-white shadow-xs"
+                  : "bg-sky-50 text-sky-900 hover:bg-sky-100/90 border border-sky-200"
+              )}
+            >
+              <Droplets className="w-3.5 h-3.5" />
+              <span>{isEn ? "Water" : "Uống nước"} ({notifications.filter(n => getNotificationCategoryType(n) === 'water').length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('medication')}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
-              activeTab === 'medication'
-                ? "bg-emerald-600 text-white shadow-2xs"
-                : "bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100/80 border border-emerald-200/60"
-            )}
-          >
-            <Pill className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{isEn ? "Medication" : "Uống thuốc"}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('medication')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
+                activeTab === 'medication'
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "bg-amber-50 text-amber-900 hover:bg-amber-100/90 border border-amber-200"
+              )}
+            >
+              <Pill className="w-3.5 h-3.5" />
+              <span>{isEn ? "Medication" : "Uống thuốc"} ({notifications.filter(n => getNotificationCategoryType(n) === 'medication').length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('vitals')}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
-              activeTab === 'vitals'
-                ? "bg-teal-700 text-white shadow-2xs"
-                : "bg-teal-50/70 text-teal-900 hover:bg-teal-100/80 border border-teal-200/60"
-            )}
-          >
-            <Activity className="w-3.5 h-3.5 text-teal-600" />
-            <span>{isEn ? "Health Vitals" : "Đo chỉ số"}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('vitals')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap",
+                activeTab === 'vitals'
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "bg-rose-50 text-rose-900 hover:bg-rose-100/90 border border-rose-200"
+              )}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>{isEn ? "Health Vitals" : "Đo chỉ số"} ({notifications.filter(n => getNotificationCategoryType(n) === 'vitals').length})</span>
+            </button>
+          </div>
+
+          {activeTab !== 'water' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenMedicationModal) {
+                  onOpenMedicationModal();
+                } else {
+                  onOpenSettings();
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold border border-teal-600 flex items-center gap-1 text-[11px] shadow-xs transition-all cursor-pointer active:scale-95 text-force-white shrink-0 ml-auto"
+              title={isEn ? "Add reminder" : "Thêm lịch nhắc"}
+            >
+              <Plus className="w-3.5 h-3.5 text-white" />
+              <span className="text-white text-force-white">{isEn ? "Add reminder" : "Thêm lịch nhắc"}</span>
+            </button>
+          )}
         </div>
 
         {/* ========================================================================= */}
-        {/* NOTIFICATIONS LIST (Light White Background, Green Text, Clean Cards)      */}
+        {/* NOTIFICATIONS LIST (Color-coded by category: Medication, Water, Vitals)   */}
         {/* ========================================================================= */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-5 space-y-2.5 bg-[#f8fbf9]">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-5 space-y-2.5 bg-[#FAF9F5]">
           {filteredNotifications.length === 0 ? (
-            <div className="text-center py-10 px-4 space-y-2.5 bg-white rounded-2xl border border-dashed border-emerald-200 shadow-2xs">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-2xs">
-                <Bell className="w-6 h-6 text-emerald-600" />
+            <div className="text-center py-10 px-4 space-y-2.5 bg-white rounded-2xl border border-dashed border-slate-200 shadow-2xs">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center mx-auto shadow-2xs">
+                <Bell className="w-6 h-6 text-slate-500" />
               </div>
               <div className="max-w-sm mx-auto space-y-1">
-                <h4 className="font-bold text-xs sm:text-sm text-emerald-950">
+                <h4 className="font-bold text-xs sm:text-sm text-slate-900">
                   {isEn ? "No notifications in this category" : "Chưa có thông báo nào trong mục này"}
                 </h4>
-                <p className="text-xs text-emerald-800/80 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {isEn 
                     ? "Notifications will appear here when your scheduled reminders trigger."
                     : "Các lời nhắc uống nước định kỳ, lịch uống thuốc và đo chỉ số sẽ tự động xuất hiện ở đây khi đến giờ."}
@@ -275,107 +308,142 @@ export default function NotificationCenterModal({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filteredNotifications.map((notif) => {
-                const isWater = notif.type === 'water';
-                const isMed = notif.type === 'medication';
-                const isVitals = notif.type === 'vitals';
+              {filteredNotifications.map((notif, idx) => {
+                const catType = getNotificationCategoryType(notif);
+                const isWater = catType === 'water';
+                const isVitals = catType === 'vitals';
+                const isMed = catType === 'medication';
+
+                // Clean presentation title and body if it contains outdated/mismatched wording
+                let displayTitle = notif.title;
+                let displayBody = notif.body;
+                if (isVitals) {
+                  displayTitle = displayTitle
+                    .replace(/💊\s*Lịch nhắc uống thuốc/gi, '🩺 Lịch nhắc đo chỉ số')
+                    .replace(/Lịch nhắc uống thuốc & đo chỉ số/gi, 'Lịch nhắc đo chỉ số')
+                    .replace(/uống thuốc:/gi, 'đo chỉ số:');
+                  if (displayBody.includes('uống thuốc')) {
+                    displayBody = displayBody
+                      .replace('Hãy uống thuốc đúng giờ theo chỉ định.', 'Hãy kiểm tra và ghi lại số đo đúng giờ.')
+                      .replace('Đã đến giờ uống thuốc', 'Đã đến giờ kiểm tra chỉ số');
+                  }
+                }
+
+                // Distinct color identity per notification type:
+                // - Water: Light Sky Blue (#f0f9ff)
+                // - Medication: Warm Amber/Golden Peach (#fffbeb)
+                // - Vitals: Soft Rose/Coral (#fff1f2)
+                // - General: Soft Teal (#f0fdfa)
+                const theme = isWater
+                  ? {
+                      cardBg: notif.read ? "bg-[#f0f9ff]/65" : "bg-[#f0f9ff]",
+                      border: notif.read ? "border-sky-200/70" : "border-sky-400 ring-1 ring-sky-300/80 shadow-xs",
+                      unreadStripe: "bg-sky-500",
+                      iconBox: "bg-white text-sky-600 border border-sky-200 shadow-2xs",
+                      title: "text-sky-950 font-bold",
+                      body: "text-slate-800",
+                      time: "text-sky-700/80",
+                      deleteHover: "hover:bg-sky-100 text-sky-600/60 hover:text-rose-600",
+                      Icon: Droplets
+                    }
+                  : isMed
+                  ? {
+                      cardBg: notif.read ? "bg-[#fffbeb]/65" : "bg-[#fffbeb]",
+                      border: notif.read ? "border-amber-200/70" : "border-amber-400 ring-1 ring-amber-300/80 shadow-xs",
+                      unreadStripe: "bg-amber-500",
+                      iconBox: "bg-white text-amber-600 border border-amber-200 shadow-2xs",
+                      title: "text-amber-950 font-bold",
+                      body: "text-slate-800",
+                      time: "text-amber-700/80",
+                      deleteHover: "hover:bg-amber-100 text-amber-600/60 hover:text-rose-600",
+                      Icon: Pill
+                    }
+                  : isVitals
+                  ? {
+                      cardBg: notif.read ? "bg-[#fff1f2]/65" : "bg-[#fff1f2]",
+                      border: notif.read ? "border-rose-200/70" : "border-rose-400 ring-1 ring-rose-300/80 shadow-xs",
+                      unreadStripe: "bg-rose-500",
+                      iconBox: "bg-white text-rose-600 border border-rose-200 shadow-2xs",
+                      title: "text-rose-950 font-bold",
+                      body: "text-slate-800",
+                      time: "text-rose-700/80",
+                      deleteHover: "hover:bg-rose-100 text-rose-600/60 hover:text-rose-700",
+                      Icon: Activity
+                    }
+                  : {
+                      cardBg: notif.read ? "bg-[#f0fdfa]/65" : "bg-[#f0fdfa]",
+                      border: notif.read ? "border-teal-200/70" : "border-teal-400 ring-1 ring-teal-300/80 shadow-xs",
+                      unreadStripe: "bg-teal-500",
+                      iconBox: "bg-white text-teal-600 border border-teal-200 shadow-2xs",
+                      title: "text-teal-950 font-bold",
+                      body: "text-slate-800",
+                      time: "text-teal-700/80",
+                      deleteHover: "hover:bg-teal-100 text-teal-600/60 hover:text-rose-600",
+                      Icon: Bell
+                    };
+
+                const NotificationIcon = theme.Icon;
 
                 return (
                   <div
-                    key={notif.id}
+                    key={`${notif.id || 'notif'}-${idx}`}
+                    onClick={() => {
+                      if (!notif.read) reminderService.markAsRead(notif.id);
+                      if (isVitals && onOpenVitalsModal) {
+                        onOpenVitalsModal();
+                        onClose();
+                      }
+                    }}
                     className={cn(
-                      "p-3 sm:p-3.5 rounded-xl border transition-all duration-200 bg-white shadow-2xs relative overflow-hidden group",
-                      notif.read ? "border-emerald-100/70 opacity-80" : "border-emerald-300 ring-1 ring-emerald-200/60 shadow-xs"
+                      "p-3 sm:p-3.5 rounded-xl border transition-all duration-200 shadow-2xs relative overflow-hidden group cursor-pointer",
+                      theme.cardBg,
+                      theme.border,
+                      notif.read && "opacity-90"
                     )}
                   >
                     {/* Unread Left Border Stripe */}
                     {!notif.read && (
-                      <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-xl" />
+                      <span className={cn("absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl", theme.unreadStripe)} />
                     )}
 
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                         {/* Type Icon Badge */}
                         <div className={cn(
-                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs",
-                          isWater && "bg-cyan-50 text-cyan-700 border border-cyan-200/80",
-                          isMed && "bg-emerald-50 text-emerald-700 border border-emerald-200/80",
-                          isVitals && "bg-teal-50 text-teal-700 border border-teal-200/80",
-                          !isWater && !isMed && !isVitals && "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0",
+                          theme.iconBox
                         )}>
-                          {isWater && <Droplets className="w-4.5 h-4.5 text-cyan-600" />}
-                          {isMed && <Pill className="w-4.5 h-4.5 text-emerald-600" />}
-                          {isVitals && <Activity className="w-4.5 h-4.5 text-teal-600" />}
-                          {!isWater && !isMed && !isVitals && <Bell className="w-4.5 h-4.5 text-emerald-600" />}
+                          <NotificationIcon className="w-4.5 h-4.5" />
                         </div>
 
-                        {/* Title & Body */}
+                        {/* Title & Body (Clean layout without extra badge tag or action buttons) */}
                         <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
-                              isWater && "bg-cyan-100 text-cyan-800",
-                              isMed && "bg-emerald-100 text-emerald-800",
-                              isVitals && "bg-teal-100 text-teal-800"
-                            )}>
-                              {isWater ? (isEn ? "Hydration" : "Uống nước") : isMed ? (isEn ? "Medication" : "Uống thuốc") : (isEn ? "Vitals" : "Đo chỉ số")}
-                            </span>
-                            <h5 className="font-bold text-xs sm:text-[13px] text-emerald-950 leading-snug">
-                              {notif.title}
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className={cn("text-xs sm:text-[13px] font-bold leading-snug", theme.title)}>
+                              {displayTitle}
                             </h5>
-                          </div>
-
-                          <p className="text-xs text-emerald-900/85 leading-relaxed">
-                            {notif.body}
-                          </p>
-
-                          {/* Quick In-Notification Actions */}
-                          <div className="flex items-center gap-2 pt-1.5 flex-wrap">
-                            {isWater && (
-                              <button
-                                type="button"
-                                onClick={() => handleDrinkWaterAction(notif.id)}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] uppercase tracking-wider shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-                              >
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>{isEn ? "Drank (+250ml)" : "Đã uống (+250ml)"}</span>
-                              </button>
-                            )}
-
-                            {isMed && (
-                              <button
-                                type="button"
-                                onClick={() => handleTakeMedAction(notif.id, notif.metadata?.medName)}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] uppercase tracking-wider shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-                              >
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>{isEn ? "Mark as Taken" : "Đã uống thuốc"}</span>
-                              </button>
-                            )}
-
-                            {isVitals && (
-                              <button
-                                type="button"
-                                onClick={() => handleLogVitalsAction(notif.id)}
-                                className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10.5px] uppercase tracking-wider shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-                              >
-                                <Activity className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>{isEn ? "Log Vitals Now" : "Ghi nhận chỉ số ngay"}</span>
-                              </button>
-                            )}
-
-                            <span className="text-[10.5px] text-emerald-700/60 font-mono ml-auto">
-                              ⏱️ {notif.timeStr}
+                            <span className={cn("text-[10px] sm:text-[11px] font-mono shrink-0 font-medium", theme.time)}>
+                              {notif.timeStr}
                             </span>
                           </div>
+
+                          <p className={cn("text-xs leading-relaxed", theme.body)}>
+                            {displayBody}
+                          </p>
                         </div>
                       </div>
 
                       {/* Delete notification item */}
                       <button
                         type="button"
-                        onClick={() => reminderService.deleteNotification(notif.id)}
-                        className="w-6 h-6 rounded-lg hover:bg-emerald-50 text-emerald-600/50 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setItemToDelete(notif);
+                        }}
+                        className={cn(
+                          "w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer shrink-0 mt-0.5",
+                          theme.deleteHover
+                        )}
                         title={isEn ? "Remove notification" : "Xóa thông báo"}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -403,7 +471,7 @@ export default function NotificationCenterModal({
             <span className="text-emerald-200">•</span>
             <button
               type="button"
-              onClick={handleClearAll}
+              onClick={() => setShowClearAllConfirm(true)}
               className="text-xs font-medium text-emerald-700/60 hover:text-rose-600 transition-colors cursor-pointer py-0.5"
             >
               {isEn ? "Clear all" : "Xóa tất cả"}
@@ -418,6 +486,179 @@ export default function NotificationCenterModal({
             {isEn ? "Close" : "Đóng"}
           </button>
         </div>
+
+        {/* ========================================================================= */}
+        {/* CONFIRMATION POPUP: DELETE SINGLE NOTIFICATION ITEM                       */}
+        {/* ========================================================================= */}
+        <AnimatePresence>
+          {itemToDelete && (
+            <motion.div 
+              key="delete-notification-item-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div 
+                className="fixed inset-0" 
+                onClick={() => setItemToDelete(null)} 
+              />
+              <motion.div
+                key="delete-notification-item-dialog"
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10"
+              >
+                <div className="p-5 pb-4 border-b border-slate-100 flex items-start justify-between bg-rose-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                      <Trash2 className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isEn ? "Delete Notification" : "Xác nhận xóa thông báo"}
+                      </h4>
+                      <p className="text-[11px] text-rose-700 font-medium">
+                        {isEn ? "Remove from notification center" : "Gỡ thông báo này khỏi danh sách"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setItemToDelete(null)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {isEn 
+                      ? "Are you sure you want to remove this notification from your history?" 
+                      : "Bạn có chắc chắn muốn xóa thông báo này khỏi danh sách lịch sử không?"}
+                  </p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-slate-900 truncate">{itemToDelete.title}</p>
+                      <span className="text-[10px] font-mono text-slate-500 shrink-0">{itemToDelete.timeStr}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 line-clamp-2">{itemToDelete.body}</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setItemToDelete(null)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {isEn ? "Cancel" : "Hủy"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDeleteItem}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer text-force-white active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white text-force-white">{isEn ? "Delete" : "Xóa"}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ========================================================================= */}
+        {/* CONFIRMATION POPUP: CLEAR ALL NOTIFICATIONS                               */}
+        {/* ========================================================================= */}
+        <AnimatePresence>
+          {showClearAllConfirm && (
+            <motion.div 
+              key="clear-all-notifications-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div 
+                className="fixed inset-0" 
+                onClick={() => setShowClearAllConfirm(false)} 
+              />
+              <motion.div
+                key="clear-all-notifications-dialog"
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10"
+              >
+                <div className="p-5 pb-4 border-b border-slate-100 flex items-start justify-between bg-rose-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                      <Trash2 className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {isEn ? "Clear All Notifications" : "Xóa tất cả thông báo"}
+                      </h4>
+                      <p className="text-[11px] text-rose-700 font-medium">
+                        {isEn ? "Clear all notifications history" : "Dọn sạch hộp thông báo"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowClearAllConfirm(false)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {isEn 
+                      ? "Are you sure you want to clear all notifications? This action cannot be undone." 
+                      : "Bạn có chắc chắn muốn xóa toàn bộ lịch sử thông báo trên thanh thông báo không? Hành động này không thể hoàn tác."}
+                  </p>
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-800">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      {isEn
+                        ? `Will remove ${notifications.length} notifications permanently.`
+                        : `Sẽ xóa vĩnh viễn ${notifications.length} thông báo hiện có.`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearAllConfirm(false)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {isEn ? "Cancel" : "Hủy"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmClearAll}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer text-force-white active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white text-force-white">{isEn ? "Clear All" : "Xóa tất cả"}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

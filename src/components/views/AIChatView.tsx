@@ -114,6 +114,20 @@ export default function AIChatView({
   const [recognition, setRecognition] = useState<any>(null);
   const [speechSupported, setSpeechSupported] = useState(true);
 
+  // Synchronized refs for speech recognition auto-submit
+  const handleSendRef = useRef<((customInput?: string) => Promise<void>) | null>(null);
+  const inputRef = useRef(input);
+  const isTypingRef = useRef(isTyping);
+  const sendTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    inputRef.current = input;
+  }, [input]);
+
+  useEffect(() => {
+    isTypingRef.current = isTyping;
+  }, [isTyping]);
+
   // Initialize browser Speech Recognition & Custom Prompt Event listener
   useEffect(() => {
     const handleSetPrompt = (e: any) => {
@@ -140,12 +154,31 @@ export default function AIChatView({
       };
 
       rec.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i][0]?.transcript) {
+            transcript += event.results[i][0].transcript;
+          }
+        }
+        transcript = transcript.trim();
         if (transcript) {
-          setInput(prev => {
-            const separator = prev.trim() ? ' ' : '';
-            return prev + separator + transcript;
-          });
+          const currentText = inputRef.current.trim();
+          const separator = currentText ? ' ' : '';
+          const fullText = currentText ? `${currentText}${separator}${transcript}` : transcript;
+          
+          // 1. Hiển thị nội dung lời nói ngay lập tức vào ô nhập liệu
+          setInput(fullText);
+          setIsRecording(false);
+
+          // 2. Tự động gửi câu hỏi đến Bác sĩ AI ngay sau khi nói xong (không cần bấm Enter hay nút Gửi)
+          if (sendTimeoutRef.current) {
+            clearTimeout(sendTimeoutRef.current);
+          }
+          sendTimeoutRef.current = setTimeout(() => {
+            if (handleSendRef.current && !isTypingRef.current) {
+              handleSendRef.current(fullText);
+            }
+          }, 350);
         }
       };
 
@@ -161,6 +194,9 @@ export default function AIChatView({
 
     return () => {
       window.removeEventListener('app-set-ai-prompt', handleSetPrompt);
+      if (sendTimeoutRef.current) {
+        clearTimeout(sendTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -546,6 +582,10 @@ export default function AIChatView({
   };
 
   const handleSend = async (customInput?: string) => {
+    if (sendTimeoutRef.current) {
+      clearTimeout(sendTimeoutRef.current);
+      sendTimeoutRef.current = null;
+    }
     const textToSend = customInput || input;
     if (!textToSend.trim() || isTyping) return;
 
@@ -607,6 +647,10 @@ export default function AIChatView({
       setIsTyping(false);
     }
   };
+
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   return (
     <div className={cn(
@@ -804,10 +848,10 @@ export default function AIChatView({
                     </p>
                   </div>
                 ) : (
-                  Object.entries(groupedSessions).map(([group, groupSessions]) => {
+                  Object.entries(groupedSessions).map(([group, groupSessions], groupIdx) => {
                     if (groupSessions.length === 0) return null;
                     return (
-                      <div key={group} className="space-y-2.5">
+                      <div key={`chat-grp-${group}-${groupIdx}`} className="space-y-2.5">
                         <div className="flex items-center justify-between px-1">
                           <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider flex items-center gap-1.5">
                             <Calendar className="w-3 h-3 text-primary" />
@@ -819,7 +863,7 @@ export default function AIChatView({
                         </div>
 
                         <div className="space-y-2">
-                          {groupSessions.map((session) => {
+                          {groupSessions.map((session, sIdx) => {
                             const isSelected = activeSessionId === session.id;
                             const isEditing = editingSessionId === session.id;
                             const lastAiMsg = session.messages.filter(m => m.role === 'model').slice(-1)[0]?.content || '';
@@ -827,7 +871,7 @@ export default function AIChatView({
 
                             return (
                               <div 
-                                key={session.id}
+                                key={`chat-sess-${session.id}-${sIdx}`}
                                 className={cn(
                                   "group/item rounded-2xl border transition-all relative overflow-hidden p-3.5 cursor-pointer text-left",
                                   isSelected 
@@ -1094,8 +1138,8 @@ export default function AIChatView({
               !speechSupported 
                 ? "Tính năng giọng nói không khả dụng trên trình duyệt này" 
                 : isRecording 
-                ? "Đang ghi âm... Nhấn để dừng" 
-                : "Nhập bằng giọng nói (Voice-to-Text)"
+                ? "Đang lắng nghe... Nói xong hệ thống sẽ tự động gửi câu hỏi" 
+                : "Nói chuyện bằng giọng nói (Tự động gửi cho Bác sĩ AI khi dứt lời)"
             }
           >
             <Mic className={cn("w-4 h-4 sm:w-5 sm:h-5", isRecording && "scale-110 text-rose-500 animate-pulse")} />
@@ -1108,7 +1152,7 @@ export default function AIChatView({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isRecording ? "Đang lắng nghe giọng nói của bạn..." : "Nhập triệu chứng, câu hỏi hoặc thắc mắc y khoa..."}
+              placeholder={isRecording ? "Đang lắng nghe... Nói xong sẽ tự động hỏi Bác sĩ AI" : "Nhập triệu chứng, câu hỏi hoặc thắc mắc y khoa..."}
               className={cn(
                 "w-full bg-slate-50 border rounded-xl py-2.5 sm:py-3 pl-3.5 pr-11 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:bg-white transition-all shadow-inner border-slate-200",
                 isRecording ? "border-rose-400 ring-2 ring-rose-400/30" : ""

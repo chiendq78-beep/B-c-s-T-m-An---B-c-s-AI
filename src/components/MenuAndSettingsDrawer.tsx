@@ -22,7 +22,7 @@ interface MenuAndSettingsDrawerProps {
   onOpenAIChat?: () => void;
   onOpenEmergency?: () => void;
   onOpenSupport?: () => void;
-  onOpenNotificationSettings: () => void;
+  onOpenNotificationSettings?: () => void;
   onOpenAuthModal: () => void;
   initialTab?: 'navigation' | 'settings';
 }
@@ -59,18 +59,6 @@ export default function MenuAndSettingsDrawer({
   };
 
   // Quick settings states with localStorage persistence
-  const [appNotificationsEnabled, setAppNotificationsEnabled] = useState(() => {
-    return localStorage.getItem('tam_an_app_notifications') !== 'false';
-  });
-  const [habitRemindersEnabled, setHabitRemindersEnabled] = useState(() => {
-    return localStorage.getItem('tam_an_habit_reminders') !== 'false';
-  });
-  const [dndEnabled, setDndEnabled] = useState(() => {
-    return localStorage.getItem('tam_an_dnd_enabled') === 'true';
-  });
-  const [dndTime, setDndTime] = useState(() => {
-    return localStorage.getItem('tam_an_dnd_time') || '22:00 - 06:00';
-  });
   const { language, setLanguage, t } = useLanguage();
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'auto'>(() => {
     return (localStorage.getItem('tam_an_theme') as any) || 'light';
@@ -98,7 +86,7 @@ export default function MenuAndSettingsDrawer({
 
   // Sub-modal states
   const [activeSubModal, setActiveSubModal] = useState<
-    'profile' | 'devices' | 'security' | 'disclaimer' | 'dnd_picker' | 'language_picker' | 'theme_picker' | 'fontSize_picker' | null
+    'profile' | 'devices' | 'security' | 'disclaimer' | 'language_picker' | 'theme_picker' | 'fontSize_picker' | null
   >(null);
 
   // Initial font size and theme sync
@@ -128,31 +116,6 @@ export default function MenuAndSettingsDrawer({
       document.documentElement.classList.remove('dark');
     }
   }, []);
-
-  // Sync settings changes
-  const toggleAppNotifications = async () => {
-    const nextVal = !appNotificationsEnabled;
-    setAppNotificationsEnabled(nextVal);
-    localStorage.setItem('tam_an_app_notifications', String(nextVal));
-    showToast(nextVal ? (language === 'vi' ? 'Đã bật thông báo ứng dụng' : 'App notifications enabled') : (language === 'vi' ? 'Đã tắt thông báo ứng dụng' : 'App notifications disabled'));
-    if (nextVal) {
-      await reminderService.requestNotificationPermission();
-    }
-  };
-
-  const toggleHabitReminders = () => {
-    const nextVal = !habitRemindersEnabled;
-    setHabitRemindersEnabled(nextVal);
-    localStorage.setItem('tam_an_habit_reminders', String(nextVal));
-    showToast(nextVal ? (language === 'vi' ? 'Đã bật nhắc nhở uống nước & tập luyện' : 'Habit reminders enabled') : (language === 'vi' ? 'Đã tắt nhắc nhở tập luyện' : 'Habit reminders disabled'));
-  };
-
-  const toggleDnd = () => {
-    const nextVal = !dndEnabled;
-    setDndEnabled(nextVal);
-    localStorage.setItem('tam_an_dnd_enabled', String(nextVal));
-    showToast(nextVal ? (language === 'vi' ? `Đã bật Không làm phiền (${dndTime})` : `DND activated (${dndTime})`) : (language === 'vi' ? 'Đã tắt Không làm phiền' : 'DND deactivated'));
-  };
 
   const handleLanguageChange = (lang: 'vi' | 'en') => {
     setLanguage(lang);
@@ -418,7 +381,7 @@ export default function MenuAndSettingsDrawer({
                 />
               </div>
 
-              {/* Phần 3: CÀI ĐẶT (Nhóm Cài đặt Hệ thống, Nhắc nhở & Báo giờ, Hỗ trợ & Góp ý) */}
+              {/* Phần 3: CÀI ĐẶT (Cài đặt Hệ thống & Hỗ trợ) */}
               <div className="pt-3 border-t border-emerald-200/70 space-y-1.5">
                 <p className="text-[9px] text-slate-500 uppercase tracking-[0.2em] font-bold pl-2 mb-1">
                   {t('drawer.settings_section')}
@@ -429,15 +392,6 @@ export default function MenuAndSettingsDrawer({
                   title={t('drawer.system_settings')} 
                   onClick={() => { 
                     setActiveTab('settings');
-                  }} 
-                />
-                <SidebarNavItem 
-                  active={false} 
-                  icon={Bell} 
-                  title={t('drawer.notification_settings')} 
-                  onClick={() => { 
-                    onClose(); 
-                    onOpenNotificationSettings();
                   }} 
                 />
                 <SidebarNavItem 
@@ -520,70 +474,7 @@ export default function MenuAndSettingsDrawer({
               </div>
             </div>
 
-            {/* 2. 🔔 THÔNG BÁO & LỊCH NHẮC */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 pl-2 mb-1">
-                <Bell className="w-3.5 h-3.5 text-teal-700" />
-                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  {t('section.notifications')}
-                </span>
-              </div>
-              <div className="bg-white/95 border border-emerald-200/80 rounded-2xl overflow-hidden shadow-2xs divide-y divide-slate-100">
-                <div className="px-3.5 py-2.5 flex items-center justify-between">
-                  <div className="pr-2">
-                    <span className="text-xs font-semibold text-slate-800 block">{t('notify.app')}</span>
-                    <span className="text-[10px] text-slate-500">{t('notify.app_desc')}</span>
-                  </div>
-                  <ToggleSwitch checked={appNotificationsEnabled} onChange={toggleAppNotifications} />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenNotificationSettings();
-                  }}
-                  className="w-full px-3.5 py-3 flex items-center justify-between text-left hover:bg-teal-50/50 transition-colors group cursor-pointer"
-                >
-                  <div className="min-w-0 pr-2">
-                    <span className="text-xs font-semibold text-slate-800 block">{t('notify.medication')}</span>
-                    <span className="text-[10px] text-slate-500 block">{t('notify.medication_desc')}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[10.5px] font-mono bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-lg font-bold">
-                      08:00, 20:00
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 transition-colors" />
-                  </div>
-                </button>
-
-                <div className="px-3.5 py-2.5 flex items-center justify-between">
-                  <div className="pr-2">
-                    <span className="text-xs font-semibold text-slate-800 block">{t('notify.workout')}</span>
-                    <span className="text-[10px] text-slate-500">{t('notify.workout_desc')}</span>
-                  </div>
-                  <ToggleSwitch checked={habitRemindersEnabled} onChange={toggleHabitReminders} />
-                </div>
-
-                <div className="px-3.5 py-2.5 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubModal('dnd_picker')}
-                    className="pr-2 text-left cursor-pointer group flex-1"
-                  >
-                    <span className="text-xs font-semibold text-slate-800 group-hover:text-teal-700 block transition-colors">
-                      {t('notify.dnd')}
-                    </span>
-                    <span className="text-[10px] text-slate-500">{t('notify.dnd_desc')} ({dndTime})</span>
-                  </button>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <ToggleSwitch checked={dndEnabled} onChange={toggleDnd} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. 🌐 TÙY CHỌN ỨNG DỤNG */}
+            {/* 2. 🌐 TÙY CHỌN ỨNG DỤNG */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 pl-2 mb-1">
                 <Globe className="w-3.5 h-3.5 text-teal-700" />
@@ -666,12 +557,12 @@ export default function MenuAndSettingsDrawer({
                       { id: 'light', label: t('pref.theme_light'), icon: Sun },
                       { id: 'dark', label: t('pref.theme_dark'), icon: Moon },
                       { id: 'auto', label: t('pref.theme_auto'), icon: Monitor },
-                    ].map(item => {
+                    ].map((item, itemIdx) => {
                       const Icon = item.icon;
                       const isSelected = themeMode === item.id;
                       return (
                         <button
-                          key={item.id}
+                          key={`theme-top-${item.id}-${itemIdx}`}
                           type="button"
                           onClick={() => handleThemeChange(item.id as any)}
                           className={cn(
@@ -716,11 +607,11 @@ export default function MenuAndSettingsDrawer({
                       { id: 'normal', label: language === 'vi' ? 'Chuẩn' : 'Standard', scale: '100%' },
                       { id: 'large', label: language === 'vi' ? 'Lớn' : 'Large', scale: '+12%' },
                       { id: 'xlarge', label: language === 'vi' ? 'Rất lớn' : 'X-Large', scale: '+25%' },
-                    ].map(item => {
+                    ].map((item, itemIdx) => {
                       const isSelected = fontSize === item.id;
                       return (
                         <button
-                          key={item.id}
+                          key={`font-top-${item.id}-${itemIdx}`}
                           type="button"
                           onClick={() => handleFontSizeChange(item.id as any)}
                           className={cn(
@@ -745,7 +636,7 @@ export default function MenuAndSettingsDrawer({
               </div>
             </div>
 
-            {/* 4. 📞 TRỢ GIÚP & LIÊN HỆ */}
+            {/* 3. 📞 TRỢ GIÚP & LIÊN HỆ */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 pl-2 mb-1">
                 <PhoneCall className="w-3.5 h-3.5 text-teal-700" />
@@ -1120,48 +1011,6 @@ export default function MenuAndSettingsDrawer({
         )}
       </AnimatePresence>
 
-      {/* Sub-modal: Cài đặt Không làm phiền (DND) */}
-      <AnimatePresence>
-        {activeSubModal === 'dnd_picker' && (
-          <SettingsSubModal title="Khung giờ Không làm phiền (DND)" onClose={() => setActiveSubModal(null)}>
-            <div className="space-y-3 text-xs">
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Trong khung giờ này, ứng dụng sẽ tắt chuông thông báo để bạn có giấc ngủ sâu và yên tĩnh (ngoại trừ cảnh báo y tế khẩn cấp 115).
-              </p>
-              <div className="space-y-2">
-                {[
-                  { label: '22:00 - 06:00 (Ban đêm tiêu chuẩn)', val: '22:00 - 06:00' },
-                  { label: '21:00 - 07:00 (Nghỉ ngơi sớm cho người cao tuổi)', val: '21:00 - 07:00' },
-                  { label: '23:00 - 06:30 (Thức khuya hơn)', val: '23:00 - 06:30' },
-                  { label: '20:00 - 08:00 (Yên tĩnh tối đa)', val: '20:00 - 08:00' },
-                ].map(opt => {
-                  const isSelected = dndTime === opt.val;
-                  return (
-                    <button
-                      key={opt.val}
-                      type="button"
-                      onClick={() => {
-                        setDndTime(opt.val);
-                        localStorage.setItem('tam_an_dnd_time', opt.val);
-                        showToast(`Đã chọn khung giờ: ${opt.val}`);
-                        setActiveSubModal(null);
-                      }}
-                      className={cn(
-                        "w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer text-left",
-                        isSelected ? "bg-teal-50 border-teal-500 text-teal-900 font-bold shadow-2xs" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                      )}
-                    >
-                      <span className="text-xs font-semibold">{opt.label}</span>
-                      {isSelected && <Check className="w-4 h-4 text-teal-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </SettingsSubModal>
-        )}
-      </AnimatePresence>
-
       {/* Sub-modal: Chọn Cỡ chữ & Trợ năng */}
       <AnimatePresence>
         {activeSubModal === 'fontSize_picker' && (
@@ -1175,11 +1024,11 @@ export default function MenuAndSettingsDrawer({
                   { id: 'normal', label: 'Cỡ chữ Bình thường', desc: 'Kích thước tiêu chuẩn (100%)', scale: '100%' },
                   { id: 'large', label: 'Cỡ chữ Lớn (Khuyên dùng)', desc: 'Phóng to nhẹ chữ và nút bấm (+12%)', scale: '112%' },
                   { id: 'xlarge', label: 'Cỡ chữ Rất lớn', desc: 'Dễ đọc tối đa cho người cao tuổi (+25%)', scale: '125%' },
-                ].map(opt => {
+                ].map((opt, optIdx) => {
                   const isSelected = fontSize === opt.id;
                   return (
                     <button
-                      key={opt.id}
+                      key={`font-picker-${opt.id}-${optIdx}`}
                       type="button"
                       onClick={() => handleFontSizeChange(opt.id as any)}
                       className={cn(
@@ -1286,12 +1135,12 @@ export default function MenuAndSettingsDrawer({
                 { id: 'light', label: 'Giao diện Sáng (Khuyên dùng)', icon: Sun },
                 { id: 'dark', label: 'Giao diện Tối (Bảo vệ mắt ban đêm)', icon: Moon },
                 { id: 'auto', label: 'Tự động theo thiết bị', icon: Monitor },
-              ].map(t => {
+              ].map((t, tIdx) => {
                 const Icon = t.icon;
                 const isSelected = themeMode === t.id;
                 return (
                   <button
-                    key={t.id}
+                    key={`theme-sub-${t.id}-${tIdx}`}
                     type="button"
                     onClick={() => handleThemeChange(t.id as any)}
                     className={cn(

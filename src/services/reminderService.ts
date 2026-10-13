@@ -25,6 +25,32 @@ export interface AppNotificationItem {
   metadata?: any;
 }
 
+/**
+ * Accurately determines if a reminder item is for measuring health metrics/vitals
+ * (e.g. blood pressure, glucose, SpO2, temperature, weight) vs taking medication.
+ */
+export function isVitalsOrMetric(category?: string, name?: string, id?: string): boolean {
+  if (id && id.startsWith('vitals-')) return true;
+
+  const text = `${category || ''} ${name || ''}`.toLowerCase();
+  const hasVitalKeywords = /đo|huyết áp|đường huyết|tiểu đường|glucose|hba1c|spo2|oxy|thân nhiệt|nhiệt độ|sốt|cân nặng|bmi|thể trọng|chỉ số|sinh hiệu|nhịp tim|vòng eo|vitals/i.test(text);
+  const hasMedKeywords = /thuốc|dược liệu|kháng sinh|viên|liều|uống viên|uống liều|vitamin|siro|cao xoa|đông y/i.test(text);
+
+  // If category is an explicit vitals/metric type
+  if (category && ['vitals', 'measurement', 'glucose', 'blood_pressure', 'spo2', 'temperature', 'weight'].includes(category)) {
+    return true;
+  }
+
+  // If name or notes has vital keywords (e.g. "Đo huyết áp", "Đo đường huyết") and is not purely medication
+  if (hasVitalKeywords && (!hasMedKeywords || text.includes('đo '))) {
+    return true;
+  }
+
+  if (category === 'medication') return false;
+
+  return false;
+}
+
 class ReminderService {
   private swRegistration: ServiceWorkerRegistration | null = null;
   private worker: Worker | null = null;
@@ -103,6 +129,7 @@ class ReminderService {
     if (enabled) {
       this.nextWaterTimestamp = Date.now() + (intervalMinutes * 60 * 1000);
       localStorage.setItem('waterReminderNextTimestamp', String(this.nextWaterTimestamp));
+      // Do not push premature notification: wait until nextWaterTimestamp arrives
     } else {
       this.nextWaterTimestamp = 0;
       localStorage.removeItem('waterReminderNextTimestamp');
@@ -110,9 +137,132 @@ class ReminderService {
     this.syncToServiceWorker();
   }
 
+  public recordWaterIntake(amountMl: number = 250) {
+    if (typeof window === 'undefined') return;
+    if (this.waterEnabled) {
+      this.nextWaterTimestamp = Date.now() + (this.waterIntervalMinutes * 60 * 1000);
+      localStorage.setItem('waterReminderNextTimestamp', String(this.nextWaterTimestamp));
+      this.syncToServiceWorker();
+    }
+  }
+
   public setReminders(reminders: ScheduledReminderItem[]) {
     this.reminders = reminders;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tam_an_scheduled_reminders', JSON.stringify(reminders));
+    }
     this.syncToServiceWorker();
+    this.scheduleReminderTimeouts();
+    this.ensureActiveRemindersInNotificationCenter();
+  }
+
+  private scheduleReminderTimeouts() {
+    if (typeof window === 'undefined' || !this.reminders || this.reminders.length === 0) return;
+    const now = new Date();
+    const currentTotalMs = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) * 1000;
+
+    this.reminders.forEach((r) => {
+      if (!r.enabled) return;
+      const [h, m] = (r.time || '08:00').split(':').map(Number);
+      const targetMs = ((isNaN(h) ? 8 : h) * 3600 + (isNaN(m) ? 0 : m) * 60) * 1000;
+
+      // 1. Timeout for 15 minutes before (Pre-alert)
+      const preTargetMs = targetMs - 15 * 60 * 1000;
+      const preDiffMs = preTargetMs - currentTotalMs;
+      if (preDiffMs > 0 && preDiffMs <= 86400000) {
+        setTimeout(() => {
+          this.checkAndTriggerReminders();
+        }, preDiffMs);
+      }
+
+      // 2. Timeout for exact scheduled time
+      const diffMs = targetMs - currentTotalMs;
+      if (diffMs > 0 && diffMs <= 86400000) {
+        setTimeout(() => {
+          this.checkAndTriggerReminders();
+        }, diffMs);
+      }
+    });
+  }
+
+  public syncReminderToNotificationCenter(item: ScheduledReminderItem) {
+    if (!item.enabled) return;
+    // Update schedule in memory and persistent storage
+    const exists = this.reminders.some(r => r.id === item.id);
+    if (!exists) {
+      this.reminders.push(item);
+    } else {
+      this.reminders = this.reminders.map(r => r.id === item.id ? item : r);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tam_an_scheduled_reminders', JSON.stringify(this.reminders));
+    }
+    this.scheduleReminderTimeouts();
+    this.syncToServiceWorker();
+    
+    // Check if it is currently due (within 15 minutes before or exact time)
+    // If not due yet, DO NOT send notification immediately!
+    this.checkAndTriggerReminders();
+  }
+
+  public ensureActiveRemindersInNotificationCenter() {
+    if (typeof window === 'undefined') return;
+    const now = new Date();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentNotifs = this.getNotifications();
+    let updated = false;
+
+    // Water reminders are only created when due via checkAndTriggerReminders()
+
+    // 2. Only add reminders if they have actually reached the alert window (within 15 minutes before or due today)
+    this.reminders.forEach(r => {
+      if (!r.enabled) return;
+      const [rHours, rMins] = (r.time || '08:00').split(':').map(Number);
+      const reminderTotalMinutes = (isNaN(rHours) ? 8 : rHours) * 60 + (isNaN(rMins) ? 0 : rMins);
+
+      // STRICT TIMING: If reminder time is more than 15 minutes in the future today, DO NOT show yet!
+      const isDueOrWithin15 = currentTotalMinutes >= reminderTotalMinutes - 15 && currentTotalMinutes <= reminderTotalMinutes + 60;
+      if (!isDueOrWithin15) {
+        return; // Wait until 15 minutes before or exact time
+      }
+
+      const isVitals = isVitalsOrMetric(r.category, r.medName, r.id);
+      const targetType = isVitals ? 'vitals' : 'medication';
+      const exists = currentNotifs.some(n => n.type === targetType && (n.metadata?.id === r.id || n.title.includes(r.medName)));
+      if (!exists) {
+        const isPreAlert = currentTotalMinutes < reminderTotalMinutes;
+        const schedNotif: AppNotificationItem = {
+          id: `sched-${r.id}-${Date.now()}`,
+          type: targetType,
+          title: isPreAlert
+            ? `⏰ Sắp đến giờ: ${r.medName} (${r.time})`
+            : (isVitals 
+                ? `🩺 Lịch nhắc đo chỉ số: ${r.medName} (${r.time})`
+                : `💊 Lịch nhắc uống thuốc: ${r.medName} (${r.time})`),
+          body: isPreAlert
+            ? `Còn ít phút nữa đến giờ ${isVitals ? 'đo chỉ số' : 'uống thuốc'} (${r.time}). Hãy chuẩn bị sẵn sàng!`
+            : (isVitals
+                ? (r.dosage 
+                    ? `Đã đến giờ kiểm tra! Mục tiêu/Chỉ số: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy ngồi nghỉ ngơi thư giãn 5 phút trước khi tiến hành đo.'}`
+                    : `Đã đến giờ kiểm tra chỉ số sức khỏe theo lịch cài đặt.`)
+                : (r.dosage 
+                    ? `Đã đến giờ uống thuốc: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy dùng thuốc đúng giờ theo chỉ định của bác sĩ.'}`
+                    : `Đã đến giờ uống thuốc theo phác đồ cài đặt.`)),
+          timeStr: r.time,
+          timestamp: Date.now(),
+          read: false,
+          actionType: isVitals ? 'log_vital' : 'take_med',
+          metadata: r
+        };
+        currentNotifs.unshift(schedNotif);
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      localStorage.setItem('tam_an_notification_center_items', JSON.stringify(currentNotifs.slice(0, 40)));
+      window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: currentNotifs }));
+    }
   }
 
   private async registerServiceWorker() {
@@ -158,8 +308,18 @@ class ReminderService {
     }
 
     if (!this.currentUserId) {
-      this.reminders = [];
+      if (typeof window !== 'undefined') {
+        const local = localStorage.getItem('tam_an_scheduled_reminders');
+        if (local) {
+          try {
+            this.reminders = JSON.parse(local);
+          } catch {
+            this.reminders = [];
+          }
+        }
+      }
       this.syncToServiceWorker();
+      this.ensureActiveRemindersInNotificationCenter();
       return;
     }
 
@@ -179,7 +339,11 @@ class ReminderService {
 
       const updateAllReminders = () => {
         this.reminders = [...medList, ...vitalsList];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tam_an_scheduled_reminders', JSON.stringify(this.reminders));
+        }
         this.syncToServiceWorker();
+        this.ensureActiveRemindersInNotificationCenter();
       };
 
       const unsubMed = onSnapshot(qMed, (snapshot) => {
@@ -311,23 +475,59 @@ class ReminderService {
     const currentMinutes = String(now.getMinutes()).padStart(2, '0');
     const currentTimeStr = `${currentHours}:${currentMinutes}`;
     const todayDateStr = now.toISOString().split('T')[0];
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
     // 1. Check Medication & Vitals reminders
     if (this.reminders && this.reminders.length > 0) {
       this.reminders.forEach((r) => {
         if (!r.enabled) return;
+
+        const [rHours, rMins] = (r.time || '08:00').split(':').map(Number);
+        const reminderTotalMinutes = (isNaN(rHours) ? 8 : rHours) * 60 + (isNaN(rMins) ? 0 : rMins);
+        const isVitals = isVitalsOrMetric(r.category, r.medName, r.id);
+
+        // A. Nhắc trước 15 phút (Pre-alert)
+        const is15MinBefore = currentTotalMinutes >= reminderTotalMinutes - 15 && currentTotalMinutes < reminderTotalMinutes;
+        const preAlertKey = `preAlert_${r.id}_${todayDateStr}`;
+        const alreadyPreAlerted = localStorage.getItem(preAlertKey);
+
+        if (is15MinBefore && !alreadyPreAlerted) {
+          localStorage.setItem(preAlertKey, 'true');
+          const preTitle = isVitals
+            ? `⏰ Sắp đến giờ đo chỉ số: ${r.medName} (${r.time})`
+            : `⏰ Sắp đến giờ uống thuốc: ${r.medName} (${r.time})`;
+          const preBody = isVitals
+            ? `Còn 15 phút nữa đến giờ kiểm tra (${r.time}). Mục tiêu: ${r.dosage || 'Đo chỉ số'}. Hãy chuẩn bị thiết bị và nghỉ ngơi thư giãn 5 phút.`
+            : `Còn 15 phút nữa đến giờ uống thuốc (${r.time}): ${r.dosage || '1 liều'}. Hãy chuẩn bị nước ấm hoặc dùng bữa phù hợp.`;
+
+          this.showNotification(
+            preTitle,
+            preBody,
+            `reminder-pre-${r.id}`,
+            isVitals ? 'vitals' : 'medication',
+            r
+          );
+          this.dispatchInAppEvent(isVitals ? 'vitals' : 'medication', r);
+        }
+
+        // B. Nhắc khi đến đúng giờ đặt (hoặc trễ trong vòng 45 phút)
         const lastKey = `lastTriggered_${r.id}_${todayDateStr}`;
         const alreadyTriggered = localStorage.getItem(lastKey);
+        const isDue = r.time === currentTimeStr || 
+          (!alreadyTriggered && currentTotalMinutes >= reminderTotalMinutes && currentTotalMinutes <= reminderTotalMinutes + 45);
 
-        if (r.time === currentTimeStr && !alreadyTriggered) {
+        if (isDue && !alreadyTriggered) {
           localStorage.setItem(lastKey, 'true');
-          const isVitals = r.category === 'vitals' || r.id.startsWith('vitals-');
           const title = isVitals 
-            ? `🩺 Lịch nhắc đo chỉ số sinh hiệu (${r.time})`
+            ? `🩺 Lịch nhắc đo chỉ số: ${r.medName} (${r.time})`
             : `💊 Lịch nhắc uống thuốc: ${r.medName} (${r.time})`;
-          const body = r.dosage
-            ? `Đã đến giờ! Chỉ số/Liều lượng: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ''}`
-            : `Đã đến giờ theo dõi sức khỏe theo lịch cài đặt.`;
+          const body = isVitals
+            ? (r.dosage
+                ? `Đã đến giờ kiểm tra! Chỉ số mục tiêu: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy ngồi nghỉ ngơi 5 phút trước khi đo.'}`
+                : `Đã đến giờ kiểm tra chỉ số sức khỏe định kỳ theo lịch cài đặt.`)
+            : (r.dosage
+                ? `Đã đến giờ uống thuốc: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy dùng thuốc đúng giờ theo chỉ định.'}`
+                : `Đã đến giờ uống thuốc theo phác đồ cài đặt.`);
 
           this.showNotification(
             title, 
@@ -336,7 +536,7 @@ class ReminderService {
             isVitals ? 'vitals' : 'medication',
             r
           );
-          this.dispatchInAppEvent('medication', r);
+          this.dispatchInAppEvent(isVitals ? 'vitals' : 'medication', r);
         }
       });
     }
@@ -407,81 +607,226 @@ class ReminderService {
       tag,
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
+      renotify: true,
       data: { url: '/', type, id: newNotif.id }
     };
 
-    // Priority 1: ServiceWorker showNotification (delivers to mobile/tablet notification shade)
-    if (this.swRegistration && 'showNotification' in this.swRegistration) {
-      this.swRegistration.showNotification(title, options).catch((err) => {
-        console.warn('swRegistration.showNotification failed, trying fallback:', err);
-        this.fallbackNotification(title, options);
-      });
-    } else if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'TRIGGER_NOTIFICATION',
-        title,
-        body,
-        icon: '/icon-192.png',
-        tag,
-        data: { url: '/', type, id: newNotif.id }
-      });
-    } else {
-      this.fallbackNotification(title, options);
+    // Deliver to mobile system notification shade via Service Worker (Android / iOS PWA / Desktop)
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const fullIconUrl = `${window.location.origin}/icon-192.png`;
+      const fullBadgeUrl = `${window.location.origin}/icon-192.png`;
+      const swOptions = {
+        ...options,
+        icon: fullIconUrl,
+        badge: fullBadgeUrl
+      };
+
+      if ('serviceWorker' in navigator) {
+        // 1. Post to active controller for instant dispatch
+        if (navigator.serviceWorker.controller) {
+          try {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'TRIGGER_NOTIFICATION',
+              title,
+              body,
+              icon: fullIconUrl,
+              badge: fullBadgeUrl,
+              tag,
+              data: options.data
+            });
+          } catch (e) {
+            console.warn('postMessage to controller failed:', e);
+          }
+        }
+
+        // 2. Direct showNotification via ready registration
+        navigator.serviceWorker.ready.then((reg) => {
+          this.swRegistration = reg;
+          reg.showNotification(title, swOptions).catch((err) => {
+            console.warn('reg.showNotification error, falling back:', err);
+            this.fallbackNotification(title, swOptions);
+          });
+        }).catch(() => {
+          navigator.serviceWorker.getRegistration().then((reg) => {
+            if (reg) {
+              reg.showNotification(title, swOptions).catch(() => this.fallbackNotification(title, swOptions));
+            } else {
+              this.fallbackNotification(title, swOptions);
+            }
+          }).catch(() => {
+            this.fallbackNotification(title, swOptions);
+          });
+        });
+      } else {
+        this.fallbackNotification(title, swOptions);
+      }
     }
   }
 
   public getNotifications(): AppNotificationItem[] {
     if (typeof window === 'undefined') return [];
+    let list: AppNotificationItem[] = [];
     try {
       const data = localStorage.getItem('tam_an_notification_center_items');
       if (data) {
-        return JSON.parse(data);
+        list = JSON.parse(data);
       }
     } catch (e) {
       console.warn('Error reading notifications:', e);
     }
-    // Return initial high-value sample reminders if empty
-    return [
-      {
-        id: 'init-water-1',
-        type: 'water',
-        title: '💧 Nhắc nhở uống nước định kỳ',
-        body: 'Đã đến giờ uống 200-250ml nước lọc ấm để bảo vệ chức năng lọc của thận và bài trừ độc tố.',
-        timeStr: 'Vừa xong',
-        timestamp: Date.now() - 1000 * 60 * 5,
-        read: false,
-        actionType: 'drink_water',
-        metadata: { amount: 250 }
-      },
-      {
-        id: 'init-med-1',
-        type: 'medication',
-        title: '💊 Lịch nhắc uống thuốc & đo chỉ số',
-        body: 'Đã đến giờ uống: Thuốc tiểu đường (Metformin 500mg) - 1 viên sau ăn.',
-        timeStr: '20:30',
-        timestamp: Date.now() - 1000 * 60 * 30,
-        read: false,
-        actionType: 'take_med',
-        metadata: { medName: 'Thuốc tiểu đường', dosage: '1 viên' }
-      },
-      {
-        id: 'init-vitals-1',
-        type: 'vitals',
-        title: '🩺 Lịch kiểm tra chỉ số sinh hiệu',
-        body: 'Đến giờ đo Huyết áp, Nhịp tim và SpO2 để theo dõi tiến trình hồi phục sức khỏe.',
-        timeStr: '08:00',
-        timestamp: Date.now() - 1000 * 60 * 120,
-        read: true,
-        actionType: 'log_vital',
-        metadata: { vitalType: 'Huyết áp & SpO2' }
+
+    if (!list || list.length === 0) {
+      list = [];
+    } else {
+      // Auto-sanitize existing notifications: fix any legacy entries where vitals/metrics were mistakenly saved with title "uống thuốc" or type "medication"
+      list = list.map(item => {
+        const isVitals = item.type === 'vitals' || isVitalsOrMetric(item.metadata?.category, item.metadata?.medName || item.title, item.id);
+        if (isVitals && item.type !== 'water') {
+          let cleanedTitle = item.title;
+          if (cleanedTitle.includes('uống thuốc & đo chỉ số')) {
+            cleanedTitle = cleanedTitle.replace('💊 Lịch nhắc uống thuốc & đo chỉ số', '🩺 Lịch nhắc đo chỉ số');
+          } else if (cleanedTitle.startsWith('💊 Lịch nhắc uống thuốc:')) {
+            cleanedTitle = cleanedTitle.replace('💊 Lịch nhắc uống thuốc:', '🩺 Lịch nhắc đo chỉ số:');
+          }
+          let cleanedBody = item.body;
+          if (cleanedBody.includes('Hãy uống thuốc đúng giờ')) {
+            cleanedBody = cleanedBody.replace('Hãy uống thuốc đúng giờ theo chỉ định.', 'Hãy kiểm tra và ghi lại số đo đúng giờ.');
+          }
+          return {
+            ...item,
+            type: 'vitals' as const,
+            title: cleanedTitle,
+            body: cleanedBody,
+            actionType: 'log_vital' as const
+          };
+        }
+        return item;
+      });
+    }
+
+    // STRICT CHECK: Remove any notifications with scheduled reminder times that haven't arrived yet
+    const now = new Date();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowTs = Date.now();
+
+    list = list.filter(item => {
+      // 1. FILTER WATER NOTIFICATIONS THAT HAVE NOT REACHED THEIR TIME
+      if (item.type === 'water') {
+        // If water reminder is disabled, filter out
+        if (!this.waterEnabled) return false;
+
+        // Purge legacy premature/synthetic water notifications created before due time
+        if (item.id === 'init-water-1' || item.id === 'water-alert-active' || item.id.startsWith('water-active-')) {
+          return false;
+        }
+
+        // Filter out if timestamp or targetTimestamp is in the future
+        if (item.timestamp && item.timestamp > nowTs) {
+          return false;
+        }
+        if (item.metadata?.targetTimestamp && item.metadata.targetTimestamp > nowTs) {
+          return false;
+        }
+        if (item.metadata?.nextWaterTimestamp && item.metadata.nextWaterTimestamp > nowTs) {
+          return false;
+        }
+
+        // If the notification specifies a specific hour (e.g. 14:00, 20:00)
+        const waterScheduledTime = item.metadata?.time || (item.title && item.title.match(/(\d{1,2}:\d{2})/) ? item.title.match(/(\d{1,2}:\d{2})/)![1] : null);
+        if (waterScheduledTime) {
+          const [wh, wm] = waterScheduledTime.split(':').map(Number);
+          if (!isNaN(wh) && !isNaN(wm)) {
+            const itemMinutes = wh * 60 + wm;
+            const diffMinutes = itemMinutes - currentTotalMinutes;
+            // Not due yet if scheduled in future today
+            if (diffMinutes > 0) {
+              return false;
+            }
+          }
+        }
+
+        return true;
       }
-    ];
+
+      // 2. FILTER MEDICATION & VITALS NOTIFICATIONS THAT HAVE NOT REACHED THEIR TIME
+      const scheduledTime = item.metadata?.time || (item.title && item.title.match(/(\d{1,2}:\d{2})/) ? item.title.match(/(\d{1,2}:\d{2})/)![1] : null);
+      if (scheduledTime) {
+        const [h, m] = scheduledTime.split(':').map(Number);
+        if (!isNaN(h) && !isNaN(m)) {
+          const itemMinutes = h * 60 + m;
+          const diffMinutes = itemMinutes - currentTotalMinutes;
+          // If scheduled time is more than 15 minutes in the future today:
+          // (e.g. 20:00 when now is 16:49: diff = 191 > 15 -> FILTER OUT)
+          if (diffMinutes > 15) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    // Only ensure reminders that are CURRENTLY DUE or within 15 minutes before scheduled time today
+    if (this.reminders && this.reminders.length > 0) {
+      this.reminders.forEach(r => {
+        if (!r.enabled) return;
+        const [rHours, rMins] = (r.time || '08:00').split(':').map(Number);
+        const reminderTotalMinutes = (isNaN(rHours) ? 8 : rHours) * 60 + (isNaN(rMins) ? 0 : rMins);
+
+        // ONLY IF within 15 minutes before or due today:
+        const isDueOrWithin15 = currentTotalMinutes >= reminderTotalMinutes - 15 && currentTotalMinutes <= reminderTotalMinutes + 60;
+        if (!isDueOrWithin15) return;
+
+        const isVitals = isVitalsOrMetric(r.category, r.medName, r.id);
+        const targetType = isVitals ? 'vitals' : 'medication';
+        const exists = list.some(n => n.type === targetType && (n.metadata?.id === r.id || n.title.includes(r.medName)));
+        if (!exists) {
+          const isPreAlert = currentTotalMinutes < reminderTotalMinutes;
+          list.unshift({
+            id: `sched-active-${r.id}`,
+            type: targetType,
+            title: isPreAlert
+              ? `⏰ Sắp đến giờ: ${r.medName} (${r.time})`
+              : (isVitals 
+                  ? `🩺 Lịch nhắc đo chỉ số: ${r.medName} (${r.time})`
+                  : `💊 Lịch nhắc uống thuốc: ${r.medName} (${r.time})`),
+            body: isPreAlert
+              ? `Còn ít phút nữa đến giờ ${isVitals ? 'đo chỉ số' : 'uống thuốc'} (${r.time}). Hãy chuẩn bị sẵn sàng!`
+              : (isVitals
+                  ? (r.dosage 
+                      ? `Đã đến giờ kiểm tra! Mục tiêu/Chỉ số: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy ngồi nghỉ ngơi thư giãn 5 phút trước khi tiến hành đo.'}`
+                      : `Đã đến giờ kiểm tra chỉ số sức khỏe theo lịch cài đặt.`)
+                  : (r.dosage 
+                      ? `Đã đến giờ uống thuốc: ${r.dosage}.${r.notes ? ' Ghi chú: ' + r.notes : ' Hãy dùng thuốc đúng giờ theo chỉ định của bác sĩ.'}`
+                      : `Đã đến giờ uống thuốc theo phác đồ cài đặt.`)),
+            timeStr: r.time,
+            timestamp: Date.now(),
+            read: false,
+            actionType: isVitals ? 'log_vital' : 'take_med',
+            metadata: r
+          });
+        }
+      });
+    }
+
+    // Deduplicate notifications by ID
+    const seenIds = new Set<string>();
+    list = list.filter(item => {
+      if (!item || !item.id || seenIds.has(item.id)) return false;
+      seenIds.add(item.id);
+      return true;
+    });
+
+    try {
+      localStorage.setItem('tam_an_notification_center_items', JSON.stringify(list.slice(0, 40)));
+    } catch {}
+
+    return list;
   }
 
   public saveNotificationToHistory(notif: AppNotificationItem) {
     if (typeof window === 'undefined') return;
     try {
-      const list = this.getNotifications();
+      const list = this.getNotifications().filter(item => item.id !== notif.id);
       const updated = [notif, ...list].slice(0, 30);
       localStorage.setItem('tam_an_notification_center_items', JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: updated }));
@@ -511,6 +856,21 @@ class ReminderService {
     window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: list }));
   }
 
+  public removeReminderNotifications(reminderId: string) {
+    if (typeof window === 'undefined') return;
+    const list = this.getNotifications().filter(item => {
+      if (item.id === `sched-active-${reminderId}` || item.id === `reminder-sync-${reminderId}` || item.id === `reminder-${reminderId}`) {
+        return false;
+      }
+      if (item.metadata && (item.metadata.id === reminderId || item.metadata.reminderId === reminderId)) {
+        return false;
+      }
+      return true;
+    });
+    localStorage.setItem('tam_an_notification_center_items', JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('app-notifications-updated', { detail: list }));
+  }
+
   public clearNotifications() {
     if (typeof window === 'undefined') return;
     localStorage.setItem('tam_an_notification_center_items', JSON.stringify([]));
@@ -527,9 +887,9 @@ class ReminderService {
     );
   }
 
-  public triggerTestMedicationNotification(medName: string = 'Thuốc tiểu đường (Metformin)') {
+  public triggerTestMedicationNotification(medName: string = 'Thuốc hạ áp / Bổ dưỡng') {
     this.showNotification(
-      `💊 Lịch nhắc uống thuốc & đo chỉ số`,
+      `💊 Lịch nhắc uống thuốc: ${medName}`,
       `Đã đến giờ uống thuốc: ${medName} (1 viên) - Dùng sau bữa ăn theo chỉ định của bác sĩ.`,
       'med-alert-test',
       'medication',
@@ -592,7 +952,7 @@ class ReminderService {
     }
   }
 
-  private dispatchInAppEvent(type: 'medication' | 'water', data: any) {
+  private dispatchInAppEvent(type: 'medication' | 'vitals' | 'water', data: any) {
     if (typeof window === 'undefined') return;
     window.dispatchEvent(new CustomEvent('app-health-reminder', {
       detail: { type, data }

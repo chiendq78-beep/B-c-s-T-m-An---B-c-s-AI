@@ -186,6 +186,7 @@ function AppContent() {
   const { user, profile, loading, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuInitialTab, setMenuInitialTab] = useState<'navigation' | 'settings'>('navigation');
+  const [targetExerciseForHealth, setTargetExerciseForHealth] = useState<string | null>(null);
 
   const isAnonymousUser = !user || user.isAnonymous;
 
@@ -259,13 +260,32 @@ function AppContent() {
     };
   }, [activeView]);
 
+  // Listen for global open exercise event to jump to specific workout
+  useEffect(() => {
+    const handleOpenExercise = (e: any) => {
+      const exName = e.detail?.exerciseName || e.detail?.exercise;
+      if (exName) {
+        setTargetExerciseForHealth(exName);
+        navigateToView('health', { exercise: exName });
+      }
+    };
+    window.addEventListener('app-open-exercise', handleOpenExercise);
+    return () => window.removeEventListener('app-open-exercise', handleOpenExercise);
+  }, [activeView, historyIndex]);
+
   // Navigate to a root menu view while resetting scroll & position
-  const navigateToView = (newView: ViewType) => {
+  const navigateToView = (newView: ViewType, options?: { exercise?: string }) => {
+    if (options?.exercise) {
+      setTargetExerciseForHealth(options.exercise);
+    }
+
     // If tapping the already active root menu (e.g. tapping Home when on Home, or Cơ thể when on Cơ thể),
     // immediately smooth scroll back to top and broadcast reset event to close sub-views/modals
     if (newView === activeView) {
       scrollToTop();
-      window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+      if (!options?.exercise) {
+        window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+      }
       setTimeout(scrollToTop, 60);
       setTimeout(scrollToTop, 180);
       return;
@@ -280,7 +300,9 @@ function AppContent() {
 
     // Scroll to top and reset view state on navigation transition
     scrollToTop();
-    window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+    if (!options?.exercise) {
+      window.dispatchEvent(new CustomEvent('app-reset-to-root', { detail: { view: newView } }));
+    }
     setTimeout(scrollToTop, 60);
     setTimeout(scrollToTop, 180);
   };
@@ -359,7 +381,13 @@ function AppContent() {
       case 'home': return <HomeView setActiveView={navigateToView} />;
       case 'anatomy': return <AnatomyView setActiveView={navigateToView} />;
       case 'disease': return <DiseaseView setActiveView={navigateToView} />;
-      case 'health': return <HealthView />;
+      case 'health': 
+        return (
+          <HealthView 
+            targetExercise={targetExerciseForHealth} 
+            onClearTargetExercise={() => setTargetExerciseForHealth(null)} 
+          />
+        );
       case 'herb': return <HerbView />;
       default: return <HomeView setActiveView={navigateToView} />;
     }
@@ -520,6 +548,7 @@ function AppContent() {
       <AnimatePresence>
         {isNotificationCenterOpen && (
           <NotificationCenterModal
+            key="app-notification-center-modal"
             isOpen={isNotificationCenterOpen}
             onClose={() => setIsNotificationCenterOpen(false)}
             onOpenSettings={() => {
@@ -538,6 +567,7 @@ function AppContent() {
       <AnimatePresence>
         {isNotificationSettingsOpen && (
           <NotificationSettingsModal
+            key="app-notification-settings-modal"
             isOpen={isNotificationSettingsOpen}
             onClose={() => setIsNotificationSettingsOpen(false)}
             onOpenMedicationDetailModal={() => setIsMedicationReminderOpen(true)}
@@ -549,6 +579,7 @@ function AppContent() {
       <AnimatePresence>
         {isMedicationReminderOpen && (
           <MedicationReminderModal
+            key="app-medication-reminder-modal"
             isOpen={isMedicationReminderOpen}
             onClose={() => setIsMedicationReminderOpen(false)}
           />
@@ -559,6 +590,7 @@ function AppContent() {
       <AnimatePresence>
         {isAuthModalOpen && (
           <motion.div
+            key="app-fullscreen-auth-container"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}

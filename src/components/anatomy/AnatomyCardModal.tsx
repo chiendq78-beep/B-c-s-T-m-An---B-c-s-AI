@@ -229,7 +229,7 @@ export default function AnatomyCardModal({
                 <div className="space-y-2 pt-1">
                   {part.aiQuestionSuggestions?.map((q, idx) => (
                     <button
-                      key={idx}
+                      key={`ai-q-${idx}`}
                       onClick={() => handleAskAIWithPrompt(q)}
                       className="w-full text-left p-3.5 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-xs text-slate-800 flex items-center justify-between gap-3 shadow-xs hover:shadow transition-all group cursor-pointer"
                     >
@@ -278,9 +278,6 @@ export default function AnatomyCardModal({
                     <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
                     <span>{isEn ? "Anatomical Illustration" : "Hình ảnh minh họa giải phẫu"}</span>
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    {isEn ? "Multi-mode Medical Illustration" : "Minh họa y khoa đa chế độ"}
-                  </span>
                 </div>
                 
                 {/* Advanced Multi-mode Anatomical Illustration Viewer */}
@@ -300,7 +297,7 @@ export default function AnatomyCardModal({
                   </div>
                   <div className="space-y-2">
                     {part.structures.map((st, idx) => (
-                      <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                      <div key={`st-${st.name}-${idx}`} className="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
                         <span className="font-bold text-xs text-teal-800 block">
                           • {st.name}
                         </span>
@@ -320,7 +317,7 @@ export default function AnatomyCardModal({
                   </div>
                   <ul className="space-y-2">
                     {part.functions.map((fn, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-teal-950 font-normal">
+                      <li key={`fn-${idx}`} className="flex items-start gap-2 text-xs sm:text-sm text-teal-950 font-normal">
                         <CheckCircle2 className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
                         <span className="leading-relaxed">{fn}</span>
                       </li>
@@ -353,7 +350,7 @@ export default function AnatomyCardModal({
                     </span>
                     <ul className="space-y-1.5">
                       {part.commonDiseases.map((d, idx) => (
-                        <li key={idx} className="flex items-center justify-between text-xs text-slate-800 py-1.5 border-b border-slate-200/70 last:border-none">
+                        <li key={`com-dis-${d}-${idx}`} className="flex items-center justify-between text-xs text-slate-800 py-1.5 border-b border-slate-200/70 last:border-none">
                           <span className="font-medium">{d}</span>
                           <button
                             onClick={() => handleAskAIWithPrompt(isEn ? `Analyze disease "${d}" of ${partName}` : `Phân tích bệnh "${d}" ở ${part.name_vi}`)}
@@ -373,7 +370,7 @@ export default function AnatomyCardModal({
                     </span>
                     <ul className="space-y-1.5">
                       {part.criticalDiseases.map((d, idx) => (
-                        <li key={idx} className="flex items-center justify-between text-xs text-rose-950 py-1.5 border-b border-rose-200/70 last:border-none">
+                        <li key={`crit-dis-${d}-${idx}`} className="flex items-center justify-between text-xs text-rose-950 py-1.5 border-b border-rose-200/70 last:border-none">
                           <span className="font-semibold">{d}</span>
                           <button
                             onClick={() => handleAskAIWithPrompt(isEn ? `Emergency warning and management for critical condition "${d}" of ${partName}` : `Cảnh báo và xử trí cấp cứu bệnh nguy hiểm "${d}" ở ${part.name_vi}`)}
@@ -397,7 +394,7 @@ export default function AnatomyCardModal({
                 <div className="flex flex-wrap gap-2 pt-1">
                   {part.commonSymptoms.map((symp, idx) => (
                     <button
-                      key={idx}
+                      key={`symp-${symp}-${idx}`}
                       onClick={() => handleSymptomClick(symp)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-amber-100 border border-amber-200 text-xs font-semibold text-amber-900 shadow-xs hover:shadow transition-all cursor-pointer group active:scale-95"
                     >
@@ -430,7 +427,7 @@ export default function AnatomyCardModal({
                   </span>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {part.redFlags.map((flag, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-xs text-red-950 font-medium bg-red-100/70 p-2.5 rounded-lg border border-red-200/70">
+                      <li key={`redflag-${idx}`} className="flex items-start gap-2 text-xs text-red-950 font-medium bg-red-100/70 p-2.5 rounded-lg border border-red-200/70">
                         <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                         <span>{flag}</span>
                       </li>
@@ -461,7 +458,7 @@ export default function AnatomyCardModal({
                 <div className="space-y-2">
                   {part.aiQuestionSuggestions.map((prompt, idx) => (
                     <button
-                      key={idx}
+                      key={`prompt-${idx}`}
                       onClick={() => handleAskAIWithPrompt(prompt)}
                       className="w-full p-3 rounded-xl bg-white hover:bg-teal-50 border border-teal-200 text-left text-xs font-medium text-slate-800 flex items-center justify-between gap-3 shadow-xs hover:shadow transition-all group cursor-pointer"
                     >
@@ -487,7 +484,7 @@ export default function AnatomyCardModal({
                     <div className="flex flex-wrap gap-2 pt-1">
                       {part.relatedHerbs.map((herb, idx) => (
                         <span 
-                          key={idx}
+                          key={`herb-badge-${herb}-${idx}`}
                           className="px-2.5 py-1 bg-white rounded-lg text-xs font-semibold text-emerald-900 border border-emerald-200 shadow-xs"
                         >
                           🌿 {herb}
@@ -506,7 +503,7 @@ export default function AnatomyCardModal({
                     </div>
                     <ul className="space-y-1.5 pt-1">
                       {part.healthTips.map((tip, idx) => (
-                        <li key={idx} className="text-xs text-slate-700 flex items-start gap-2">
+                        <li key={`tip-${idx}`} className="text-xs text-slate-700 flex items-start gap-2">
                           <span className="text-teal-600 font-bold">•</span>
                           <span>{tip}</span>
                         </li>

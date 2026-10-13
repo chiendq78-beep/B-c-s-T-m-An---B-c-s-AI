@@ -252,7 +252,7 @@ export default function SupportModal({ isOpen, onClose, onOpenAIChat }: SupportM
                 const isOpen = openFaqIndex === idx;
                 return (
                   <div 
-                    key={idx} 
+                    key={`faq-item-${idx}`} 
                     className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50 transition-colors hover:border-teal-300"
                   >
                     <button

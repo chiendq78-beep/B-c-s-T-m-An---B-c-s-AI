@@ -276,11 +276,14 @@ export default function HerbView() {
       if (e.detail?.view === 'herb') {
         setSelectedHerbForModal(null);
         setIsFilterPanelOpen(false);
+        setAiResult(null);
+        setCapturedImage(null);
         setSelectedGroup('all');
         setSelectedSymptom(null);
         setSelectedNature('all');
         setSelectedTaste('all');
         setSelectedMeridian('all');
+        setOnlyBookmarked(false);
         setSearchTerm('');
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         const mainEl = document.querySelector('main');
@@ -291,6 +294,38 @@ export default function HerbView() {
     window.addEventListener('app-reset-to-root', handleResetToRoot);
     return () => window.removeEventListener('app-reset-to-root', handleResetToRoot);
   }, []);
+
+  // Register filter panel in modal manager
+  useEffect(() => {
+    if (!isFilterPanelOpen) return;
+    return registerModal('herb-filter-panel', () => setIsFilterPanelOpen(false));
+  }, [isFilterPanelOpen]);
+
+  // Register AI photo scan modal in modal manager
+  useEffect(() => {
+    if (!aiResult && !capturedImage) return;
+    return registerModal('herb-ai-result', () => {
+      setAiResult(null);
+      setCapturedImage(null);
+    });
+  }, [aiResult, capturedImage]);
+
+  // When filters or search are active without any popup, edge swipe resets to all herbs before app exit
+  useEffect(() => {
+    if (selectedHerbForModal || isFilterPanelOpen || aiResult || capturedImage) return;
+    const hasFilter = selectedGroup !== 'all' || selectedSymptom !== null || selectedNature !== 'all' || selectedTaste !== 'all' || selectedMeridian !== 'all' || onlyBookmarked || searchTerm.trim() !== '';
+    if (!hasFilter) return;
+
+    return registerModal('herb-active-filters', () => {
+      setSelectedGroup('all');
+      setSelectedSymptom(null);
+      setSelectedNature('all');
+      setSelectedTaste('all');
+      setSelectedMeridian('all');
+      setOnlyBookmarked(false);
+      setSearchTerm('');
+    });
+  }, [selectedHerbForModal, isFilterPanelOpen, aiResult, capturedImage, selectedGroup, selectedSymptom, selectedNature, selectedTaste, selectedMeridian, onlyBookmarked, searchTerm]);
 
   const toggleBookmark = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -564,7 +599,7 @@ export default function HerbView() {
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-            {SYMPTOM_FILTER_TAGS.map(tag => {
+            {SYMPTOM_FILTER_TAGS.map((tag, tagIdx) => {
               const isSelected = selectedSymptom === tag.id;
               // Count matching herbs for this symptom tag
               const count = tag.id === 'all' 
@@ -575,7 +610,7 @@ export default function HerbView() {
 
               return (
                 <button
-                  key={tag.id}
+                  key={`symptom-tag-${tag.id}-${tagIdx}`}
                   onClick={() => setSelectedSymptom(tag.id)}
                   className={cn(
                     "px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border cursor-pointer active:scale-95",
@@ -639,9 +674,9 @@ export default function HerbView() {
                   {isEn ? "1. Functional Category:" : "1. Nhóm Dược Liệu Tác Dụng:"}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {HERB_GROUPS.map(grp => (
+                  {HERB_GROUPS.map((grp, grpIdx) => (
                     <button
-                      key={grp.id}
+                      key={`herb-grp-${grp.id}-${grpIdx}`}
                       onClick={() => setSelectedGroup(grp.id)}
                       className={cn(
                         "p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex items-center justify-between",
@@ -674,12 +709,12 @@ export default function HerbView() {
                   >
                     {isEn ? "All Natures" : "Tất cả tính"}
                   </button>
-                  {ALL_NATURES.map(nature => {
+                  {ALL_NATURES.map((nature, nIdx) => {
                     const style = NATURE_COLOR_MAP[nature];
                     const isSelected = selectedNature === nature;
                     return (
                       <button
-                        key={nature}
+                        key={`nature-${nature}-${nIdx}`}
                         onClick={() => setSelectedNature(nature)}
                         className={cn(
                           "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer",
@@ -712,9 +747,9 @@ export default function HerbView() {
                   >
                     {isEn ? "All Flavors" : "Tất cả vị"}
                   </button>
-                  {ALL_TASTES.map(taste => (
+                  {ALL_TASTES.map((taste, tIdx) => (
                     <button
-                      key={taste}
+                      key={`taste-${taste}-${tIdx}`}
                       onClick={() => setSelectedTaste(taste)}
                       className={cn(
                         "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer",
@@ -746,9 +781,9 @@ export default function HerbView() {
                   >
                     {isEn ? "All Meridians" : "Tất cả kinh"}
                   </button>
-                  {ALL_MERIDIANS.map(meridian => (
+                  {ALL_MERIDIANS.map((meridian, mIdx) => (
                     <button
-                      key={meridian}
+                      key={`meridian-${meridian}-${mIdx}`}
                       onClick={() => setSelectedMeridian(meridian)}
                       className={cn(
                         "px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer",
@@ -920,23 +955,23 @@ export default function HerbView() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredHerbs.map(herb => {
+            {filteredHerbs.map((herb, herbIdx) => {
               const isSaved = bookmarkedIds.includes(herb.id);
 
               return (
                 <div
-                  key={herb.id}
+                  key={`herb-card-${herb.id}-${herbIdx}`}
                   onClick={() => setSelectedHerbForModal(herb)}
                   className="bg-panel rounded-3xl overflow-hidden border border-border shadow-xl text-left group hover:border-teal-500/40 transition-all cursor-pointer flex flex-col justify-between hover:shadow-2xl hover:-translate-y-0.5"
                 >
                   <div>
                     {/* Header above the image with colored background */}
-                    <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-emerald-50/70 border-b border-teal-100/70 px-3.5 sm:px-4 py-2 sm:py-2.5 transition-colors group-hover:from-emerald-100/60 group-hover:to-teal-100/60">
+                    <div className="bg-gradient-to-r from-teal-200/80 via-emerald-200/70 to-teal-200/80 border-b border-teal-300/80 px-3.5 sm:px-4 py-2 sm:py-2.5 transition-colors group-hover:from-teal-200 group-hover:to-emerald-200">
                       <div className="flex items-baseline justify-between gap-2">
-                        <h3 className="font-serif text-[15px] sm:text-base italic font-semibold text-slate-800 group-hover:text-teal-900 transition-colors truncate">
+                        <h3 className="font-serif text-[15px] sm:text-base italic font-bold text-slate-900 group-hover:text-teal-950 transition-colors truncate">
                           {isEn ? (herb.name_en || herb.name_vi) : herb.name_vi}
                         </h3>
-                        <span className="text-[8px] sm:text-[8.5px] text-teal-700 font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/90 border border-teal-200/80 shadow-2xs shrink-0 whitespace-nowrap">
+                        <span className="text-[8px] sm:text-[8.5px] text-teal-800 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/95 border border-teal-300/90 shadow-2xs shrink-0 whitespace-nowrap">
                           {isEn ? (
                             herb.groupId === 'bo-khi' ? 'Qi Tonic' :
                             herb.groupId === 'giai-bieu' ? 'Exterior Release' :
@@ -946,7 +981,7 @@ export default function HerbView() {
                           ) : herb.groupName.split(' - ')[0]}
                         </span>
                       </div>
-                      <p className="text-[9px] sm:text-[9.5px] text-teal-700/80 font-mono italic truncate mt-0.5 font-light">
+                      <p className="text-[9px] sm:text-[9.5px] text-teal-900 font-mono italic truncate mt-0.5 font-medium">
                         {herb.name_scientific}
                       </p>
                     </div>
@@ -1071,7 +1106,7 @@ export default function HerbView() {
             {isEn ? "Explore 12 Months of Traditional Herbal Remedies" : "Khám phá 12 Tháng dược thảo cổ truyền"}
           </label>
           <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m, mIdx) => {
               const isCurrentSystemMonth = m === (new Date().getMonth() + 1);
               const isSelected = m === selectedSeasonalMonth;
               const monthHerb = SEASONAL_HERBS_DATA.find(h => h.month === m);
@@ -1079,7 +1114,7 @@ export default function HerbView() {
               
               return (
                 <button
-                  key={m}
+                  key={`season-m-${m}-${mIdx}`}
                   type="button"
                   onClick={() => setSelectedSeasonalMonth(m)}
                   className={cn(
@@ -1286,9 +1321,9 @@ function RecipeCard({
       </p>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
-        {ingredients.map(ing => (
+        {ingredients.map((ing, ingIdx) => (
           <span 
-            key={ing} 
+            key={`ing-${ing}-${ingIdx}`} 
             className="text-[10px] font-mono bg-white/5 text-primary px-2.5 py-0.5 rounded-md border border-white/5"
           >
             {ing}

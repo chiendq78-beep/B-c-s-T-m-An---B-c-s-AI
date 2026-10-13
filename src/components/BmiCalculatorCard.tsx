@@ -622,7 +622,7 @@ export default function BmiCalculatorCard() {
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {currentCategory.herbs.map((herb, i) => (
                   <span 
-                    key={i} 
+                    key={`bmi-herb-${herb}-${i}`} 
                     className="text-[9.5px] bg-emerald-700 text-white-pure border border-emerald-600 px-2 py-0.5 rounded-lg font-medium shadow-xs"
                   >
                     {herb}

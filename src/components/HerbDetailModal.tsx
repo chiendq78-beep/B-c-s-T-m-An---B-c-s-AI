@@ -250,8 +250,8 @@ export default function HerbDetailModal({ herb, onClose, onFilterBySymptom }: He
                   {isEn ? "Five Flavors" : "Ngũ Vị"}
                 </span>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {herb.tastes.map(taste => (
-                    <span key={taste} className="text-xs font-bold text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
+                  {herb.tastes.map((taste, idx) => (
+                    <span key={`${taste}-${idx}`} className="text-xs font-bold text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
                       {isEn ? (taste === 'Ngọt' ? 'Sweet' : taste === 'Cay' ? 'Acrid' : taste === 'Đắng' ? 'Bitter' : taste === 'Chua' ? 'Sour' : taste === 'Mặn' ? 'Salty' : 'Astringent') : `Vị ${taste}`}
                     </span>
                   ))}
@@ -271,8 +271,8 @@ export default function HerbDetailModal({ herb, onClose, onFilterBySymptom }: He
                   {isEn ? "Meridians Entered" : "Quy Kinh Lạc"}
                 </span>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {herb.meridians.map(m => (
-                    <span key={m} className="text-xs font-bold text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-500/30">
+                  {herb.meridians.map((m, idx) => (
+                    <span key={`${m}-${idx}`} className="text-xs font-bold text-teal-300 bg-teal-950/60 px-2 py-0.5 rounded border border-teal-500/30">
                       {isEn ? (m === 'Phế' ? 'Lung' : m === 'Tỳ' ? 'Spleen' : m === 'Vị' ? 'Stomach' : m === 'Tâm' ? 'Heart' : m === 'Can' ? 'Liver' : m === 'Thận' ? 'Kidney' : m === 'Đởm' ? 'Gallbladder' : m === 'Bàng quang' ? 'Bladder' : m) : `Kinh ${m}`}
                     </span>
                   ))}
@@ -305,12 +305,14 @@ export default function HerbDetailModal({ herb, onClose, onFilterBySymptom }: He
             </ul>
           </div>
 
-          {/* Thể Trạng & Triệu Chứng Tương Thích */}
-          <div className="space-y-2.5">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              {isEn ? "Target Conditions & Matched Symptoms" : "Phù Hợp Gợi Ý Cho Thể Trạng / Triệu Chứng"}
-            </h3>
+          {/* Thể Trạng & Triệu Chứng Tương Thích (Nền xanh, chữ trắng theo yêu cầu) */}
+          <div className="bg-emerald-700 text-white border border-emerald-600 shadow-md rounded-2xl p-4 sm:p-5 space-y-3">
+            <div className="flex items-center gap-2 text-white text-xs font-bold uppercase tracking-wider">
+              <ShieldCheck className="w-4.5 h-4.5 flex-shrink-0 text-white" />
+              <span className="text-white font-bold tracking-wide">
+                {isEn ? "Target Conditions & Matched Symptoms" : "Phù Hợp Gợi Ý Cho Thể Trạng / Triệu Chứng"}
+              </span>
+            </div>
             <div className="flex flex-wrap gap-2">
               {herb.matchedSymptoms.map((sym, idx) => (
                 <button
@@ -321,11 +323,11 @@ export default function HerbDetailModal({ herb, onClose, onFilterBySymptom }: He
                       onClose();
                     }
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-primary/20 text-xs text-white border border-white/10 hover:border-primary/40 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-xs font-semibold text-white border border-emerald-500 hover:border-emerald-300 transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-xs"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>{sym}</span>
-                  <ChevronRight className="w-3 h-3 text-text-dim" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 shrink-0" />
+                  <span className="text-white">{sym}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
                 </button>
               ))}
             </div>

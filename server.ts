@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import https from "https";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
@@ -8,6 +9,34 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Firebase Auth Reverse Proxy to eliminate cross-origin storage partitioning on mobile/PWA
+app.use("/__/auth", (req, res) => {
+  const targetHost = "gen-lang-client-0987837148.firebaseapp.com";
+  const proxyReq = https.request(
+    {
+      hostname: targetHost,
+      port: 443,
+      path: `/__/auth${req.url}`,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: targetHost,
+      },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
+
+  proxyReq.on("error", (err) => {
+    console.error("Firebase Auth reverse proxy error:", err);
+    res.status(502).send("Auth Proxy Error");
+  });
+
+  req.pipe(proxyReq, { end: true });
+});
 
 // Body parser with 10mb limit for base64 herb images
 app.use(express.json({ limit: "10mb" }));

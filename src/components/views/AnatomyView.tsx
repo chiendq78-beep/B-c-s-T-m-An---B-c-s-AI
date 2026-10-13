@@ -132,25 +132,40 @@ export default function AnatomyView({ setActiveView }: AnatomyViewProps) {
     return () => window.removeEventListener('app-reset-to-root', handleResetToRoot);
   }, []);
 
-  // Listen for back gesture when a body part modal, system dropdown, or search is active
+  // Register organ system detail, sub-tabs, dropdown, and search in global modal manager
+  // so edge swipe navigates back through the hierarchy and only exits app at root Anatomy map
   useEffect(() => {
-    if (!selectedPart && !isSystemDropdownOpen && !isSearchFocused) return;
-    const closeFn = () => {
-      if (selectedPart) setSelectedPart(null);
-      else if (isSystemDropdownOpen) setIsSystemDropdownOpen(false);
-      else if (isSearchFocused) setIsSearchFocused(false);
-    };
-    const unregister = registerModal('anatomy-active-subview', closeFn);
-    const handleBackGesture = (e: Event) => {
-      e.preventDefault();
-      closeFn();
-    };
-    window.addEventListener('app-back-press', handleBackGesture);
-    return () => {
-      unregister();
-      window.removeEventListener('app-back-press', handleBackGesture);
-    };
-  }, [selectedPart, isSystemDropdownOpen, isSearchFocused]);
+    if (!isSystemDropdownOpen) return;
+    const unregister = registerModal('anatomy-dropdown', () => setIsSystemDropdownOpen(false));
+    return () => unregister();
+  }, [isSystemDropdownOpen]);
+
+  useEffect(() => {
+    if (!isSearchFocused && !searchTerm.trim()) return;
+    const unregister = registerModal('anatomy-search', () => {
+      setIsSearchFocused(false);
+      setSearchTerm('');
+    });
+    return () => unregister();
+  }, [isSearchFocused, searchTerm]);
+
+  // Trang chi tiết Hệ cơ quan (khi chọn 1 hệ cơ quan cụ thể)
+  useEffect(() => {
+    if (selectedSystemId === 'all') return;
+    const unregister = registerModal('anatomy-system-detail', () => {
+      setSelectedSystemId('all');
+    });
+    return () => unregister();
+  }, [selectedSystemId]);
+
+  // Thẻ/tab con: 3D hoặc danh sách Hệ cơ quan
+  useEffect(() => {
+    if (subTab === 'map') return;
+    const unregister = registerModal('anatomy-subtab', () => {
+      setSubTab('map');
+    });
+    return () => unregister();
+  }, [subTab]);
 
   // Find currently selected system
   const currentSystem = useMemo(() => {
@@ -352,11 +367,11 @@ export default function AnatomyView({ setActiveView }: AnatomyViewProps) {
 
                     {filteredParts.length > 0 ? (
                       <div className="overflow-y-auto max-h-64 p-1.5 divide-y divide-slate-100">
-                        {filteredParts.slice(0, 6).map((part) => {
+                        {filteredParts.slice(0, 6).map((part, partIdx) => {
                           const systemMeta = ORGAN_SYSTEMS_LIST.find(s => s.id === part.systemId);
                           return (
                             <button
-                              key={part.id}
+                              key={`search-part-${part.id}-${partIdx}`}
                               type="button"
                               onClick={() => {
                                 setSelectedPart(part);
@@ -436,9 +451,9 @@ export default function AnatomyView({ setActiveView }: AnatomyViewProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">
-                      {POPULAR_SEARCH_TAGS.map((tag) => (
+                      {POPULAR_SEARCH_TAGS.map((tag, tagIdx) => (
                         <button
-                          key={tag.label}
+                          key={`pop-tag-${tag.label}-${tagIdx}`}
                           type="button"
                           onClick={() => {
                             setSearchTerm(tag.query);
@@ -566,13 +581,13 @@ export default function AnatomyView({ setActiveView }: AnatomyViewProps) {
                   </button>
 
                   {/* 12 Standard Systems Options */}
-                  {ORGAN_SYSTEMS_LIST.map((system) => {
+                  {ORGAN_SYSTEMS_LIST.map((system, sysIdx) => {
                     const isSelected = selectedSystemId === system.id;
                     const partsCount = ALL_ANATOMY_PARTS.filter(p => p.systemId === system.id).length;
 
                     return (
                       <button
-                        key={system.id}
+                        key={`sys-opt-${system.id}-${sysIdx}`}
                         type="button"
                         onClick={() => {
                           setSelectedSystemId(system.id);
@@ -642,13 +657,13 @@ export default function AnatomyView({ setActiveView }: AnatomyViewProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[720px] overflow-y-auto pr-1">
-            {filteredParts.map((part) => {
+            {filteredParts.map((part, partIdx) => {
               const systemMeta = ORGAN_SYSTEMS_LIST.find(s => s.id === part.systemId) || ORGAN_SYSTEMS_LIST[0];
               const isSelected = selectedPart?.id === part.id;
 
               return (
                 <motion.div
-                  key={part.id}
+                  key={`part-card-${part.id}-${partIdx}`}
                   whileHover={{ scale: 1.015, y: -2 }}
                   whileTap={{ scale: 0.985 }}
                   onClick={() => setSelectedPart(part)}

@@ -11,6 +11,7 @@ import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { reminderService } from '../services/reminderService';
 import { registerModal } from '../utils/modalManager';
+import ConfirmDeleteReminderModal from './ConfirmDeleteReminderModal';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -245,18 +246,28 @@ export default function NotificationSettingsModal({
     }
   };
 
-  // Delete Medication
-  const deleteMedication = async (id: string) => {
-    setMedications(prev => prev.filter(m => m.id !== id));
-    if (user && !id.startsWith('demo-')) {
-      try {
+  // Delete Medication with confirmation
+  const [medicationToDelete, setMedicationToDelete] = useState<MedicationItem | null>(null);
+  const [isDeletingMed, setIsDeletingMed] = useState(false);
+
+  const handleConfirmDeleteMed = async () => {
+    if (!medicationToDelete) return;
+    try {
+      setIsDeletingMed(true);
+      const id = medicationToDelete.id;
+      setMedications(prev => prev.filter(m => m.id !== id));
+      if (user && !id.startsWith('demo-')) {
         await deleteDoc(doc(db, 'medicationReminders', id));
-      } catch (err) {
-        console.error('Error deleting medication reminder:', err);
+      } else {
+        const updated = medications.filter(m => m.id !== id);
+        localStorage.setItem('guest_medication_reminders', JSON.stringify(updated));
       }
-    } else {
-      const updated = medications.filter(m => m.id !== id);
-      localStorage.setItem('guest_medication_reminders', JSON.stringify(updated));
+      reminderService.removeReminderNotifications(id);
+      setMedicationToDelete(null);
+    } catch (err) {
+      console.error('Error deleting medication reminder:', err);
+    } finally {
+      setIsDeletingMed(false);
     }
   };
 
@@ -352,15 +363,13 @@ export default function NotificationSettingsModal({
       setPermission(perm);
     }
 
-    if (perm === 'granted' && typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        new Notification('🔔 Bác sĩ Tâm An - Nhắc nhở mẫu', {
-          body: 'Đã đến giờ uống 1 ly nước ấm và kiểm tra sức khỏe!',
-          icon: '/icon-192.png'
-        });
-      } catch (err) {
-        console.warn('Notification constructor error:', err);
-      }
+    if (perm === 'granted') {
+      reminderService.showNotification(
+        '🔔 Bác sĩ Tâm An - Nhắc nhở mẫu',
+        'Đã đến giờ uống 1 ly nước ấm và kiểm tra sức khỏe!',
+        'test-notification-sample',
+        'general'
+      );
     }
 
     setTestSuccessMessage('✓ Đã phát chuông & gửi thông báo thử nghiệm thành công!');
@@ -387,11 +396,12 @@ export default function NotificationSettingsModal({
 
   return (
     <motion.div
+      key="notification-settings-modal-container"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 15 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[100] w-full h-full flex flex-col bg-slate-50 overflow-hidden"
+      className="fixed inset-0 z-[100] w-full h-full flex flex-col bg-[#FAF9F5] overflow-hidden"
     >
       {/* Top Header Full Screen */}
       <div className="w-full bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border-b border-teal-100/90 shadow-2xs shrink-0 pt-[calc(max(env(safe-area-inset-top,0px),34px)+0.5rem)] sm:pt-4 pb-3.5 px-4 sm:px-8">
@@ -456,16 +466,6 @@ export default function NotificationSettingsModal({
                 Cấp quyền thông báo
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={handleTestNotification}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-[10.5px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-              title="Thử nghiệm chuông báo và thông báo"
-            >
-              <Play className="w-3 h-3 text-teal-600 fill-teal-600" />
-              <span>Thử chuông báo</span>
-            </button>
           </div>
         </div>
       </div>
@@ -489,36 +489,44 @@ export default function NotificationSettingsModal({
 
       {/* Category Tabs */}
       <div className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 shrink-0">
-        <div className="max-w-4xl mx-auto w-full flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="max-w-4xl mx-auto w-full flex items-center gap-2 overflow-x-auto no-scrollbar py-1.5">
           {[
             { id: 'all', label: 'Tất cả', icon: Bell },
             { id: 'water', label: 'Uống nước', icon: Droplets, badge: waterEnabled ? 'Bật' : undefined },
             { id: 'medication', label: 'Uống thuốc', icon: Pill, count: medications.filter(m => m.enabled).length },
             { id: 'vitals', label: 'Đo sinh hiệu', icon: Activity, count: vitalsSchedules.filter(v => v.enabled).length },
-          ].map(tab => {
+          ].map((tab, tabIdx) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            const isAll = tab.id === 'all';
             return (
               <button
-                key={tab.id}
+                key={`notif-tab-${tab.id}-${tabIdx}`}
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
-                  "py-3 px-3.5 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap",
-                  isActive 
-                    ? "border-teal-600 text-teal-700 font-bold" 
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                  "py-2 px-3 text-xs font-semibold flex items-center gap-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap",
+                  isAll
+                    ? (isActive 
+                        ? "bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-xs ring-2 ring-teal-400/50" 
+                        : "bg-teal-700 hover:bg-teal-800 text-white font-semibold")
+                    : (isActive 
+                        ? "bg-teal-50 text-teal-800 border border-teal-300 font-bold shadow-2xs" 
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent")
                 )}
               >
-                <Icon className={cn("w-3.5 h-3.5", isActive ? "text-teal-600" : "text-slate-400")} />
+                <Icon className={cn("w-3.5 h-3.5", isAll ? "text-white" : isActive ? "text-teal-700" : "text-slate-400")} />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-200">
+                  <span className={cn(
+                    "ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-bold border",
+                    isAll ? "bg-white/20 text-white border-white/30" : "bg-slate-100 text-slate-700 border-slate-200"
+                  )}>
                     {tab.count}
                   </span>
                 )}
                 {tab.badge && (
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-100 text-emerald-700 font-bold">
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
                     {tab.badge}
                   </span>
                 )}
@@ -582,9 +590,9 @@ export default function NotificationSettingsModal({
                         { label: '60 phút (Khuyên dùng)', val: 60 },
                         { label: '90 phút', val: 90 },
                         { label: '2 giờ', val: 120 }
-                      ].map(opt => (
+                      ].map((opt, optIdx) => (
                         <button
-                          key={opt.val}
+                          key={`water-int-${opt.val}-${optIdx}`}
                           type="button"
                           onClick={() => setWaterInterval(opt.val)}
                           className={cn(
@@ -767,9 +775,9 @@ export default function NotificationSettingsModal({
                     Chưa có lịch uống thuốc nào. Bấm nút "+ Thêm lịch" để bắt đầu cài đặt.
                   </div>
                 ) : (
-                  medications.map(med => (
+                  medications.map((med, idx) => (
                     <div
-                      key={med.id}
+                      key={`${med.id || 'med'}-${idx}`}
                       className={cn(
                         "p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 bg-white",
                         med.enabled ? "border-slate-200 shadow-2xs" : "border-slate-100 opacity-60 bg-slate-50/50"
@@ -816,7 +824,7 @@ export default function NotificationSettingsModal({
                         {/* Delete button */}
                         <button
                           type="button"
-                          onClick={() => deleteMedication(med.id)}
+                          onClick={() => setMedicationToDelete(med)}
                           className="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
                           title="Xóa nhắc nhở"
                         >
@@ -865,9 +873,9 @@ export default function NotificationSettingsModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {vitalsSchedules.map(sched => (
+                {vitalsSchedules.map((sched, idx) => (
                   <div
-                    key={sched.id}
+                    key={`${sched.id || 'sched'}-${idx}`}
                     className={cn(
                       "p-3 rounded-xl border bg-white flex items-center justify-between gap-2.5 transition-all",
                       sched.enabled ? "border-slate-200 shadow-2xs" : "border-slate-100 opacity-60"
@@ -981,6 +989,24 @@ export default function NotificationSettingsModal({
             </button>
           </div>
         </div>
+
+        {/* Confirmation Modal before Deleting Medication Reminder */}
+        <ConfirmDeleteReminderModal
+          key="confirm-delete-med-submodal"
+          isOpen={!!medicationToDelete}
+          onClose={() => setMedicationToDelete(null)}
+          onConfirm={handleConfirmDeleteMed}
+          reminder={medicationToDelete ? {
+            id: medicationToDelete.id,
+            medName: medicationToDelete.medName,
+            dosage: medicationToDelete.dosage,
+            time: medicationToDelete.time,
+            notes: medicationToDelete.notes,
+            enabled: medicationToDelete.enabled,
+            category: 'medication'
+          } : null}
+          isDeleting={isDeletingMed}
+        />
       </motion.div>
   );
 }

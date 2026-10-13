@@ -82,12 +82,12 @@ export default function InteractiveBodyMap({
               <Activity className="w-5 h-5 text-teal-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
+              <h2 className="text-sm sm:text-base font-bold text-white text-force-white tracking-wide truncate">
                 {isEn 
                   ? `Human Body 3D Anatomy Model (${gender === 'male' ? 'Male' : 'Female'})` 
                   : `Mô Hình Giải Phẫu Cơ Thể Người (${gender === 'male' ? 'Nam Giới' : 'Nữ Giới'})`}
               </h2>
-              <p className="text-[11px] text-teal-400 truncate hidden xs:block">
+              <p className="text-[11px] text-teal-300 truncate hidden xs:block">
                 {isEn 
                   ? "Fullscreen Mode • Click glowing hotspots to inspect organs" 
                   : "Chế độ toàn màn hình • Nhấp vào điểm phát sáng để chọn cơ quan"}
@@ -129,9 +129,9 @@ export default function InteractiveBodyMap({
                 { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
                 { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
                 { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt Sinh Học' },
-              ].map(f => (
+              ].map((f, fIdx) => (
                 <button
-                  key={f.id}
+                  key={`depth-fs-top-${f.id}-${fIdx}`}
                   type="button"
                   onClick={() => setDepthMode(f.id as any)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
@@ -149,12 +149,12 @@ export default function InteractiveBodyMap({
             <button
               type="button"
               onClick={() => setIsFullscreen(false)}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-rose-500/30"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white text-force-white rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-teal-500/30"
               title={isEn ? "Exit fullscreen (Esc)" : "Đóng chế độ toàn màn hình (Esc)"}
             >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>{isEn ? "Close" : "Đóng"}</span>
-              <span className="hidden sm:inline text-rose-200 text-xs font-mono font-normal">(Esc)</span>
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-white text-force-white" />
+              <span className="text-white text-force-white">{isEn ? "Close" : "Đóng"}</span>
+              <span className="hidden sm:inline text-teal-100 text-xs font-mono font-normal">(Esc)</span>
             </button>
           </div>
         </div>
@@ -187,9 +187,9 @@ export default function InteractiveBodyMap({
               { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
               { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
               { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt' },
-            ].map(f => (
+            ].map((f, fIdx) => (
               <button
-                key={f.id}
+                key={`depth-fs-mob-${f.id}-${fIdx}`}
                 type="button"
                 onClick={() => setDepthMode(f.id as any)}
                 className={`px-2 py-0.5 rounded-lg text-[10.5px] font-semibold transition-all ${
@@ -222,14 +222,14 @@ export default function InteractiveBodyMap({
             />
 
             {/* Interactive Hotspot Pins overlaying body parts */}
-            {visibleHotspots.map((part) => {
+            {visibleHotspots.map((part, partIdx) => {
               const isSelected = selectedPart?.id === part.id;
               const top = part.hotspot?.top || '50%';
               const left = part.hotspot?.left || '50%';
 
               return (
                 <div
-                  key={part.id}
+                  key={`hotspot-fs-${part.id}-${partIdx}`}
                   style={{ top, left }}
                   className="absolute -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-auto"
                 >
@@ -358,9 +358,9 @@ export default function InteractiveBodyMap({
             { id: 'composite', label: isEn ? 'Standard' : 'Chuẩn' },
             { id: 'xray', label: isEn ? 'X-Ray' : 'X-Quang' },
             { id: 'thermal', label: isEn ? 'Thermal' : 'Nhiệt' },
-          ].map(f => (
+          ].map((f, fIdx) => (
             <button
-              key={f.id}
+              key={`depth-std-${f.id}-${fIdx}`}
               type="button"
               onClick={() => setDepthMode(f.id as any)}
               className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
@@ -398,14 +398,14 @@ export default function InteractiveBodyMap({
           />
 
           {/* Interactive Hotspot Pins overlaying body parts */}
-          {visibleHotspots.map((part) => {
+          {visibleHotspots.map((part, partIdx) => {
             const isSelected = selectedPart?.id === part.id;
             const top = part.hotspot?.top || '50%';
             const left = part.hotspot?.left || '50%';
 
             return (
               <div
-                key={part.id}
+                key={`hotspot-std-${part.id}-${partIdx}`}
                 style={{ top, left }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto"
               >

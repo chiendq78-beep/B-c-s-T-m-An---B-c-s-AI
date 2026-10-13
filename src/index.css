@@ -6,7 +6,7 @@
   --color-secondary: #0F172A;
   --color-accent: #0D9488;
   --color-error: #EF4444;
-  --color-bg: #F0F3F6;
+  --color-bg: #FAF9F5;
   --color-panel: #FFFFFF;
   --color-border: rgba(15, 23, 42, 0.08);
   --color-text-dim: #334155;
@@ -18,22 +18,28 @@
 @layer base {
   body {
     @apply bg-bg text-slate-900 font-sans antialiased;
-    background-color: #F0F3F6;
+    background-color: #FAF9F5;
     background-image: 
-      radial-gradient(at top left, rgba(13, 148, 136, 0.04) 0px, transparent 55%),
-      radial-gradient(at top right, rgba(14, 165, 233, 0.03) 0px, transparent 50%),
-      radial-gradient(at bottom right, rgba(16, 185, 129, 0.03) 0px, transparent 55%);
+      radial-gradient(at top left, rgba(13, 148, 136, 0.035) 0px, transparent 55%),
+      radial-gradient(at top right, rgba(217, 119, 6, 0.02) 0px, transparent 50%),
+      radial-gradient(at bottom right, rgba(16, 185, 129, 0.025) 0px, transparent 55%);
     background-attachment: fixed;
     color: #0F172A;
   }
 
-  /* Light mode text contrast overrides (only when NOT in dark mode) */
-  html:not(.dark) .text-white,
-  html:not(.dark) [class*="text-white/"] {
+  /* Light mode text contrast overrides (only for text on light surfaces, NOT colored buttons) */
+  html:not(.dark) .text-white:not(button):not(button *):not([class*="bg-teal"]):not([class*="bg-emerald"]):not([class*="bg-sky"]):not([class*="bg-blue"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="bg-slate-9"]):not([class*="bg-slate-8"]):not([class*="bg-black"]):not(.text-force-white),
+  html:not(.dark) [class*="text-white/"]:not(button):not(button *):not([class*="bg-teal"]):not([class*="bg-emerald"]):not([class*="bg-sky"]):not([class*="bg-blue"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not(.text-force-white) {
     color: #090D16 !important;
   }
   
-  .text-white-pure, .text-force-white {
+  .text-white-pure, 
+  .text-force-white,
+  html:not(.dark) .text-force-white,
+  html:not(.dark) button.text-force-white,
+  html:not(.dark) button.text-white,
+  html:not(.dark) button .text-white,
+  html:not(.dark) button .text-force-white {
     color: #FFFFFF !important;
   }
   
@@ -283,21 +289,21 @@
     border-color: rgba(15, 23, 42, 0.13) !important;
   }
 
-  /* Translucent light backgrounds for headers, app bars, and overlay backdrops */
+  /* Translucent light backgrounds for headers, app bars, and overlay backdrops (Màu trắng ngà) */
   .bg-bg\/60 {
-    background-color: rgba(240, 243, 246, 0.6) !important;
+    background-color: rgba(250, 249, 245, 0.6) !important;
   }
   .bg-bg\/75 {
-    background-color: rgba(240, 243, 246, 0.75) !important;
+    background-color: rgba(250, 249, 245, 0.75) !important;
   }
   .bg-bg\/80 {
-    background-color: rgba(240, 243, 246, 0.8) !important;
+    background-color: rgba(250, 249, 245, 0.8) !important;
   }
   .bg-bg\/90 {
-    background-color: rgba(240, 243, 246, 0.9) !important;
+    background-color: rgba(250, 249, 245, 0.9) !important;
   }
   .bg-bg\/95 {
-    background-color: rgba(240, 243, 246, 0.95) !important;
+    background-color: rgba(250, 249, 245, 0.95) !important;
   }
 
   /* AI markdown readability in light mode */

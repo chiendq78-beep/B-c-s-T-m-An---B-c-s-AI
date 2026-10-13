@@ -845,9 +845,9 @@ export default function HealthReportExportModal({ isOpen, onClose }: HealthRepor
               { id: '7d', label: '7 Ngày Gần Nhất' },
               { id: '30d', label: '30 Ngày Qua' },
               { id: 'all', label: 'Toàn Bộ Lịch Sử' }
-            ].map(tab => (
+            ].map((tab, tabIdx) => (
               <button
-                key={tab.id}
+                key={`export-tab-${tab.id}-${tabIdx}`}
                 type="button"
                 onClick={() => setTimeRange(tab.id as any)}
                 className={cn(

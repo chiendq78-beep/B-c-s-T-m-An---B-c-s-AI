@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Eye, 
   ZoomIn, 
   ZoomOut, 
   RotateCcw, 
@@ -29,6 +28,10 @@ export default function AnatomyIllustrationViewer({
   const [selectedStructureIdx, setSelectedStructureIdx] = useState<number | null>(null);
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [imgError, setImgError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [part.id]);
 
   // Helper to render customized SVG anatomical diagrams per organ system
   const renderVectorDiagram = () => {
@@ -74,7 +77,7 @@ export default function AnatomyIllustrationViewer({
               <stop offset="100%" stopColor="#cbd5e1" />
             </linearGradient>
             <filter id="skullShadow" x="-15%" y="-15%" width="130%" height="130%">
-              <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#000000" floodOpacity="0.6" />
+              <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#78716c" floodOpacity="0.2" />
             </filter>
             <filter id="boneGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="blur" />
@@ -82,9 +85,9 @@ export default function AnatomyIllustrationViewer({
             </filter>
           </defs>
 
-          {/* Technical blueprint grid */}
+          {/* Technical blueprint grid (Soft Teal on Ivory White) */}
           <pattern id="skullGrid" width="22" height="22" patternUnits="userSpaceOnUse">
-            <path d="M 22 0 L 0 0 0 22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.7" />
+            <path d="M 22 0 L 0 0 0 22" fill="none" stroke="rgba(15,118,110,0.08)" strokeWidth="0.7" />
           </pattern>
           <rect width="100%" height="100%" fill="url(#skullGrid)" />
 
@@ -267,58 +270,58 @@ export default function AnatomyIllustrationViewer({
             <g className="transition-opacity duration-300">
               {/* 1. Xương Trán (Frontal Bone) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(0)}>
-                <line x1="240" y1="170" x2="90" y2="130" stroke="#0ea5e9" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="240" y1="170" x2="90" y2="130" stroke="#0284c7" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="240" cy="170" r="4.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                <rect x="15" y="114" width="85" height="30" rx="8" fill="#0f172a" stroke="#0ea5e9" strokeWidth="1.2" />
-                <text x="57" y="133" fill="#e0f2fe" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Trán</text>
+                <rect x="15" y="114" width="85" height="30" rx="8" fill="#ffffff" stroke="#0284c7" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="57" y="133" fill="#0369a1" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Trán</text>
               </g>
 
               {/* 2. Xương Đỉnh (Parietal Bone) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(0)}>
-                <line x1="330" y1="95" x2="450" y2="70" stroke="#6366f1" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="330" y1="95" x2="450" y2="70" stroke="#4f46e5" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="330" cy="95" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="2" />
-                <rect x="440" y="54" width="85" height="30" rx="8" fill="#0f172a" stroke="#6366f1" strokeWidth="1.2" />
-                <text x="482" y="73" fill="#e0e7ff" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Đỉnh</text>
+                <rect x="440" y="54" width="85" height="30" rx="8" fill="#ffffff" stroke="#4f46e5" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="482" y="73" fill="#4338ca" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Đỉnh</text>
               </g>
 
               {/* 3. Hốc Mắt (Orbit) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(1)}>
-                <line x1="225" y1="225" x2="85" y2="210" stroke="#38bdf8" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="225" y1="225" x2="85" y2="210" stroke="#0284c7" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="225" cy="225" r="4.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                <rect x="15" y="195" width="80" height="30" rx="8" fill="#0f172a" stroke="#38bdf8" strokeWidth="1.2" />
-                <text x="55" y="214" fill="#f0f9ff" fontSize="10.5" fontWeight="bold" textAnchor="middle">Hốc Mắt</text>
+                <rect x="15" y="195" width="80" height="30" rx="8" fill="#ffffff" stroke="#0284c7" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="55" y="214" fill="#0369a1" fontSize="10.5" fontWeight="bold" textAnchor="middle">Hốc Mắt</text>
               </g>
 
               {/* 4. Xương Gò Má (Zygomatic Bone) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(1)}>
-                <line x1="355" y1="245" x2="445" y2="225" stroke="#a855f7" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="355" y1="245" x2="445" y2="225" stroke="#9333ea" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="355" cy="245" r="4.5" fill="#9333ea" stroke="#ffffff" strokeWidth="2" />
-                <rect x="435" y="210" width="92" height="30" rx="8" fill="#0f172a" stroke="#a855f7" strokeWidth="1.2" />
-                <text x="481" y="229" fill="#fae8ff" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Gò Má</text>
+                <rect x="435" y="210" width="92" height="30" rx="8" fill="#ffffff" stroke="#9333ea" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="481" y="229" fill="#7e22ce" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Gò Má</text>
               </g>
 
               {/* 5. Xương Mũi & Hốc Mũi */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(1)}>
-                <line x1="270" y1="255" x2="95" y2="275" stroke="#ec4899" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="270" y1="255" x2="95" y2="275" stroke="#db2777" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="270" cy="255" r="4.5" fill="#db2777" stroke="#ffffff" strokeWidth="2" />
-                <rect x="15" y="260" width="88" height="30" rx="8" fill="#0f172a" stroke="#ec4899" strokeWidth="1.2" />
-                <text x="59" y="279" fill="#fce7f3" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Mũi</text>
+                <rect x="15" y="260" width="88" height="30" rx="8" fill="#ffffff" stroke="#db2777" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="59" y="279" fill="#be185d" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Mũi</text>
               </g>
 
               {/* 6. Xương Hàm Trên (Maxilla) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(1)}>
-                <line x1="315" y1="280" x2="440" y2="295" stroke="#10b981" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="315" y1="280" x2="440" y2="295" stroke="#059669" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="315" cy="280" r="4.5" fill="#059669" stroke="#ffffff" strokeWidth="2" />
-                <rect x="430" y="280" width="98" height="30" rx="8" fill="#0f172a" stroke="#10b981" strokeWidth="1.2" />
-                <text x="479" y="299" fill="#d1fae5" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Hàm Trên</text>
+                <rect x="430" y="280" width="98" height="30" rx="8" fill="#ffffff" stroke="#059669" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="479" y="299" fill="#047857" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Hàm Trên</text>
               </g>
 
               {/* 7. Xương Hàm Dưới (Mandible) */}
               <g className="cursor-pointer group" onClick={() => setSelectedStructureIdx(2)}>
-                <line x1="285" y1="365" x2="430" y2="375" stroke="#f97316" strokeWidth="1.8" strokeDasharray="3 3" />
+                <line x1="285" y1="365" x2="430" y2="375" stroke="#ea580c" strokeWidth="1.8" strokeDasharray="3 3" />
                 <circle cx="285" cy="365" r="4.5" fill="#ea580c" stroke="#ffffff" strokeWidth="2" />
-                <rect x="420" y="360" width="108" height="30" rx="8" fill="#0f172a" stroke="#f97316" strokeWidth="1.2" />
-                <text x="474" y="379" fill="#ffedd5" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Hàm Dưới</text>
+                <rect x="420" y="360" width="108" height="30" rx="8" fill="#ffffff" stroke="#ea580c" strokeWidth="1.6" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+                <text x="474" y="379" fill="#c2410c" fontSize="10.5" fontWeight="bold" textAnchor="middle">Xương Hàm Dưới</text>
               </g>
             </g>
           )}
@@ -331,7 +334,7 @@ export default function AnatomyIllustrationViewer({
       return (
         <svg viewBox="0 0 500 420" className="w-full h-full select-none" preserveAspectRatio="xMidYMid meet">
           <pattern id="spineGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8" />
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(15,118,110,0.08)" strokeWidth="0.8" />
           </pattern>
           <rect width="100%" height="100%" fill="url(#spineGrid)" />
 
@@ -340,8 +343,8 @@ export default function AnatomyIllustrationViewer({
             <path d="M 235 50 Q 255 70 245 110" stroke="#0d9488" strokeWidth="16" strokeLinecap="round" fill="none" opacity="0.8" />
             <path d="M 235 50 Q 255 70 245 110" stroke="#e2e8f0" strokeWidth="12" strokeDasharray="4 6" strokeLinecap="round" fill="none" />
             <line x1="255" y1="75" x2="350" y2="75" stroke="#0d9488" strokeWidth="1.5" strokeDasharray="3 3" />
-            <rect x="350" y="60" width="130" height="30" rx="6" fill="#0f172a" stroke="#0d9488" strokeWidth="1" />
-            <text x="415" y="80" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">7 Đốt sống Cổ (C1 - C7)</text>
+            <rect x="350" y="60" width="130" height="30" rx="6" fill="#ffffff" stroke="#0d9488" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+            <text x="415" y="80" fill="#0f766e" fontSize="10" fontWeight="bold" textAnchor="middle">7 Đốt sống Cổ (C1 - C7)</text>
           </g>
 
           {/* Thoracic Section T1-T12 (Đoạn Ngực) */}
@@ -349,8 +352,8 @@ export default function AnatomyIllustrationViewer({
             <path d="M 245 115 Q 220 180 250 240" stroke="#3b82f6" strokeWidth="20" strokeLinecap="round" fill="none" opacity="0.8" />
             <path d="M 245 115 Q 220 180 250 240" stroke="#e2e8f0" strokeWidth="15" strokeDasharray="5 7" strokeLinecap="round" fill="none" />
             <line x1="230" y1="175" x2="90" y2="175" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="3 3" />
-            <rect x="25" y="160" width="130" height="30" rx="6" fill="#0f172a" stroke="#3b82f6" strokeWidth="1" />
-            <text x="90" y="180" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">12 Đốt Ngực (T1 - T12)</text>
+            <rect x="25" y="160" width="130" height="30" rx="6" fill="#ffffff" stroke="#3b82f6" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+            <text x="90" y="180" fill="#1d4ed8" fontSize="10" fontWeight="bold" textAnchor="middle">12 Đốt Ngực (T1 - T12)</text>
           </g>
 
           {/* Lumbar Section L1-L5 (Đoạn Thắt lưng) */}
@@ -358,27 +361,27 @@ export default function AnatomyIllustrationViewer({
             <path d="M 250 245 Q 270 290 250 330" stroke="#f59e0b" strokeWidth="24" strokeLinecap="round" fill="none" opacity="0.8" />
             <path d="M 250 245 Q 270 290 250 330" stroke="#e2e8f0" strokeWidth="18" strokeDasharray="6 8" strokeLinecap="round" fill="none" />
             <line x1="265" y1="285" x2="355" y2="285" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" />
-            <rect x="350" y="270" width="135" height="30" rx="6" fill="#0f172a" stroke="#f59e0b" strokeWidth="1" />
-            <text x="417" y="290" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">5 Đốt Thắt Lưng (L1 - L5)</text>
+            <rect x="350" y="270" width="135" height="30" rx="6" fill="#ffffff" stroke="#f59e0b" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+            <text x="417" y="290" fill="#b45309" fontSize="10" fontWeight="bold" textAnchor="middle">5 Đốt Thắt Lưng (L1 - L5)</text>
           </g>
 
           {/* Sacrum & Coccyx (Cùng Cụt) */}
           <g className="cursor-pointer" onClick={() => setSelectedStructureIdx(2)}>
             <polygon points="235,335 265,335 250,385" fill="#ef4444" stroke="#e2e8f0" strokeWidth="2" opacity="0.85" />
             <line x1="250" y1="365" x2="110" y2="365" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 3" />
-            <rect x="40" y="350" width="125" height="30" rx="6" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
-            <text x="102" y="370" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">Xương Cùng & Cụt</text>
+            <rect x="40" y="350" width="125" height="30" rx="6" fill="#ffffff" stroke="#ef4444" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+            <text x="102" y="370" fill="#b91c1c" fontSize="10" fontWeight="bold" textAnchor="middle">Xương Cùng & Cụt</text>
           </g>
         </svg>
       );
     }
 
-    // Cardiovascular / Heart (Hệ tuần hoàn / Trái tim)
+    {/* Cardiovascular / Heart (Hệ tuần hoàn / Trái tim) */}
     if (systemId === 'CARDIOVASCULAR' || part.name_vi.toLowerCase().includes('tim') || part.name_vi.toLowerCase().includes('mạch')) {
       return (
         <svg viewBox="0 0 500 400" className="w-full h-full select-none" preserveAspectRatio="xMidYMid meet">
           <pattern id="heartGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8" />
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(15,118,110,0.08)" strokeWidth="0.8" />
           </pattern>
           <rect width="100%" height="100%" fill="url(#heartGrid)" />
 
@@ -409,31 +412,31 @@ export default function AnatomyIllustrationViewer({
               {/* Cung động mạch chủ */}
               <line x1="260" y1="80" x2="380" y2="80" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 3" />
               <circle cx="260" cy="80" r="4" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
-              <rect x="380" y="65" width="105" height="28" rx="6" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
-              <text x="432" y="83" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">Cung ĐM Chủ</text>
+              <rect x="380" y="65" width="105" height="28" rx="6" fill="#ffffff" stroke="#ef4444" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+              <text x="432" y="83" fill="#b91c1c" fontSize="10" fontWeight="bold" textAnchor="middle">Cung ĐM Chủ</text>
 
               {/* Tâm thất trái */}
               <line x1="290" y1="250" x2="390" y2="250" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 3" />
               <circle cx="290" cy="250" r="4" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
-              <rect x="390" y="235" width="95" height="28" rx="6" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
-              <text x="437" y="253" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">Tâm Thất Trái</text>
+              <rect x="390" y="235" width="95" height="28" rx="6" fill="#ffffff" stroke="#ef4444" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+              <text x="437" y="253" fill="#b91c1c" fontSize="10" fontWeight="bold" textAnchor="middle">Tâm Thất Trái</text>
 
               {/* Tâm thất phải */}
               <line x1="210" y1="240" x2="90" y2="240" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="3 3" />
               <circle cx="210" cy="240" r="4" fill="#3b82f6" stroke="#ffffff" strokeWidth="1.5" />
-              <rect x="25" y="225" width="95" height="28" rx="6" fill="#0f172a" stroke="#3b82f6" strokeWidth="1" />
-              <text x="72" y="243" fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">Tâm Thất Phải</text>
+              <rect x="25" y="225" width="95" height="28" rx="6" fill="#ffffff" stroke="#3b82f6" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+              <text x="72" y="243" fill="#1d4ed8" fontSize="10" fontWeight="bold" textAnchor="middle">Tâm Thất Phải</text>
             </g>
           )}
         </svg>
       );
     }
 
-    // Default High-tech Anatomy Vector Representation for any other organs/systems
+    {/* Default High-tech Anatomy Vector Representation for any other organs/systems */}
     return (
       <svg viewBox="0 0 500 400" className="w-full h-full select-none" preserveAspectRatio="xMidYMid meet">
         <pattern id="genGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8" />
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(15,118,110,0.08)" strokeWidth="0.8" />
         </pattern>
         <rect width="100%" height="100%" fill="url(#genGrid)" />
 
@@ -447,22 +450,22 @@ export default function AnatomyIllustrationViewer({
           fill="#0f766e"
           stroke="#2dd4bf"
           strokeWidth="3"
-          filter="drop-shadow(0 0 15px rgba(20,184,166,0.5))"
+          filter="drop-shadow(0 0 15px rgba(20,184,166,0.25))"
         />
 
         {/* Crosshair coordinate markers */}
-        <line x1="120" y1="200" x2="380" y2="200" stroke="#0d9488" strokeWidth="1" strokeDasharray="2 4" opacity="0.6" />
-        <line x1="250" y1="70" x2="250" y2="330" stroke="#0d9488" strokeWidth="1" strokeDasharray="2 4" opacity="0.6" />
+        <line x1="120" y1="200" x2="380" y2="200" stroke="#0d9488" strokeWidth="1" strokeDasharray="2 4" opacity="0.4" />
+        <line x1="250" y1="70" x2="250" y2="330" stroke="#0d9488" strokeWidth="1" strokeDasharray="2 4" opacity="0.4" />
 
         {/* Dynamic labels */}
         {part.structures.slice(0, 3).map((st, i) => {
           const yPos = 120 + i * 70;
           return (
-            <g key={i} className="cursor-pointer" onClick={() => setSelectedStructureIdx(i)}>
-              <line x1="250" y1={yPos} x2={370} y2={yPos} stroke="#2dd4bf" strokeWidth="1.5" strokeDasharray="3 3" />
+            <g key={`dyn-struct-${st.name}-${i}`} className="cursor-pointer" onClick={() => setSelectedStructureIdx(i)}>
+              <line x1="250" y1={yPos} x2={370} y2={yPos} stroke="#0d9488" strokeWidth="1.5" strokeDasharray="3 3" />
               <circle cx="250" cy={yPos} r="4" fill="#0d9488" stroke="#ffffff" strokeWidth="1.5" />
-              <rect x="370" y={yPos - 14} width="115" height="28" rx="6" fill="#0f172a" stroke="#2dd4bf" strokeWidth="1" />
-              <text x="427" y={yPos + 4} fill="#f8fafc" fontSize="10" fontWeight="bold" textAnchor="middle">
+              <rect x="370" y={yPos - 14} width="115" height="28" rx="6" fill="#ffffff" stroke="#0d9488" strokeWidth="1.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))" />
+              <text x="427" y={yPos + 4} fill="#0f766e" fontSize="10" fontWeight="bold" textAnchor="middle">
                 {st.name.length > 16 ? st.name.slice(0, 15) + '…' : st.name}
               </text>
             </g>
@@ -473,81 +476,81 @@ export default function AnatomyIllustrationViewer({
   };
 
   return (
-    <div className="bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-xl flex flex-col">
+    <div className="bg-[#faf8f5] rounded-2xl overflow-hidden border border-[#e8e2d8] shadow-sm flex flex-col">
       {/* Top Controls Bar */}
-      <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
-        {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+      <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#f5f2eb] border-b border-[#e8e2d8] flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        {/* Mode Selector Tabs (Luôn hiện đầy đủ cả 3 tab chia đều) */}
+        <div className="grid grid-cols-3 md:flex items-center gap-1 bg-[#ede8df] p-1 rounded-xl border border-[#ded7cb] w-full md:w-auto">
           <button
             type="button"
             onClick={() => setViewMode('diagram')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center px-1 sm:px-2.5 py-1.5 rounded-lg text-[9.5px] sm:text-[10.5px] md:text-[11px] font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap min-w-0 ${
               viewMode === 'diagram'
                 ? 'bg-teal-600 text-white shadow-xs font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Sơ đồ Giải Phẫu</span>
+            <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">Sơ đồ Giải Phẫu</span>
           </button>
 
           <button
             type="button"
             onClick={() => setViewMode('medical_photo')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center px-1 sm:px-2.5 py-1.5 rounded-lg text-[9.5px] sm:text-[10.5px] md:text-[11px] font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap min-w-0 ${
               viewMode === 'medical_photo'
                 ? 'bg-teal-600 text-white shadow-xs font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <Camera className="w-3.5 h-3.5" />
-            <span>Ảnh Y Khoa Chuẩn</span>
+            <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">Ảnh Y Khoa Chuẩn</span>
           </button>
 
           <button
             type="button"
             onClick={() => setViewMode('xray')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center px-1 sm:px-2.5 py-1.5 rounded-lg text-[9.5px] sm:text-[10.5px] md:text-[11px] font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap min-w-0 ${
               viewMode === 'xray'
                 ? 'bg-teal-600 text-white shadow-xs font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Mặt Cắt X-Quang</span>
+            <Activity className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">Mặt Cắt X-Quang</span>
           </button>
         </div>
 
         {/* Zoom & Labels Controls */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between md:justify-end gap-1.5 w-full md:w-auto">
           <button
             type="button"
             onClick={() => setShowLabels(!showLabels)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+            className={`px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-[10.5px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
               showLabels
-                ? 'bg-teal-950 text-teal-300 border-teal-700'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                ? 'bg-teal-50 text-teal-800 border-teal-300 shadow-2xs'
+                : 'bg-white text-slate-700 border-[#ded7cb] hover:bg-[#faf8f5]'
             }`}
           >
             {showLabels ? 'Ẩn chú thích' : 'Hiện chú thích'}
           </button>
 
-          <div className="flex items-center bg-slate-950 rounded-lg border border-slate-800 p-0.5">
+          <div className="flex items-center bg-white rounded-lg border border-[#ded7cb] p-0.5 shadow-2xs">
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.max(0.8, prev - 0.2))}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-md cursor-pointer"
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md cursor-pointer"
               title="Thu nhỏ"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[10px] font-mono text-slate-400 px-1.5">
+            <span className="text-[10px] font-mono text-slate-700 font-bold px-1.5">
               {Math.round(zoomLevel * 100)}%
             </span>
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.min(2.0, prev + 0.2))}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-md cursor-pointer"
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md cursor-pointer"
               title="Phóng to"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -555,7 +558,7 @@ export default function AnatomyIllustrationViewer({
             <button
               type="button"
               onClick={() => setZoomLevel(1)}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-md cursor-pointer"
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md cursor-pointer"
               title="Đặt lại zoom"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -564,8 +567,8 @@ export default function AnatomyIllustrationViewer({
         </div>
       </div>
 
-      {/* Main Visual Display Stage */}
-      <div className="relative h-64 sm:h-80 md:h-96 w-full flex items-center justify-center overflow-hidden bg-radial from-slate-900 to-slate-950 p-4">
+      {/* Main Visual Display Stage (Nền trắng ngà / Ivory White) */}
+      <div className="relative h-64 sm:h-80 md:h-96 w-full flex items-center justify-center overflow-hidden bg-[#faf8f5] border-t border-b border-[#e8e2d8] p-4">
         <motion.div
           animate={{ scale: zoomLevel }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
@@ -579,8 +582,9 @@ export default function AnatomyIllustrationViewer({
                 <img
                   src={part.illustrationUrl}
                   alt={part.name_vi}
+                  referrerPolicy="no-referrer"
                   onError={() => setImgError(true)}
-                  className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border border-slate-800"
+                  className="max-h-full max-w-full object-contain rounded-xl shadow-md border border-[#e8e2d8] bg-white"
                 />
               ) : (
                 renderVectorDiagram()
@@ -589,7 +593,7 @@ export default function AnatomyIllustrationViewer({
           )}
 
           {viewMode === 'xray' && (
-            <div className="relative w-full h-full flex items-center justify-center filter invert contrast-125 hue-rotate-180 brightness-90">
+            <div className="relative w-full h-full flex items-center justify-center filter contrast-125 brightness-95">
               {renderVectorDiagram()}
             </div>
           )}
@@ -602,43 +606,37 @@ export default function AnatomyIllustrationViewer({
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 15 }}
-              className="absolute bottom-3 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-md bg-slate-900/95 backdrop-blur-md border border-teal-500/50 rounded-xl p-3 shadow-2xl text-white z-20 space-y-1"
+              className="absolute bottom-3 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-md bg-white/98 backdrop-blur-md border border-teal-500/50 rounded-xl p-3 shadow-xl text-slate-900 z-20 space-y-1"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-teal-400 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                <div className="flex items-center gap-1.5 text-teal-700 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600" />
                   <span>{part.structures[selectedStructureIdx].name}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedStructureIdx(null)}
-                  className="text-slate-400 hover:text-white text-xs px-1"
+                  className="text-slate-400 hover:text-slate-700 text-xs px-1"
                 >
                   ✕
                 </button>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
+              <p className="text-[11px] text-slate-600 leading-relaxed">
                 {part.structures[selectedStructureIdx].detail}
               </p>
               {onAskAI && (
                 <button
                   type="button"
                   onClick={() => onAskAI(`Phân tích giải phẫu và ý nghĩa lâm sàng của "${part.structures[selectedStructureIdx].name}" thuộc ${part.name_vi}`)}
-                  className="text-[10px] text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1 pt-0.5 cursor-pointer"
+                  className="text-[10px] text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1 pt-0.5 cursor-pointer"
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-3 h-3 text-teal-600" />
                   <span>Hỏi Bác sĩ AI về cấu trúc này</span>
                 </button>
               )}
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Bottom overlay badge */}
-        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-          <Eye className="w-3.5 h-3.5 text-teal-400" />
-          <span>{part.name_vi} • {part.name_latin || part.name_en}</span>
-        </div>
       </div>
     </div>
   );

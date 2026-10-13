@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(async (result) => {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('tam_an_google_redirecting');
+          sessionStorage.removeItem('tam_an_google_redirecting_ts');
         }
         if (!isMounted) return;
         if (result && result.user) {
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch((error) => {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('tam_an_google_redirecting');
+          sessionStorage.removeItem('tam_an_google_redirecting_ts');
         }
         console.warn("Google getRedirectResult error on mobile/tablet:", error);
       });
@@ -115,7 +117,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) setLoading(false);
       } else {
         // If a Google redirect is in progress on mobile/tablet, do not prematurely sign in anonymously
-        const isPendingRedirect = typeof window !== 'undefined' && sessionStorage.getItem('tam_an_google_redirecting') === 'true';
+        let isPendingRedirect = false;
+        try {
+          const isRedirecting = sessionStorage.getItem('tam_an_google_redirecting') === 'true';
+          const redirectTs = sessionStorage.getItem('tam_an_google_redirecting_ts');
+          // Allow up to 5 minutes for user to select Google account and redirect back
+          if (isRedirecting && redirectTs && (Date.now() - parseInt(redirectTs, 10) < 5 * 60 * 1000)) {
+            isPendingRedirect = true;
+          } else {
+            sessionStorage.removeItem('tam_an_google_redirecting');
+            sessionStorage.removeItem('tam_an_google_redirecting_ts');
+          }
+        } catch {
+          isPendingRedirect = false;
+        }
+
         if (isPendingRedirect) {
           return;
         }
@@ -167,30 +183,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prompt: 'select_account'
     });
 
+    // Check if running in mobile / standalone PWA / storage-partitioned browser environment
+    const isStandalone = typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://')
+    );
+
     // If explicit redirect is requested
     if (forceRedirect) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('tam_an_google_redirecting', 'true');
+        sessionStorage.setItem('tam_an_google_redirecting_ts', Date.now().toString());
       }
       await signInWithRedirect(auth, provider);
       return;
     }
 
-    // Try popup first - standard across mobile and tablet when triggered by user tap
+    // Always prefer popup - in modern mobile browsers and PWAs, signInWithPopup communicates
+    // via postMessage and avoids the "missing initial state" cross-origin sessionStorage error.
     try {
       await signInWithPopup(auth, provider);
     } catch (popupError: any) {
       console.warn("Google signInWithPopup note:", popupError);
-      // If popup was blocked by browser and not in an iframe, attempt redirect
-      if (
-        popupError.code === 'auth/popup-blocked' &&
-        typeof window !== 'undefined' &&
-        window.self === window.top
-      ) {
-        sessionStorage.setItem('tam_an_google_redirecting', 'true');
-        await signInWithRedirect(auth, provider);
-        return;
+
+      if (popupError.code === 'auth/popup-blocked') {
+        const error = new Error(
+          isStandalone
+            ? "Cửa sổ đăng nhập Google bị trình duyệt chặn khi cài ứng dụng (PWA). Vui lòng vào Cài đặt trình duyệt (Chrome/Safari) > Cài đặt trang web > bật 'Cho phép cửa sổ bật lên (Pop-ups)', hoặc đăng nhập nhanh bằng Email."
+            : "Trình duyệt đang chặn cửa sổ bật lên đăng nhập Google. Vui lòng bấm vào biểu tượng chặn Pop-up trên thanh địa chỉ để 'Luôn cho phép' rồi bấm thử lại."
+        );
+        (error as any).code = 'auth/popup-blocked';
+        throw error;
       }
+
+      if (popupError.code === 'auth/popup-closed-by-user') {
+        const error = new Error("Bạn đã đóng cửa sổ đăng nhập Google.");
+        (error as any).code = 'auth/popup-closed-by-user';
+        throw error;
+      }
+
       throw popupError;
     }
   };

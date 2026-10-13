@@ -17,7 +17,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '9%', left: '50%' },
     definition: 'Hộp sọ là cấu trúc xương phức tạp gồm 22 xương chính bảo vệ não bộ, tạo hình khuôn mặt, bảo vệ các giác quan và làm chỗ bám cho các cơ vùng đầu mặt.',
     location: 'Nằm ở phần đỉnh cao nhất của trục cơ thể, tiếp khớp với đốt sống cổ C1 (Atlas).',
-    illustrationUrl: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&q=80&w=1200',
+    illustrationUrl: '/src/assets/images/skull_medical_photo_1791795541044.jpg',
     model3dUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
     structures: [
       { name: 'Xương sọ não', detail: 'Xương trán, xương đỉnh, xương thái dương, xương chẩm, xương bướm, xương sàng.' },
@@ -57,7 +57,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '35%', left: '50%' },
     definition: 'Cột sống là cột trục nâng đỡ cơ thể gồm 33-34 đốt sống xếp chồng lên nhau thành các đoạn uốn cong sinh lý, liên kết qua các đĩa đệm và dây chằng, bảo vệ tủy sống.',
     location: 'Chạy dọc chính giữa lưng từ nền sọ (xương chẩm) xuống đến xương cụt vùng đáy chậu.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/spine_medical_photo_1791795559227.jpg',
     structures: [
       { name: 'Cột sống cổ (C1 - C7)', detail: 'Gồm C1 (Atlas - Đốt đội), C2 (Axis - Đốt trục) và C3-C7 linh hoạt nhất.' },
       { name: 'Cột sống ngực (T1 - T12)', detail: '12 đốt sống ngực gắn với 12 đôi xương sườn bảo vệ tim phổi.' },
@@ -96,7 +96,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '28%', left: '48%' },
     definition: 'Lồng ngực là khung xương hình nón gồm xương ức phía trước, 12 đôi xương sườn hai bên và 12 đốt sống ngực phía sau, có chức năng bảo vệ tim, phổi và các cấu trúc quan trọng.',
     location: 'Nằm ở phần thân trên, ngăn cách với ổ bụng bởi cơ hoành.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/ribcage_medical_photo_1791795575430.jpg',
     structures: [
       { name: 'Xương ức', detail: 'Cán ức, thân ức và mỏm mũi kiếm nằm ở đường giữa ngực.' },
       { name: 'Xương sườn & Sụn sườn', detail: '12 đôi xương sườn (sườn thật, sườn giả, sườn cụt) và các khớp sườn đàn hồi.' },
@@ -133,7 +133,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '38%', left: '26%' },
     definition: 'Hệ thống xương chi trên gồm đai vai (xương đòn, xương bả vai) và phần tự do (xương cánh tay, xương quay, xương trụ, xương cổ tay, bàn tay, ngón tay) cho phép biên độ vận động tinh vi.',
     location: 'Hai bên thân mình, nối vào thân qua khớp ức đòn.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/upper_limb_photo_1791795731123.jpg',
     structures: [
       { name: 'Đai vai', detail: 'Xương đòn (xương quai xanh) và xương bả vai.' },
       { name: 'Cánh tay & Cẳng tay', detail: 'Xương cánh tay; Xương quay (bên ngón cái) và Xương trụ (bên ngón út).' },
@@ -169,7 +169,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '74%', left: '44%' },
     definition: 'Xương chi dưới là các khối xương to khỏe chịu lực gồm xương đùi, xương bánh chè, xương chày, xương mác, xương cổ chân, bàn chân và ngón chân.',
     location: 'Nối từ khớp háng xuống đến bàn chân hai bên.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/lower_limb_photo_1791795749506.jpg',
     structures: [
       { name: 'Xương đùi & Xương bánh chè', detail: 'Xương đùi dài và khỏe nhất cơ thể; xương bánh chè bảo vệ mặt trước khớp gối.' },
       { name: 'Cẳng chân', detail: 'Xương chày chịu lực chính phía trong và Xương mác hỗ trợ phía ngoài.' },
@@ -205,7 +205,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '55%', left: '50%' },
     definition: 'Khung chậu là vòng xương khép kín gồm hai xương chậu (xương cánh chậu, xương mu, xương ngồi) và xương cùng phía sau, làm cầu nối thân trên với hai chân.',
     location: 'Đáy thân mình, giữa thắt lưng và hai đùi.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/pelvis_photo_1791795766927.jpg',
     structures: [
       { name: 'Xương cánh chậu', detail: 'Bản xương rộng tạo mào chậu hai bên hông.' },
       { name: 'Xương mu & Khớp mu', detail: 'Nằm ở phía trước, có thể giãn nhẹ khi phụ nữ sinh nở.' },
@@ -245,7 +245,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '30%', left: '38%' },
     definition: 'Hệ cơ gồm hơn 600 cơ vân, cơ tim và cơ trơn, chiếm khoảng 40% trọng lượng cơ thể, có khả năng co giãn tạo lực vận động, duy trì tư thế và sản sinh nhiệt.',
     location: 'Phân bố rộng khắp toàn bộ cơ thể từ đầu mặt đến các ngón chân.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/muscular_photo_1791795784334.jpg',
     structures: [
       { name: 'Cơ đầu mặt & Cơ cổ', detail: 'Cơ thái dương, cơ cắn, cơ ức đòn chũm, cơ bám da mặt.' },
       { name: 'Cơ thân mình (Ngực, Bụng, Lưng)', detail: 'Cơ ngực lớn, cơ thẳng bụng, cơ chéo bụng, cơ lưng rộng, cơ thang, cơ hoành.' },
@@ -287,7 +287,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '8%', left: '50%' },
     definition: 'Hệ thần kinh gồm Thần kinh trung ương (Não bộ, Tủy sống) và Thần kinh ngoại biên (12 đôi dây thần kinh sọ, 31 đôi dây thần kinh tủy), điều khiển toàn bộ suy nghĩ, cảm giác và hành vi cơ thể.',
     location: 'Nằm trong hộp sọ và ống sống cột sống, tỏa các nhánh dây thần kinh đến mọi cơ quan.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/brain_medical_photo_1791795608529.jpg',
     model3dUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
     structures: [
       { name: 'Đại não (4 Thùy)', detail: 'Thùy trán (vận động, tư duy), thùy đỉnh (cảm giác), thùy thái dương (trí nhớ, nghe), thùy chẩm (thị giác).' },
@@ -329,7 +329,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '32%', left: '52%' },
     definition: 'Hệ tuần hoàn gồm quả tim và mạng lưới mạch máu (động mạch, tĩnh mạch, mao mạch) cùng dòng máu lưu thông liên tục, vận chuyển oxy, dưỡng chất đến tế bào và mang chất thải đi đào thải.',
     location: 'Tim nằm trong trung thất giữa lồng ngực hơi lệch sang trái; hệ mạch máu phân nhánh khắp toàn thân.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1628595351029-c2bf17511435?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/heart_medical_photo_1791795590665.jpg',
     structures: [
       { name: '4 Buồng tim', detail: 'Tâm nhĩ phải, tâm thất phải (tuần hoàn phổi); Tâm nhĩ trái, tâm thất trái (tuần hoàn hệ thống).' },
       { name: '4 Van tim sinh học', detail: 'Van 3 lá, van 2 lá, van động mạch chủ, van động mạch phổi đóng mở theo nhịp.' },
@@ -369,7 +369,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '30%', left: '46%' },
     definition: 'Hệ hô hấp gồm đường dẫn khí (mũi, khoang mũi, hầu, thanh quản, khí quản, phế quản) và cơ quan trao đổi khí (hai lá phổi, phế nang) cùng cơ hoành tham gia động tác thở.',
     location: 'Kéo dài từ mũi, vùng cổ họng xuống trọn trong lồng ngực.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/lungs_medical_photo_1791795624984.jpg',
     structures: [
       { name: 'Đường hô hấp trên', detail: 'Mũi, khoang mũi, hầu họng, thanh quản (dây thanh âm).' },
       { name: 'Đường hô hấp dưới', detail: 'Khí quản, phế quản chính, tiểu phế quản dẫn khí.' },
@@ -411,7 +411,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '46%', left: '50%' },
     definition: 'Hệ tiêu hóa gồm ống tiêu hóa dài khoảng 9m (miệng, thực quản, dạ dày, ruột non, ruột già, hậu môn) và các cơ quan phụ trợ (gan, túi mật, tụy) đảm nhiệm biến đổi thức ăn thành năng lượng nuôi cơ thể.',
     location: 'Trải dài từ miệng qua lồng ngực xuống toàn bộ ổ bụng đến hậu môn.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/digestive_medical_photo_1791795656149.jpg',
     structures: [
       { name: 'Khoang miệng & Thực quản', detail: 'Răng nghiền nát, lưỡi nhào trộn và thực quản đưa thức ăn xuống dạ dày.' },
       { name: 'Dạ dày & Ruột non', detail: 'Dạ dày co bóp tiết axit; ruột non (tá tràng, hỗng tràng, hồi tràng) hấp thu chất dinh dưỡng.' },
@@ -453,7 +453,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '48%', left: '44%' },
     definition: 'Hệ tiết niệu gồm hai quả thận (chứa hàng triệu đơn vị nephron), hai niệu quản, bàng quang và niệu đạo, đảm nhiệm lọc máu liên tục, tạo nước tiểu và duy trì cân bằng nội môi.',
     location: 'Hai quả thận nằm sau phúc mạc hai bên cột sống thắt lưng; bàng quang nằm trong hố chậu bé.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/kidneys_medical_photo_1791795639254.jpg',
     structures: [
       { name: 'Thận phải & Thận trái', detail: 'Hình hạt đậu, chứa khoảng 2 triệu đơn vị lọc máu Nephron.' },
       { name: 'Hai niệu quản', detail: 'Hai ống cơ trơn dẫn nước tiểu từ bể thận xuống bàng quang.' },
@@ -495,7 +495,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '20%', left: '50%' },
     definition: 'Hệ nội tiết gồm các tuyến không ống dẫn tiết hormone trực tiếp vào máu để điều hòa tăng trưởng, chuyển hóa năng lượng, sinh sản và đáp ứng stress.',
     location: 'Phân bố rải rác trong cơ thể: vùng dưới đồi/tuyến yên ở não, tuyến giáp ở cổ, tuyến thượng thận ở bụng, tuyến sinh dục ở chậu.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/endocrine_photo_1791795824015.jpg',
     structures: [
       { name: 'Tuyến yên & Tuyến tùng', detail: 'Tuyến chỉ huy ở nền não điều hòa các tuyến khác và nhịp sinh học melatonin.' },
       { name: 'Tuyến giáp & Cận giáp', detail: 'Hình cánh bướm ở trước cổ điều hòa chuyển hóa và nồng độ canxi máu.' },
@@ -538,7 +538,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '36%', left: '56%' },
     definition: 'Hệ thống phòng thủ sinh học gồm các hạch, mạch bạch huyết, lách, tuyến ức, amidan và tủy xương giúp nhận diện, tiêu diệt vi sinh vật gây bệnh và dẫn lưu dịch mô.',
     location: 'Mạng lưới vi mạch và hạch trải rộng toàn thân (cổ, nách, bẹn, trung thất, ổ bụng).',
-    illustrationUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/lymphatic_photo_1791795836250.jpg',
     structures: [
       { name: 'Hạch bạch huyết & Mạch bạch huyết', detail: 'Các trạm lọc vi khuẩn tại cổ, nách, bẹn và mạng lưới thu gom dịch mô.' },
       { name: 'Lách (Spleen)', detail: 'Nằm ở hạ sườn trái, lọc máu tiêu hủy hồng cầu già và dự trữ tế bào miễn dịch.' },
@@ -581,7 +581,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '58%', left: '50%' },
     definition: 'Hệ sinh sản nam gồm tinh hoàn, mào tinh, ống dẫn tinh, túi tinh, tuyến tiền liệt, dương vật và niệu đạo, đảm nhiệm sản xuất tinh trùng và hormone nam testosterone.',
     location: 'Nằm ở vùng đáy chậu và hố chậu bé nam giới.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/male_repro_photo_1791795963512.jpg',
     structures: [
       { name: 'Tinh hoàn & Mào tinh', detail: 'Nằm trong bìu, sản xuất tinh trùng và nội tiết tố testosterone.' },
       { name: 'Ống dẫn tinh & Túi tinh', detail: 'Vận chuyển tinh trùng và tiết dịch nuôi dưỡng tinh trùng.' },
@@ -620,7 +620,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '58%', left: '50%' },
     definition: 'Hệ sinh sản nữ gồm buồng trứng, vòi trứng, tử cung, cổ tử cung, âm đạo và âm hộ, đảm nhiệm sản xuất trứng, hormone nữ, thụ tinh, mang thai và sinh nở.',
     location: 'Nằm trong hố chậu bé nữ giới giữa bàng quang phía trước và trực tràng phía sau.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/female_repro_photo_1791795981335.jpg',
     structures: [
       { name: 'Hai buồng trứng', detail: 'Sản xuất noãn (trứng) và hormone estrogen, progesterone.' },
       { name: 'Vòi trứng (Ống dẫn trứng)', detail: 'Nơi diễn ra quá trình thụ tinh giữa tinh trùng và trứng.' },
@@ -661,7 +661,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '25%', left: '60%' },
     definition: 'Hệ da là cơ quan lớn nhất cơ thể (diện tích ~2m²) gồm 3 lớp: Biểu bì, Trung bì, Hạ bì cùng các cấu trúc phụ (nang lông, móng, tuyến mồ hôi, tuyến bã nhờn) tạo hàng rào bảo vệ vững chắc.',
     location: 'Bao phủ toàn bộ bề mặt bên ngoài cơ thể.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/skin_photo_1791795798085.jpg',
     structures: [
       { name: 'Biểu bì (Epidermis)', detail: 'Lớp sừng bảo vệ ngoài cùng và tế bào hắc tố Melanin quyết định màu da.' },
       { name: 'Trung bì (Dermis)', detail: 'Mạng lưới sợi Collagen và Elastin đàn hồi, mạch máu và đầu mút thần kinh.' },
@@ -703,7 +703,7 @@ export const ANATOMY_PARTS_DATABASE: AnatomyPartData[] = [
     hotspot: { top: '14%', left: '50%' },
     definition: 'Hệ giác quan gồm 5 giác quan đặc biệt: Thị giác (Mắt), Thính giác & Thăng bằng (Tai), Khứu giác (Mũi), Vị giác (Lưỡi) và Xúc giác (Thụ thể da) giúp tiếp nhận thế giới xung quanh.',
     location: 'Chủ yếu tập trung ở vùng đầu mặt và rải rác trên da toàn thân.',
-    illustrationUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
+    illustrationUrl: '/src/assets/images/sensory_photo_1791795811321.jpg',
     structures: [
       { name: 'Mắt (Thị giác)', detail: 'Giác mạc, mống mắt, đồng tử, thủy tinh thể, võng mạc, hoàng điểm, dịch kính, dây thần kinh thị giác.' },
       { name: 'Tai (Thính giác & Thăng bằng)', detail: 'Tai ngoài (vành tai, ống tai, màng nhĩ), Tai giữa (chuỗi xương con, vòi nhĩ), Tai trong (ốc tai, tiền đình).' },

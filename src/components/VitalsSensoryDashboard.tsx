@@ -345,9 +345,9 @@ export default function VitalsSensoryDashboard() {
 
             {/* Time filter toggles */}
             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 self-start sm:self-auto">
-              {(['7d', '14d', '30d'] as const).map(tf => (
+              {(['7d', '14d', '30d'] as const).map((tf, tfIdx) => (
                 <button
-                  key={tf}
+                  key={`vitals-tf-${tf}-${tfIdx}`}
                   onClick={() => setTimeFilter(tf)}
                   className={cn(
                     "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer",
@@ -623,8 +623,8 @@ export default function VitalsSensoryDashboard() {
               {isEn ? "Recent Journals" : "Nhật ký gần đây"}
             </h4>
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-slate-50/50 overflow-hidden">
-              {recentJournals.map(j => (
-                <div key={j.id} className="p-3.5 flex items-start justify-between gap-3 text-xs">
+              {recentJournals.map((j, idx) => (
+                <div key={`${j.id || 'journal'}-${idx}`} className="p-3.5 flex items-start justify-between gap-3 text-xs">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-800">
@@ -680,9 +680,9 @@ export default function VitalsSensoryDashboard() {
               {/* Mood selector */}
               {editingMetric === 'mood' && (
                 <div className="grid grid-cols-2 gap-2">
-                  {['Vui vẻ 😊', 'Bình an 🌿', 'Mệt mỏi 🥱', 'Căng thẳng ⚡', 'Hào hứng ✨', 'Buồn bã 🌧️'].map(m => (
+                  {['Vui vẻ 😊', 'Bình an 🌿', 'Mệt mỏi 🥱', 'Căng thẳng ⚡', 'Hào hứng ✨', 'Buồn bã 🌧️'].map((m, mIdx) => (
                     <button
-                      key={m}
+                      key={`vitals-mood-${m}-${mIdx}`}
                       onClick={() => { setMood(m.split(' ')[0]); setEditingMetric(null); }}
                       className={cn(
                         "p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer",

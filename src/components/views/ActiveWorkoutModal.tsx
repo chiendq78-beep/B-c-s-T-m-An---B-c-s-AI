@@ -19,11 +19,18 @@ import {
   Check, 
   Activity,
   Award,
-  Wind
+  Wind,
+  Music
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { registerModal } from '../../utils/modalManager';
 import { cn } from '../../lib/utils';
+import { 
+  workoutMusic, 
+  WORKOUT_TRACKS, 
+  WorkoutTrack, 
+  getTrackForExercise 
+} from '../../services/workoutMusicService';
 
 export interface ExerciseStepItem {
   id: string;
@@ -148,6 +155,44 @@ export default function ActiveWorkoutModal({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  // Dedicated Music Soundscape State for this workout
+  const initialTrack = useMemo(() => {
+    return getTrackForExercise(exercise?.id, exercise?.category);
+  }, [exercise]);
+
+  const [currentTrack, setCurrentTrack] = useState<WorkoutTrack>(initialTrack);
+  const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(true);
+  const [musicVolume, setMusicVolume] = useState<number>(0.65);
+  const [isMusicModalOpen, setIsMusicModalOpen] = useState<boolean>(false);
+
+  // When exercise prop changes, reset to exercise's matched track
+  useEffect(() => {
+    if (exercise) {
+      const matched = getTrackForExercise(exercise.id, exercise.category);
+      setCurrentTrack(matched);
+      setIsMusicPlaying(true);
+    }
+  }, [exercise]);
+
+  const handleToggleMusicPlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (isMusicPlaying) {
+      workoutMusic.pause();
+      setIsMusicPlaying(false);
+    } else {
+      setIsMusicPlaying(true);
+      if (isAudioMuted) setIsAudioMuted(false);
+      workoutMusic.playTrack(currentTrack.vibe);
+    }
+  };
+
+  const handleSelectTrack = (track: WorkoutTrack) => {
+    setCurrentTrack(track);
+    setIsMusicPlaying(true);
+    if (isAudioMuted) setIsAudioMuted(false);
+    workoutMusic.playTrack(track.vibe);
+  };
+
   // Active workout steps calculation
   const steps: ExerciseStepItem[] = useMemo(() => {
     if (!exercise) return [];
@@ -183,6 +228,33 @@ export default function ActiveWorkoutModal({
   const [totalElapsedSeconds, setTotalElapsedSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+
+  // Synchronize workout music with session timer and volume
+  useEffect(() => {
+    if (!exercise || sessionCompleted) {
+      workoutMusic.stop();
+      return;
+    }
+
+    if (isAudioMuted) {
+      workoutMusic.setMuted(true);
+    } else {
+      workoutMusic.setMuted(false);
+      workoutMusic.setVolume(musicVolume);
+      if (isTimerRunning && isMusicPlaying) {
+        workoutMusic.playTrack(currentTrack.vibe);
+      } else {
+        workoutMusic.pause();
+      }
+    }
+  }, [isTimerRunning, isAudioMuted, currentTrack, sessionCompleted, exercise, isMusicPlaying, musicVolume]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      workoutMusic.stop();
+    };
+  }, []);
 
   // Register edge swipe & Escape listener
   useEffect(() => {
@@ -405,21 +477,51 @@ export default function ActiveWorkoutModal({
             </div>
           </div>
 
-          {/* Sound & Mode Controls */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Sound & Music Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Music Soundscape Pill Button */}
+            <button
+              type="button"
+              onClick={() => setIsMusicModalOpen(true)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs active:scale-95",
+                isMusicPlaying && !isAudioMuted
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-400/40"
+                  : "bg-slate-100 text-slate-600 border-slate-200"
+              )}
+              title="Cài đặt & Chọn nhạc buổi tập"
+            >
+              <Music className={cn("w-3.5 h-3.5 shrink-0", isMusicPlaying && !isAudioMuted ? "text-emerald-600" : "text-slate-500")} />
+              
+              {/* Dancing Equalizer Bars */}
+              {isMusicPlaying && !isAudioMuted && isTimerRunning && (
+                <div className="flex items-end gap-0.5 h-3">
+                  <span className="w-0.5 bg-emerald-600 rounded-full animate-pulse h-1.5" />
+                  <span className="w-0.5 bg-emerald-600 rounded-full animate-bounce h-3" />
+                  <span className="w-0.5 bg-emerald-600 rounded-full animate-pulse h-2" />
+                </div>
+              )}
+
+              <span className="hidden sm:inline font-semibold">{currentTrack.iconEmoji}</span>
+              <span className="truncate max-w-[80px] sm:max-w-[120px] font-bold">
+                {currentTrack.name.replace('Nhạc ', '')}
+              </span>
+            </button>
+
+            {/* Mute / Unmute Toggle */}
             <button
               type="button"
               onClick={() => setIsAudioMuted(!isAudioMuted)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-95",
+                "p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-95 flex items-center gap-1",
                 isAudioMuted 
                   ? "bg-slate-100 text-slate-500 border-slate-200" 
                   : "bg-teal-50 text-teal-700 border-teal-200/90 font-bold"
               )}
               title={isAudioMuted ? (isEn ? "Unmute audio" : "Bật âm thanh") : (isEn ? "Mute audio" : "Tắt âm thanh")}
             >
-              {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-teal-600" />}
-              <span>{isAudioMuted ? (isEn ? "Muted" : "Tắt âm") : (isEn ? "Âm thanh" : "Âm thanh")}</span>
+              {isAudioMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-teal-600" />}
+              <span className="hidden md:inline">{isAudioMuted ? (isEn ? "Muted" : "Tắt âm") : (isEn ? "Âm thanh" : "Âm thanh")}</span>
             </button>
           </div>
         </div>
@@ -432,13 +534,62 @@ export default function ActiveWorkoutModal({
           />
         </div>
 
+        {/* Active Soundscape Music Bar */}
+        <div className="px-3.5 sm:px-6 py-2 bg-gradient-to-r from-emerald-50/80 via-teal-50/80 to-emerald-50/80 border-b border-emerald-100/90 flex items-center justify-between gap-2.5 text-xs shrink-0">
+          <div 
+            onClick={() => setIsMusicModalOpen(true)}
+            className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-90 transition-opacity"
+            title="Bấm để đổi nhạc buổi tập"
+          >
+            <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
+              <span className="text-sm">{currentTrack.iconEmoji}</span>
+            </div>
+            <div className="min-w-0 truncate">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100/80 px-1.5 py-0.2 rounded">
+                  {currentTrack.badge}
+                </span>
+                <span className="font-bold text-slate-900 truncate text-[11.5px]">
+                  {currentTrack.name}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                {currentTrack.description}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleToggleMusicPlay}
+              className="p-1.5 rounded-lg bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+              title={isMusicPlaying ? "Tạm dừng nhạc" : "Tiếp tục phát nhạc"}
+            >
+              {isMusicPlaying && !isAudioMuted ? (
+                <Pause className="w-3.5 h-3.5 text-emerald-700" />
+              ) : (
+                <Play className="w-3.5 h-3.5 text-emerald-700 fill-emerald-700" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsMusicModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              Đổi nhạc
+            </button>
+          </div>
+        </div>
+
         {/* ================================================================= */}
         {/* 2. BODY CONTENT SCROLLABLE CONTAINER                              */}
         {/* ================================================================= */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-slate-50/50 pb-28">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-5 pt-2.5 sm:pt-3 space-y-3.5 sm:space-y-4 bg-slate-50/50 pb-28">
           
           {/* A. ACTIVE POSE STAGE (Upper Hero Card) */}
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden p-4 sm:p-6 space-y-4 relative">
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden p-3.5 sm:p-4.5 space-y-2.5 sm:space-y-3 relative">
             
             {/* Pose Title & Step Indicator Badge */}
             <div className="flex items-start justify-between gap-3">
@@ -461,7 +612,7 @@ export default function ActiveWorkoutModal({
             </div>
 
             {/* Pose Visual Guide Animation Stage (Light White Background, Green Text) */}
-            <div className="relative rounded-2xl overflow-hidden bg-[#fafcfb] border border-emerald-200/90 p-4 sm:p-5 flex flex-col items-center justify-center text-center min-h-[175px] sm:min-h-[195px] shadow-2xs">
+            <div className="relative rounded-2xl overflow-hidden bg-[#fafcfb] border border-emerald-200/90 pt-2 pb-3 px-3 sm:pt-2.5 sm:pb-3.5 sm:px-4 flex flex-col items-center justify-center text-center min-h-[135px] sm:min-h-[150px] shadow-2xs">
               {/* Subtle Light Green Grid Pattern */}
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#05966914_1px,transparent_1px),linear-gradient(to_bottom,#05966914_1px,transparent_1px)] bg-[size:22px_22px] pointer-events-none" />
 
@@ -473,7 +624,7 @@ export default function ActiveWorkoutModal({
               />
 
               {/* Step Countdown Timer Overlay */}
-              <div className="relative z-10 space-y-1 mt-3">
+              <div className="relative z-10 space-y-1 mt-1.5 sm:mt-2">
                 <span className="text-[10.5px] font-bold uppercase tracking-widest text-emerald-700 block">
                   {isEn ? "Step Time Remaining" : "THỜI GIAN ĐỘNG TÁC HIỆN TẠI"}
                 </span>
@@ -495,39 +646,39 @@ export default function ActiveWorkoutModal({
             </div>
 
             {/* Interactive Step Timer Controls (Skip Back | Pause/Resume | Skip Next) */}
-            <div className="flex items-center justify-center gap-3 sm:gap-4 pt-1">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 pt-1 w-full max-w-sm mx-auto">
               {/* Previous Step */}
               <button
                 type="button"
                 onClick={handlePreviousStep}
                 disabled={currentStepIndex === 0}
                 className={cn(
-                  "flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0",
                   currentStepIndex === 0
                     ? "opacity-40 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200"
                     : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
                 )}
                 title={isEn ? "Previous step / Skip" : "Bỏ qua / Lùi lại động tác trước"}
               >
-                <SkipBack className="w-4 h-4 text-slate-600" />
-                <span>{isEn ? "Bỏ qua" : "Bỏ qua"}</span>
+                <SkipBack className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 shrink-0" />
+                <span className="whitespace-nowrap">{isEn ? "Bỏ qua" : "Bỏ qua"}</span>
               </button>
 
               {/* Play / Pause Toggle */}
               <button
                 type="button"
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="flex items-center gap-2 px-6 sm:px-8 py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-md shadow-teal-600/30 transition-all cursor-pointer active:scale-95"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] sm:text-xs uppercase tracking-normal sm:tracking-wide shadow-md shadow-teal-600/30 transition-all cursor-pointer active:scale-95 whitespace-nowrap shrink-0"
               >
                 {isTimerRunning ? (
                   <>
-                    <Pause className="w-4 h-4 fill-white" />
-                    <span>{isEn ? "TẠM DỪNG" : "TẠM DỪNG"}</span>
+                    <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
+                    <span className="whitespace-nowrap">{isEn ? "TẠM DỪNG" : "TẠM DỪNG"}</span>
                   </>
                 ) : (
                   <>
-                    <Play className="w-4 h-4 fill-white ml-0.5" />
-                    <span>{isEn ? "TIẾP TỤC" : "TIẾP TỤC"}</span>
+                    <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white ml-0.5 shrink-0" />
+                    <span className="whitespace-nowrap">{isEn ? "TIẾP TỤC" : "TIẾP TỤC"}</span>
                   </>
                 )}
               </button>
@@ -536,11 +687,11 @@ export default function ActiveWorkoutModal({
               <button
                 type="button"
                 onClick={handleNextStep}
-                className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
                 title={isEn ? "Next step" : "Sang động tác tiếp"}
               >
-                <span>{isEn ? "Tiếp" : "Tiếp"}</span>
-                <SkipForward className="w-4 h-4 text-slate-600" />
+                <span className="whitespace-nowrap">{isEn ? "Tiếp" : "Tiếp"}</span>
+                <SkipForward className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 shrink-0" />
               </button>
             </div>
           </div>
@@ -567,7 +718,7 @@ export default function ActiveWorkoutModal({
 
                 return (
                   <div
-                    key={st.id || idx}
+                    key={`step-${st.id || 'st'}-${idx}`}
                     onClick={() => handleSelectStep(idx)}
                     className={cn(
                       "p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-3 shadow-2xs group relative overflow-hidden",
@@ -691,6 +842,152 @@ export default function ActiveWorkoutModal({
           </div>
         </div>
       </motion.div>
+
+      {/* Soundscape & Music Picker Modal */}
+      <AnimatePresence>
+        {isMusicModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[88vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 via-teal-50 to-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
+                    <Music className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-base font-bold text-slate-900 leading-tight">
+                      Âm Nhạc & Không Gian Trị Liệu
+                    </h3>
+                    <p className="text-[11px] text-teal-700 font-medium">
+                      Tần số Solfeggio & sóng não thư giãn tương ứng từng bài tập
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMusicModalOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Volume & Master Playback Bar */}
+              <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioMuted(!isAudioMuted)}
+                    className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 cursor-pointer"
+                  >
+                    {isAudioMuted ? <VolumeX className="w-4 h-4 text-slate-400" /> : <Volume2 className="w-4 h-4 text-teal-600" />}
+                  </button>
+                  <span className="text-xs font-bold text-slate-700">Âm lượng nhạc</span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-1 max-w-[180px]">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={isAudioMuted ? 0 : musicVolume}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setMusicVolume(val);
+                      if (isAudioMuted && val > 0) setIsAudioMuted(false);
+                      workoutMusic.setVolume(val);
+                    }}
+                    className="w-full accent-teal-600 cursor-pointer"
+                  />
+                  <span className="text-[11px] font-mono text-slate-600 w-8 text-right font-bold">
+                    {Math.round((isAudioMuted ? 0 : musicVolume) * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Track List */}
+              <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-2.5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block px-1">
+                  Chọn giai điệu phù hợp với bạn:
+                </span>
+                {WORKOUT_TRACKS.map((track, trackIdx) => {
+                  const isSelected = currentTrack.id === track.id;
+                  const isRecommended = track.recommendedFor.includes(exercise.id) || track.recommendedFor.includes(exercise.category);
+
+                  return (
+                    <div
+                      key={`track-${track.id}-${trackIdx}`}
+                      onClick={() => handleSelectTrack(track)}
+                      className={cn(
+                        "p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left group",
+                        isSelected
+                          ? "bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs"
+                          : "bg-white border-slate-200 hover:border-teal-300 hover:bg-slate-50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border",
+                          isSelected ? "bg-white border-emerald-200 shadow-2xs" : "bg-slate-100 border-slate-200"
+                        )}>
+                          {track.iconEmoji}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={cn(
+                              "text-xs font-bold truncate",
+                              isSelected ? "text-emerald-950" : "text-slate-800"
+                            )}>
+                              {track.name}
+                            </span>
+                            {isRecommended && (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                                Khuyên dùng cho bài này
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 line-clamp-1">
+                            {track.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-2">
+                        {isSelected ? (
+                          <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-slate-400 group-hover:text-teal-600">
+                            Chọn
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsMusicModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -706,7 +1003,7 @@ function PoseVisualGuide({
   isEn: boolean;
 }) {
   return (
-    <div className="relative w-full max-w-[280px] h-[95px] flex items-center justify-center">
+    <div className="relative w-full max-w-[250px] h-[68px] sm:h-[75px] flex items-center justify-center">
       {type === 'cat_cow' && (
         <svg viewBox="0 0 200 80" className="w-full h-full text-emerald-600 drop-shadow-xs">
           {/* Floor Alignment line */}

@@ -407,16 +407,16 @@ export default function HealthTrendsChartCard({
 
         {/* Time Range Filter Pills */}
         <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-teal-200 shadow-xs self-start md:self-auto">
-          {(['7d', '14d', '30d'] as const).map((r) => (
+          {(['7d', '14d', '30d'] as const).map((r, rIdx) => (
             <button
-              key={r}
+              key={`trend-r-${r}-${rIdx}`}
               type="button"
               onClick={() => setTimeRange(r)}
               className={cn(
                 "px-2.5 py-1 rounded-md text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                 timeRange === r 
-                  ? "bg-teal-700 text-white-pure shadow-xs" 
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-teal-300 text-slate-950 font-extrabold shadow-xs" 
+                  : "text-slate-800 hover:text-black font-semibold"
               )}
             >
               {r === '7d' 
@@ -439,17 +439,17 @@ export default function HealthTrendsChartCard({
           className={cn(
             "p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between space-y-1",
             activeMetric === 'heartRate'
-              ? "bg-rose-500/10 border-rose-500/30 text-white shadow-xs ring-1 ring-rose-500/40"
-              : "bg-white/[0.02] border-white/5 text-text-dim hover:bg-white/[0.05] hover:text-white"
+              ? "bg-rose-50 border-rose-300 text-slate-900 shadow-xs ring-1 ring-rose-400/40"
+              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.hr')}</span>
-            <Heart className={cn("w-3.5 h-3.5", activeMetric === 'heartRate' ? "text-rose-400" : "text-text-dim")} />
+            <span className="text-[9.5px] uppercase font-bold tracking-wider text-slate-800">{t('trends.hr')}</span>
+            <Heart className={cn("w-3.5 h-3.5", activeMetric === 'heartRate' ? "text-rose-500" : "text-slate-500")} />
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-mono font-bold text-white">{stats.avgHeartRate}</span>
-            <span className="text-[9.5px] text-text-dim font-mono">BPM</span>
+            <span className="text-lg font-mono font-bold text-slate-950">{stats.avgHeartRate}</span>
+            <span className="text-[9.5px] text-slate-600 font-mono font-medium">BPM</span>
           </div>
         </button>
 
@@ -459,17 +459,17 @@ export default function HealthTrendsChartCard({
           className={cn(
             "p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between space-y-1",
             activeMetric === 'bloodPressure'
-              ? "bg-cyan-500/10 border-cyan-500/30 text-white shadow-xs ring-1 ring-cyan-500/40"
-              : "bg-white/[0.02] border-white/5 text-text-dim hover:bg-white/[0.05] hover:text-white"
+              ? "bg-cyan-50 border-cyan-300 text-slate-900 shadow-xs ring-1 ring-cyan-400/40"
+              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.bp')}</span>
-            <Activity className={cn("w-3.5 h-3.5", activeMetric === 'bloodPressure' ? "text-cyan-400" : "text-text-dim")} />
+            <span className="text-[9.5px] uppercase font-bold tracking-wider text-slate-800">{t('trends.bp')}</span>
+            <Activity className={cn("w-3.5 h-3.5", activeMetric === 'bloodPressure' ? "text-cyan-600" : "text-slate-500")} />
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-mono font-bold text-white">{stats.avgSys}/{stats.avgDia}</span>
-            <span className="text-[9.5px] text-text-dim font-mono">mmHg</span>
+            <span className="text-lg font-mono font-bold text-slate-950">{stats.avgSys}/{stats.avgDia}</span>
+            <span className="text-[9.5px] text-slate-600 font-mono font-medium">mmHg</span>
           </div>
         </button>
 
@@ -479,17 +479,17 @@ export default function HealthTrendsChartCard({
           className={cn(
             "p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between space-y-1",
             activeMetric === 'spo2'
-              ? "bg-emerald-500/10 border-emerald-500/30 text-white shadow-xs ring-1 ring-emerald-500/40"
-              : "bg-white/[0.02] border-white/5 text-text-dim hover:bg-white/[0.05] hover:text-white"
+              ? "bg-emerald-50 border-emerald-300 text-slate-900 shadow-xs ring-1 ring-emerald-400/40"
+              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.spo2')}</span>
-            <Wind className={cn("w-3.5 h-3.5", activeMetric === 'spo2' ? "text-emerald-400" : "text-text-dim")} />
+            <span className="text-[9.5px] uppercase font-bold tracking-wider text-slate-800">{t('trends.spo2')}</span>
+            <Wind className={cn("w-3.5 h-3.5", activeMetric === 'spo2' ? "text-emerald-600" : "text-slate-500")} />
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-mono font-bold text-white">{stats.avgSpo2}</span>
-            <span className="text-[9.5px] text-text-dim font-mono">%</span>
+            <span className="text-lg font-mono font-bold text-slate-950">{stats.avgSpo2}</span>
+            <span className="text-[9.5px] text-slate-600 font-mono font-medium">%</span>
           </div>
         </button>
 
@@ -499,19 +499,19 @@ export default function HealthTrendsChartCard({
           className={cn(
             "p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between space-y-1",
             activeMetric === 'activity'
-              ? "bg-purple-500/10 border-purple-500/30 text-white shadow-xs ring-1 ring-purple-500/40"
-              : "bg-white/[0.02] border-white/5 text-text-dim hover:bg-white/[0.05] hover:text-white"
+              ? "bg-purple-50 border-purple-300 text-slate-900 shadow-xs ring-1 ring-purple-400/40"
+              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase font-bold tracking-wider">{t('trends.activity')}</span>
-            <Droplets className={cn("w-3.5 h-3.5", activeMetric === 'activity' ? "text-purple-400" : "text-text-dim")} />
+            <span className="text-[9.5px] uppercase font-bold tracking-wider text-slate-800">{t('trends.activity')}</span>
+            <Droplets className={cn("w-3.5 h-3.5", activeMetric === 'activity' ? "text-purple-600" : "text-slate-500")} />
           </div>
           <div className="flex items-baseline justify-between gap-1 w-full">
-            <span className="text-sm font-mono font-bold text-white truncate">
+            <span className="text-sm font-mono font-bold text-slate-950 truncate">
               {isEn ? 'Water & Sleep' : 'Nước & Ngủ'}
             </span>
-            <span className="text-[9px] text-text-dim font-mono shrink-0">
+            <span className="text-[9px] text-slate-600 font-mono shrink-0 font-medium">
               {isEn ? 'Cycle' : 'Chu kỳ'}
             </span>
           </div>
@@ -519,29 +519,29 @@ export default function HealthTrendsChartCard({
       </div>
 
       {/* Main Chart Canvas Area */}
-      <div className="bg-bg/50 border border-white/5 rounded-2xl p-3 sm:p-3.5 space-y-2.5">
+      <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-3 sm:p-3.5 space-y-2.5">
         {/* Metric Top Bar Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white">{curConfig.title}</span>
-              <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-white/5 text-text-dim border border-white/10 font-mono">
+              <span className="text-xs font-bold text-slate-900">{curConfig.title}</span>
+              <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-white text-slate-700 border border-slate-200 font-mono">
                 {curConfig.safeLabel}
               </span>
             </div>
-            <p className="text-[10.5px] text-text-dim font-light leading-snug">
+            <p className="text-[10.5px] text-slate-600 font-normal leading-snug">
               {curConfig.desc}
             </p>
           </div>
 
           {/* Mini Stats Summary Pill */}
           {activeMetric === 'heartRate' && (
-            <div className="flex items-center gap-2.5 bg-white/[0.02] border border-white/5 px-2.5 py-1 rounded-lg self-start sm:self-auto font-mono text-[10px]">
-              <span className="text-text-dim">Min: <strong className="text-emerald-400">{stats.minHeartRate}</strong></span>
-              <span className="text-white/20">|</span>
-              <span className="text-text-dim">Max: <strong className="text-rose-400">{stats.maxHeartRate}</strong></span>
-              <span className="text-white/20">|</span>
-              <span className="text-text-dim">{isEn ? 'Trend:' : 'Xu hướng:'} <strong className="text-primary">{stats.trendStatus}</strong></span>
+            <div className="flex items-center gap-2.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg self-start sm:self-auto font-mono text-[10px]">
+              <span className="text-slate-700">Min: <strong className="text-emerald-600">{stats.minHeartRate}</strong></span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-700">Max: <strong className="text-rose-600">{stats.maxHeartRate}</strong></span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-700">{isEn ? 'Trend:' : 'Xu hướng:'} <strong className="text-teal-700 font-bold">{stats.trendStatus}</strong></span>
             </div>
           )}
         </div>
@@ -573,19 +573,19 @@ export default function HealthTrendsChartCard({
                 </linearGradient>
               </defs>
 
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               
               <XAxis 
                 dataKey="dayLabel" 
                 tickLine={false} 
                 axisLine={false} 
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 fontSize={10} 
                 dy={6}
               />
               
               <YAxis 
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 fontSize={10} 
                 tickLine={false} 
                 axisLine={false}
@@ -663,9 +663,9 @@ export default function HealthTrendsChartCard({
         </div>
 
         {/* Action Controls & Navigation Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-white/5">
-          <div className="flex items-center gap-2 text-xs text-text-dim font-light">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200">
+          <div className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {isEn 
                 ? 'Trends automatically update as you log vitals and health journals' 
@@ -678,10 +678,10 @@ export default function HealthTrendsChartCard({
               <button
                 type="button"
                 onClick={onOpenVitalsModal}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl bg-primary text-bg font-bold text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl bg-primary text-slate-950 font-bold text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
-                <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('home.log_vitals')}</span>
+                <PlusCircle className="w-3.5 h-3.5 shrink-0 text-slate-950" />
+                <span className="text-slate-950 font-bold">{t('home.log_vitals')}</span>
               </button>
             )}
 
@@ -689,10 +689,10 @@ export default function HealthTrendsChartCard({
               <button
                 type="button"
                 onClick={onNavigateToHealth}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium text-xs border border-white/10 active:scale-95 transition-all cursor-pointer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs border border-slate-300 active:scale-95 transition-all cursor-pointer shadow-xs"
               >
-                {isEn ? 'Detailed Journal' : 'Nhật ký chi tiết'}
-                <ChevronRight className="w-3.5 h-3.5" />
+                <span className="text-slate-950 font-bold">{isEn ? 'Detailed Journal' : 'Nhật ký chi tiết'}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-950" />
               </button>
             )}
           </div>

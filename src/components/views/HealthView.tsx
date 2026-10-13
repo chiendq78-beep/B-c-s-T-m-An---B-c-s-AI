@@ -23,7 +23,8 @@ import {
   Smile,
   ShieldCheck,
   TrendingUp,
-  Info
+  Info,
+  Music
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -33,142 +34,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { registerModal } from '../../utils/modalManager';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ActiveWorkoutModal from './ActiveWorkoutModal';
+import { getTrackForExercise } from '../../services/workoutMusicService';
 
-interface Exercise {
-  id: string;
-  title: string;
-  category: 'cotsong' | 'timmach' | 'giamstress' | 'dotcalo' | 'thothieng' | 'all';
-  categoryLabel: string;
-  tag: string;
-  duration: number; // minutes
-  kcal: number;
-  level: 'Nhẹ nhàng' | 'Vừa phải' | 'Nâng cao';
-  image: string;
-  description: string;
-  benefits: string[];
-  steps: string[];
-}
-
-const THERAPY_EXERCISES: Exercise[] = [
-  {
-    id: 'hero-yoga-spine',
-    title: 'YOGA PHỤC HỒI CHUYÊN SÂU',
-    category: 'cotsong',
-    categoryLabel: 'Cột sống',
-    tag: 'Giảm đau lưng',
-    duration: 25,
-    kcal: 180,
-    level: 'Nhẹ nhàng',
-    image: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&q=80&w=1200',
-    description: 'Liệu pháp giải phóng căng thẳng vùng cơ thắt lưng và tăng tính linh hoạt cột sống.',
-    benefits: ['Kéo giãn đốt sống L4-L5', 'Giảm chèn ép dây thần kinh tọa', 'Tăng lưu thông máu vùng lưng'],
-    steps: [
-      '1. Con Mèo - Con Bò (Cat-Cow): 3 phút (Khởi động & Làm mềm dẻo cột sống)',
-      '2. Tư thế Em Bé (Child Pose): 3 phút (Kéo giãn thắt lưng & Mở rộng hông)',
-      '3. Dynamic Bridge (Cây Cầu động): 4 phút (Củng cố cơ mông, đùi & Đáy chậu)',
-      '4. Baby Cobra (Rắn Hổ Mang nhẹ): 3 phút (Kích hoạt cơ dựng sống & Mở ngực)',
-      '5. Thắt lưng gập nhẹ / Lăn lưng (Knees to Chest): 2 phút (Trả lại trạng thái trung tính)',
-      '6. Savasana & Thở bụng sâu: 10 phút (Thư giãn sâu, cân bằng thần kinh & Giảm đau)'
-    ]
-  },
-  {
-    id: 'ex-sun-salutation',
-    title: 'Chào mặt trời (Surya Namaskar)',
-    category: 'dotcalo',
-    categoryLabel: 'Đốt calo',
-    tag: 'Khởi động ngày mới',
-    duration: 15,
-    kcal: 120,
-    level: 'Nhẹ nhàng',
-    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600',
-    description: 'Chuỗi 12 động tác liên hoàn đánh thức toàn bộ nhóm cơ và kích hoạt năng lượng tích cực.',
-    benefits: ['Làm nóng cơ thể', 'Tăng độ dẻo dai toàn thân', 'Cải thiện tuần hoàn máu'],
-    steps: [
-      'Tư thế cầu nguyện (Pranamasana)',
-      'Tư thế vươn tay ngả sau (Hastauttanasana)',
-      'Tư thế cúi gập người (Padahastasana)',
-      'Tư thế chiến binh thấp',
-      'Tư thế tấm ván và rắn hổ mang'
-    ]
-  },
-  {
-    id: 'ex-neck-shoulder',
-    title: 'Trị liệu Đau Cổ Vai Gáy',
-    category: 'cotsong',
-    categoryLabel: 'Cột sống',
-    tag: 'Dân văn phòng',
-    duration: 18,
-    kcal: 110,
-    level: 'Nhẹ nhàng',
-    image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=600',
-    description: 'Tập trung thả lỏng cơ thang, cơ nâng vai và giải phóng chèn ép rễ thần kinh cổ.',
-    benefits: ['Giảm căng cứng cổ gáy', 'Phòng ngừa thoái hóa đốt sống cổ', 'Cắt đứt cơn đau nửa đầu sau'],
-    steps: [
-      'Nghiêng đầu sang hai bên kết hợp ấn huyệt Phong Trì',
-      'Xoay tròn khớp vai mở ngực',
-      'Động tác luồn kim kéo giãn cơ liên bả vai',
-      'Tư thế mặt bò kéo giãn cánh tay'
-    ]
-  },
-  {
-    id: 'ex-meditation-breathing',
-    title: 'Thiền Chánh Niệm & Hơi Thở Sâu',
-    category: 'thothieng',
-    categoryLabel: 'Thở & Thiền',
-    tag: 'An thần & Ngủ ngon',
-    duration: 12,
-    kcal: 35,
-    level: 'Nhẹ nhàng',
-    image: 'https://images.unsplash.com/photo-1591228127791-8e2eaef098d3?auto=format&fit=crop&q=80&w=600',
-    description: 'Kỹ thuật thở cơ hoành 4-7-8 giúp làm dịu hệ thần kinh giao cảm và giảm cortisol.',
-    benefits: ['Giảm lo âu căng thẳng', 'Ổn định huyết áp', 'Cải thiện chất lượng giấc ngủ'],
-    steps: [
-      'Ngồi thẳng lưng, nhắm mắt nhẹ nhàng',
-      'Hít vào bằng mũi trong 4 giây căng tròn bụng',
-      'Giữ hơi thở thư thái trong 7 giây',
-      'Thở từ từ qua miệng trong 8 giây',
-      'Lặp lại chu kỳ 8 lần liên tục'
-    ]
-  },
-  {
-    id: 'ex-cardio-flow',
-    title: 'Dưỡng Sinh Khí Công Tim Mạch',
-    category: 'timmach',
-    categoryLabel: 'Tim mạch',
-    tag: 'Tăng sức bền tim',
-    duration: 20,
-    kcal: 155,
-    level: 'Vừa phải',
-    image: 'https://images.unsplash.com/photo-1510894347713-fc3ad6cb0d4d?auto=format&fit=crop&q=80&w=600',
-    description: 'Vận động nhịp điệu nhẹ nhàng điều hòa nhịp tim, cải thiện đàn hồi thành mạch máu.',
-    benefits: ['Hạ áp tự nhiên', 'Tăng thể tích tống máu', 'Tăng cường oxy mô'],
-    steps: [
-      'Xoay khớp cổ chân, cổ tay điều hòa khí huyết',
-      'Động tác Bát Đoạn Cẩm: Lưỡng thủ thác thiên lý tam tiêu',
-      'Đi bộ nhịp thở 3 bước hít - 3 bước thở',
-      'Vỗ tay tĩnh mạch thư giãn'
-    ]
-  },
-  {
-    id: 'ex-stress-relief',
-    title: 'Yoga Giải Tỏa Căng Thẳng (De-Stress)',
-    category: 'giamstress',
-    categoryLabel: 'Giảm stress',
-    tag: 'Thư giãn cảm xúc',
-    duration: 22,
-    kcal: 130,
-    level: 'Nhẹ nhàng',
-    image: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&q=80&w=600',
-    description: 'Kết hợp các tư thế gập người về phía trước giải tỏa áp lực tâm lý và mệt mỏi tích tụ.',
-    benefits: ['Tăng sóng não Alpha thư thái', 'Giảm đau căng đầu do stress', 'Khơi thông kinh lạc'],
-    steps: [
-      'Tư thế Cánh Bướm gập người',
-      'Tư thế Chó úp mặt (Downward Dog)',
-      'Tư thế Gác chân lên tường (Viparita Karani)',
-      'Thả lỏng toàn thân với nhạc trị liệu'
-    ]
-  }
-];
+import { 
+  THERAPY_EXERCISES, 
+  findTherapyExercise, 
+  TherapyExercise as Exercise 
+} from '../../data/therapyExercisesData';
 
 // Structured multi-week therapeutic programs
 const THERAPY_PROGRAMS = [
@@ -193,7 +65,7 @@ const THERAPY_PROGRAMS = [
     totalSessions: 21,
     completedSessions: 0,
     level: 'Nhẹ đến Vừa',
-    image: 'https://images.unsplash.com/photo-1510894347713-fc3ad6cb0d4d?auto=format&fit=crop&q=80&w=500',
+    image: '/qigong_cardio.jpg',
     desc: 'Cải thiện chỉ số huyết áp, hạ nhịp tim nghỉ và tăng lượng oxy SpO2 cho cơ thể.'
   },
   {
@@ -210,7 +82,12 @@ const THERAPY_PROGRAMS = [
   }
 ];
 
-export default function HealthView() {
+interface HealthViewProps {
+  targetExercise?: string | null;
+  onClearTargetExercise?: () => void;
+}
+
+export default function HealthView({ targetExercise, onClearTargetExercise }: HealthViewProps = {}) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const isEn = language === 'en';
@@ -220,6 +97,8 @@ export default function HealthView() {
 
   // Active workout session modal
   const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
+  const [highlightedExerciseId, setHighlightedExerciseId] = useState<string | null>(null);
+  const [linkedNotice, setLinkedNotice] = useState<string | null>(null);
 
   // Workout History
   const [workoutHistory, setWorkoutHistory] = useState<any[]>([
@@ -265,6 +144,67 @@ export default function HealthView() {
     window.addEventListener('app-reset-to-root', handleResetToRoot);
     return () => window.removeEventListener('app-reset-to-root', handleResetToRoot);
   }, []);
+
+  // Register banner notice dismissal in modal manager
+  useEffect(() => {
+    if (!linkedNotice) return;
+    return registerModal('health-linked-notice', () => setLinkedNotice(null));
+  }, [linkedNotice]);
+
+  // Sub-tabs (Giáo trình Trị liệu hoặc Lịch sử luyện tập -> quay lại Cho bạn hôm nay)
+  useEffect(() => {
+    if (activeExercise || subTab === 'today') return;
+    return registerModal('health-subtab', () => setSubTab('today'));
+  }, [activeExercise, subTab]);
+
+  // Bộ lọc bài tập khi đang ở tab Cho bạn hôm nay -> quay lại Tất cả
+  useEffect(() => {
+    if (activeExercise || selectedFilter === 'all') return;
+    return registerModal('health-filter', () => setSelectedFilter('all'));
+  }, [activeExercise, selectedFilter]);
+
+  // Listen for target exercise from props or custom event
+  useEffect(() => {
+    const handleTarget = (query: string) => {
+      const matched = findTherapyExercise(query);
+      if (matched) {
+        setSubTab('today');
+        if (matched.category !== 'all') {
+          setSelectedFilter(matched.category as any);
+        } else {
+          setSelectedFilter('all');
+        }
+        setHighlightedExerciseId(matched.id);
+        setActiveExercise(matched);
+        setLinkedNotice(matched.title);
+
+        setTimeout(() => setLinkedNotice(null), 6000);
+
+        setTimeout(() => {
+          const el = document.getElementById(`exercise-${matched.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+
+        onClearTargetExercise?.();
+      }
+    };
+
+    if (targetExercise) {
+      handleTarget(targetExercise);
+    }
+
+    const handleEvent = (e: any) => {
+      const q = e.detail?.exerciseName || e.detail?.exercise;
+      if (q) {
+        handleTarget(q);
+      }
+    };
+
+    window.addEventListener('app-open-exercise', handleEvent);
+    return () => window.removeEventListener('app-open-exercise', handleEvent);
+  }, [targetExercise, onClearTargetExercise]);
 
   const startExercise = (ex: Exercise) => {
     setActiveExercise(ex);
@@ -335,6 +275,44 @@ export default function HealthView() {
         </p>
       </div>
 
+      {/* Linked from Disease Notice Banner */}
+      <AnimatePresence>
+        {linkedNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-emerald-50/90 border border-emerald-300/80 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Sparkles className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded-md border border-teal-200">
+                    {isEn ? "Linked from Disease" : "Liên kết từ Bệnh lý"}
+                  </span>
+                  <span className="text-[10px] text-teal-700 font-medium hidden sm:inline">
+                    {isEn ? "Opening workout routine" : "Đang mở bài tập chính xác"}
+                  </span>
+                </div>
+                <h3 className="text-[11.5px] sm:text-xs font-bold text-slate-900 truncate mt-0.5">
+                  {linkedNotice}
+                </h3>
+              </div>
+            </div>
+            <button
+              onClick={() => setLinkedNotice(null)}
+              className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors cursor-pointer shrink-0"
+              title="Đóng thông báo"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 2. Top Sub-Tabs Navigation (Optimized for Mobile & Desktop) */}
       <div className="bg-white border border-slate-200 rounded-2xl p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-xs w-full max-w-full overflow-hidden">
         <button
@@ -401,18 +379,18 @@ export default function HealthView() {
                   alt={featuredExercise.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-105 contrast-[1.02]" 
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent flex flex-col justify-between p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="px-3 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-teal-600 text-force-white shadow-sm flex items-center gap-1">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent flex flex-col justify-between p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8.5px] sm:text-[9.5px] font-bold uppercase tracking-wider bg-teal-600 text-force-white shadow-sm flex items-center gap-1 shrink-0">
                       🏷️ {featuredExercise.tag}
                     </span>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/95 backdrop-blur-md text-slate-800 border border-slate-200/90 shadow-2xs">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8.5px] sm:text-[9px] font-semibold bg-white/95 backdrop-blur-md text-slate-800 border border-slate-200/90 shadow-2xs shrink-0">
                       {isEn ? "Level: " : "Mức độ: "}{featuredExercise.level}
                     </span>
                   </div>
 
-                  <div className="bg-white/95 backdrop-blur-md rounded-2xl py-2.5 px-3.5 sm:py-3 sm:px-4 border border-white/90 shadow-md text-center">
-                    <h3 className="font-serif text-sm sm:text-base font-bold tracking-tight text-slate-900 leading-snug text-center">
+                  <div className="bg-white/95 backdrop-blur-md rounded-xl py-1.5 px-2.5 sm:py-2 sm:px-3 border border-white/90 shadow-md text-center max-w-[92%] sm:max-w-[85%] mx-auto">
+                    <h3 className="font-serif text-[11px] sm:text-xs font-bold tracking-tight text-slate-900 leading-snug text-center">
                       {featuredExercise.title}
                     </h3>
                   </div>
@@ -426,18 +404,18 @@ export default function HealthView() {
                 </p>
 
                 {/* Specs row */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-6 pt-1 text-xs text-slate-600 font-medium">
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                    <Clock className="w-4 h-4 text-teal-600" />
-                    <span>⏱️ <strong>{featuredExercise.duration} {isEn ? "min" : "phút"}</strong></span>
+                <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 pt-1 text-[11px] sm:text-xs text-slate-700 font-medium overflow-x-auto no-scrollbar">
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
+                    <Clock className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span><strong>{featuredExercise.duration} {isEn ? "min" : "phút"}</strong></span>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                    <Flame className="w-4 h-4 text-rose-500" />
-                    <span>🔥 <strong>{featuredExercise.kcal} kcal</strong></span>
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
+                    <Flame className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>{featuredExercise.kcal} kcal</strong></span>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>📊 <strong>{isEn ? "Level: " : "Mức độ: "}{featuredExercise.level}</strong></span>
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span><strong>{isEn ? "Level: " : "Mức độ: "}{featuredExercise.level}</strong></span>
                   </div>
                 </div>
 
@@ -447,7 +425,7 @@ export default function HealthView() {
                   className="w-full py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-force-white font-bold text-xs uppercase tracking-widest shadow-md shadow-teal-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
                   <Play className="w-4 h-4 fill-white" />
-                  <span>{isEn ? "▶️ Start Workout Now" : "▶️ Bắt đầu luyện tập ngay"}</span>
+                  <span>{isEn ? "Start Workout Now" : "Bắt đầu luyện tập ngay"}</span>
                 </button>
               </div>
             </div>
@@ -473,9 +451,9 @@ export default function HealthView() {
                 { id: 'giamstress', label: isEn ? 'Stress Relief' : 'Giảm stress' },
                 { id: 'dotcalo', label: isEn ? 'Calorie Burn' : 'Đốt calo' },
                 { id: 'thothieng', label: isEn ? 'Breath & Zen' : 'Thở & Thiền' },
-              ].map(chip => (
+              ].map((chip, idx) => (
                 <button
-                  key={chip.id}
+                  key={`chip-${chip.id}-${idx}`}
                   onClick={() => setSelectedFilter(chip.id as any)}
                   className={cn(
                     "px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer",
@@ -491,52 +469,84 @@ export default function HealthView() {
 
             {/* Exercise Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredExercises.map(ex => (
-                <div
-                  key={ex.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-xs hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between"
-                >
-                  <div className="flex items-start gap-3.5">
-                    <img 
-                      src={ex.image} 
-                      alt={ex.title} 
-                      className="w-20 h-20 rounded-xl object-cover border border-slate-100 shrink-0"
-                    />
-                    <div className="min-w-0 space-y-1">
-                      <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200 uppercase tracking-wider">
-                        {ex.tag}
-                      </span>
-                      <h4 className="font-serif text-base font-bold text-slate-900 leading-snug line-clamp-1">
-                        {ex.title}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 line-clamp-2">
-                        {ex.description}
-                      </p>
+              {filteredExercises.map((ex, idx) => {
+                const isHighlighted = highlightedExerciseId === ex.id;
+                return (
+                  <div
+                    key={`ex-${ex.id}-${idx}`}
+                    id={`exercise-${ex.id}`}
+                    className={cn(
+                      "bg-white rounded-2xl border p-4 space-y-3 transition-all flex flex-col justify-between",
+                      isHighlighted
+                        ? "border-teal-500 ring-2 ring-teal-500/30 shadow-lg shadow-teal-500/10 bg-teal-50/15"
+                        : "border-slate-200 shadow-xs hover:border-teal-300 hover:shadow-md"
+                    )}
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <img 
+                        src={ex.image} 
+                        alt={ex.title} 
+                        className="w-20 h-20 rounded-xl object-cover border border-slate-100 shrink-0"
+                      />
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200 uppercase tracking-wider">
+                            {ex.tag}
+                          </span>
+                          {isHighlighted && (
+                            <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-bold bg-teal-600 text-white uppercase tracking-wider animate-pulse">
+                              {isEn ? "Linked" : "Đang xem"}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-serif text-[13.5px] sm:text-sm font-bold text-slate-900 leading-snug line-clamp-1">
+                          {ex.title}
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 line-clamp-2">
+                          {ex.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                    <div className="flex items-center gap-3 text-slate-500 text-[11px] font-medium">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-teal-600" />
-                        {ex.duration} {isEn ? "min" : "phút"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5 text-rose-500" />
-                        {ex.kcal} kcal
-                      </span>
+                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 text-slate-500 text-[11px] font-medium">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-teal-600" />
+                          {ex.duration} {isEn ? "min" : "phút"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Flame className="w-3.5 h-3.5 text-rose-500" />
+                          {ex.kcal} kcal
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => startExercise(ex)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>{isEn ? "Start" : "Tập ngay"}</span>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => startExercise(ex)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                    >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>{isEn ? "Start" : "Tập ngay"}</span>
-                    </button>
+                    {/* Associated Soundscape / Music Pill */}
+                    {(() => {
+                      const matchedTrack = getTrackForExercise(ex.id, ex.category);
+                      return (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50/70 border border-teal-200/60 text-[10.5px] text-teal-800 font-medium">
+                          <Music className="w-3 h-3 text-teal-600 shrink-0" />
+                          <span className="truncate">
+                            <strong className="font-semibold">{isEn ? "Music: " : "Nhạc kèm theo: "}</strong>
+                            {matchedTrack.name}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
         </div>
@@ -557,9 +567,9 @@ export default function HealthView() {
           </div>
 
           <div className="space-y-4">
-            {THERAPY_PROGRAMS.map(prog => (
+            {THERAPY_PROGRAMS.map((prog, idx) => (
               <div 
-                key={prog.id}
+                key={`prog-${prog.id}-${idx}`}
                 className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-300 transition-all space-y-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -654,7 +664,7 @@ export default function HealthView() {
             </h4>
             <div className="divide-y divide-slate-100 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
               {workoutHistory.map((item, idx) => (
-                <div key={item.id || idx} className="p-4 flex items-center justify-between gap-3 text-xs">
+                <div key={`history-${item.id || 'sess'}-${idx}`} className="p-4 flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shrink-0">
                       <CheckCircle className="w-5 h-5 text-teal-600" />

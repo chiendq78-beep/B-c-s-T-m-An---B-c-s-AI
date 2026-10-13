@@ -293,12 +293,12 @@ export default function Anatomy3DViewer({
             <button
               type="button"
               onClick={() => setIsFullscreen(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-rose-500/30"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-force-white rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-teal-500/30"
               title="Đóng chế độ toàn màn hình (Esc)"
             >
-              <X className="w-4 h-4" />
-              <span>Đóng</span>
-              <span className="hidden sm:inline text-rose-200 text-xs font-mono font-normal">(Esc)</span>
+              <X className="w-4 h-4 text-white text-force-white" />
+              <span className="text-white text-force-white">Đóng</span>
+              <span className="hidden sm:inline text-teal-100 text-xs font-mono font-normal">(Esc)</span>
             </button>
           )}
         </div>
@@ -396,7 +396,7 @@ export default function Anatomy3DViewer({
 
             return (
               <div
-                key={idx}
+                key={`landmark-${lm.name || 'lm'}-${idx}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveLandmark(isSelected ? null : lm.name);

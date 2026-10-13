@@ -373,12 +373,12 @@ export default function EmergencyModal({ isOpen, onClose }: EmergencyModalProps)
 
               {/* Horizontal Tabs for First Aid topics */}
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {FIRST_AID_GUIDES.map((guide) => {
+                {FIRST_AID_GUIDES.map((guide, gIdx) => {
                   const isSelected = selectedGuide?.id === guide.id;
                   const IconComp = guide.icon;
                   return (
                     <button
-                      key={guide.id}
+                      key={`guide-${guide.id}-${gIdx}`}
                       onClick={() => setSelectedGuide(guide)}
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer",

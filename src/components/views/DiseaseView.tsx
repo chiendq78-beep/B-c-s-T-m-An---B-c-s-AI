@@ -60,7 +60,7 @@ const ICON_MAP: Record<string, any> = {
 
 const ITEMS_PER_PAGE = 10;
 
-export default function DiseaseView({ setActiveView }: { setActiveView: (view: any) => void }) {
+export default function DiseaseView({ setActiveView }: { setActiveView: (view: any, options?: any) => void }) {
   const { language, t } = useLanguage();
   const isEn = language === 'en';
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,25 +130,39 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
     fetchLiveDiseases();
   }, []);
 
-  // Handle back gesture and ESC key for open modals
+  // Handle back gesture and ESC key for open modals in DiseaseView
   useEffect(() => {
-    if (!selectedDisease && !showFilters && !showCategoryModal) return;
-    const closeFn = () => {
-      if (showCategoryModal) setShowCategoryModal(false);
-      else if (showFilters) setShowFilters(false);
-      else if (selectedDisease) setSelectedDisease(null);
-    };
-    const unregister = registerModal('disease-view-submodal', closeFn);
-    const handleBackGesture = (e: Event) => {
-      e.preventDefault();
-      closeFn();
-    };
-    window.addEventListener('app-back-press', handleBackGesture);
-    return () => {
-      unregister();
-      window.removeEventListener('app-back-press', handleBackGesture);
-    };
-  }, [selectedDisease, showFilters, showCategoryModal]);
+    if (showCategoryModal) {
+      return registerModal('disease-category-modal', () => setShowCategoryModal(false));
+    }
+  }, [showCategoryModal]);
+
+  useEffect(() => {
+    if (showFilters) {
+      return registerModal('disease-filter-modal', () => setShowFilters(false));
+    }
+  }, [showFilters]);
+
+  // When selectedDisease is open as fallback if DiseaseDetailView hasn't registered
+  useEffect(() => {
+    if (!selectedDisease) return;
+    return registerModal('disease-selected-item', () => setSelectedDisease(null));
+  }, [selectedDisease]);
+
+  // When filters or search are active without any popup, edge swipe resets to all diseases before app exit
+  useEffect(() => {
+    if (selectedDisease || showFilters || showCategoryModal) return;
+    const hasFilter = activeCategory !== 'all' || activeSeverity !== 'all' || activeAgeGroup !== 'all' || onlyBookmarked || searchTerm.trim() !== '';
+    if (!hasFilter) return;
+
+    return registerModal('disease-active-filters', () => {
+      setActiveCategory('all');
+      setActiveSeverity('all');
+      setActiveAgeGroup('all');
+      setOnlyBookmarked(false);
+      setSearchTerm('');
+    });
+  }, [selectedDisease, showFilters, showCategoryModal, activeCategory, activeSeverity, activeAgeGroup, onlyBookmarked, searchTerm]);
 
   // Listen for root menu reset to return to top of root disease catalog
   useEffect(() => {
@@ -370,13 +384,14 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
           <DiseaseDetailView 
             disease={selectedDisease as any} 
             onBack={() => setSelectedDisease(null)} 
-            onHerbClick={() => {
+            onHerbClick={(herb) => {
               setSelectedDisease(null);
               setActiveView('herb');
             }}
-            onExerciseClick={() => {
+            onExerciseClick={(exerciseTitle) => {
               setSelectedDisease(null);
-              setActiveView('health');
+              setActiveView('health', { exercise: exerciseTitle });
+              window.dispatchEvent(new CustomEvent('app-open-exercise', { detail: { exerciseName: exerciseTitle } }));
             }}
           />
         )}
@@ -524,9 +539,9 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                     { label: '● Nhẹ', value: 'mild', color: 'text-emerald-400' },
                     { label: '● Cần theo dõi', value: 'moderate', color: 'text-amber-400' },
                     { label: '● Nguy hiểm - Cần khám ngay', value: 'severe', color: 'text-rose-400' },
-                  ].map(s => (
+                  ].map((s, sIdx) => (
                     <button
-                      key={s.value}
+                      key={`sev-${s.value}-${sIdx}`}
                       onClick={() => setActiveSeverity(s.value)}
                       className={cn(
                         "px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all border cursor-pointer",
@@ -550,9 +565,9 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                     { label: 'Trẻ em', value: 'child' },
                     { label: 'Người trưởng thành', value: 'adult' },
                     { label: 'Người cao tuổi', value: 'elderly' },
-                  ].map(a => (
+                  ].map((a, aIdx) => (
                     <button
-                      key={a.value}
+                      key={`age-${a.value}-${aIdx}`}
                       onClick={() => setActiveAgeGroup(a.value)}
                       className={cn(
                         "px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all border cursor-pointer",
@@ -645,13 +660,13 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
         </div>
 
         <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 scroll-smooth">
-          {categoriesWithCounts.map(cat => {
+          {categoriesWithCounts.map((cat, catIdx) => {
             const Icon = ICON_MAP[cat.iconName] || Activity;
             const isActive = activeCategory === cat.id;
 
             return (
               <button
-                key={cat.id}
+                key={`cat-pill-${cat.id}-${catIdx}`}
                 onClick={() => setActiveCategory(cat.id)}
                 className={cn(
                   "flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all flex-shrink-0 border cursor-pointer group select-none",
@@ -699,51 +714,38 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
         {filteredDiseases.length > 0 ? (
           <>
             <div className="grid grid-cols-1 gap-4">
-              {filteredDiseases.slice(0, visibleCount).map((disease) => {
+              {filteredDiseases.slice(0, visibleCount).map((disease, idx) => {
                 const categoryConfig = SPECIALTY_CATEGORIES.find(c => c.id === disease.category_id);
-                const IconComponent = categoryConfig ? (ICON_MAP[categoryConfig.iconName] || Activity) : Activity;
                 const isBookmarked = bookmarkedIds.includes(disease.id);
 
                 return (
                   <motion.div
-                    key={disease.id}
+                    key={`${disease.id}-${idx}`}
                     initial={{ opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     onClick={() => handleSelectDisease(disease)}
                     className="w-full bg-panel hover:bg-panel/90 p-5 rounded-2xl border border-border shadow-lg transition-all duration-200 group hover:border-primary/40 cursor-pointer relative overflow-hidden"
                   >
-                    {/* Top Row: Specialty Icon, Disease Name, Category Tag, Bookmark */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        {/* Icon Khoa */}
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center border flex-shrink-0 transition-all duration-200 shadow-inner",
-                          disease.severity === 'mild' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500/20" :
-                          disease.severity === 'moderate' ? "bg-amber-500/10 text-amber-400 border-amber-500/20 group-hover:bg-amber-500/20" :
-                          "bg-rose-500/10 text-rose-400 border-rose-500/20 group-hover:bg-rose-500/20"
-                        )}>
-                          <IconComponent className="w-6 h-6" />
-                        </div>
-
-                        {/* Title & Metadata */}
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900 group-hover:text-primary transition-colors">
-                              {isEn ? (disease.name_en || disease.name_vi) : disease.name_vi}
-                            </h3>
-                            <span className="text-[11px] text-slate-600 font-light hidden sm:inline">
-                              {isEn ? `(${disease.name_vi})` : (disease.name_en ? `(${disease.name_en})` : '')}
+                    {/* Top Header Row of Card: Distinct soft medical header background */}
+                    <div className="-mx-5 -mt-5 mb-3 px-4 sm:px-5 py-2.5 sm:py-3 bg-teal-100 border-b border-teal-200 rounded-t-2xl flex items-start justify-between gap-2.5">
+                      {/* Title & Metadata */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 group-hover:text-teal-700 transition-colors leading-tight">
+                            {isEn ? (disease.name_en || disease.name_vi) : disease.name_vi}
+                          </h3>
+                          {disease.name_en && (
+                            <span className="text-[10px] text-slate-500 font-normal hidden md:inline truncate">
+                              ({disease.name_en})
                             </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="font-mono text-[10px] font-semibold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-300">
-                              ICD-10: {disease.icd10}
-                            </span>
-                            <span className="text-[9px] font-bold uppercase text-teal-800 px-2 py-0.5 bg-teal-50 rounded border border-teal-200 tracking-wider">
-                              {isEn ? (categoryConfig?.name_en || disease.category) : disease.category}
-                            </span>
-                          </div>
+                          )}
+                          <span className="font-mono text-[7px] sm:text-[7.5px] font-bold text-teal-800 bg-white px-1.5 py-0.5 rounded border border-teal-200 whitespace-nowrap shrink-0 shadow-2xs">
+                            ICD-10: {disease.icd10}
+                          </span>
+                          <span className="text-[7px] sm:text-[7.5px] font-bold uppercase text-slate-700 px-1.5 py-0.5 bg-white rounded border border-slate-200 tracking-tight whitespace-nowrap shrink-0 shadow-2xs">
+                            {isEn ? (categoryConfig?.name_en || disease.category) : disease.category}
+                          </span>
                         </div>
                       </div>
 
@@ -751,30 +753,30 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                       <button
                         onClick={(e) => toggleBookmark(e, disease.id)}
                         className={cn(
-                          "w-9 h-9 rounded-xl flex items-center justify-center border transition-all cursor-pointer flex-shrink-0",
+                          "w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center border transition-all cursor-pointer flex-shrink-0 shadow-2xs",
                           isBookmarked 
-                            ? "bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-xs" 
-                            : "bg-slate-100 text-slate-600 border-transparent hover:text-slate-900 hover:border-slate-300"
+                            ? "bg-amber-50 text-amber-600 border-amber-300" 
+                            : "bg-white text-slate-400 border-teal-200/80 hover:text-teal-600 hover:border-teal-300"
                         )}
                         title={isBookmarked ? (isEn ? "Remove bookmark" : "Bỏ lưu bệnh này") : (isEn ? "Save to bookmarks" : "Lưu bệnh để theo dõi")}
                       >
-                        <Bookmark className={cn("w-4 h-4", isBookmarked && "fill-amber-400")} />
+                        <Bookmark className={cn("w-3.5 h-3.5", isBookmarked && "fill-amber-500 text-amber-500")} />
                       </button>
                     </div>
 
                     {/* Middle: Short Description */}
-                    <p className="text-xs sm:text-sm text-slate-800 font-normal leading-relaxed mt-3 line-clamp-2">
+                    <p className="text-[11.5px] sm:text-xs text-slate-600 font-normal leading-relaxed line-clamp-2">
                       {disease.description}
                     </p>
 
                     {/* Symptoms List */}
                     {disease.symptoms && disease.symptoms.length > 0 && (
-                      <div className="mt-3.5 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                      <div className="mt-2.5 space-y-1">
+                        <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-600 uppercase tracking-wider">
                           <Activity className="w-3 h-3 text-primary" />
                           <span>{isEn ? 'Key symptoms:' : 'Triệu chứng chính:'}</span>
                         </div>
-                        <p className="text-xs text-slate-800 font-normal leading-relaxed">
+                        <p className="text-[11px] sm:text-xs text-slate-700 font-normal leading-relaxed">
                           {disease.symptoms.map((symptom, idx) => (
                             <span key={idx}>
                               {idx > 0 && <span className="text-teal-600 mx-1.5 font-normal">•</span>}
@@ -786,25 +788,25 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                     )}
 
                     {/* Severity Badge & Bottom Row */}
-                    <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
                       {/* Mức độ nguy cơ */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">{isEn ? 'Severity:' : 'Mức độ:'}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider">{isEn ? 'Severity:' : 'Mức độ:'}</span>
                         {disease.severity === 'mild' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             {isEn ? 'Mild' : 'Nhẹ'}
                           </span>
                         )}
                         {disease.severity === 'moderate' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                             {isEn ? 'Moderate / Monitor' : 'Cần theo dõi'}
                           </span>
                         )}
                         {disease.severity === 'severe' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                             {isEn ? 'Severe / Urgent care' : 'Nguy hiểm - Cần khám ngay'}
                           </span>
                         )}
@@ -815,14 +817,14 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
                         <button
                           type="button"
                           onClick={(e) => handleChatWithAI(e, disease)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 hover:text-teal-200 border border-teal-500/30 text-[11px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer group/btn"
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 hover:text-teal-800 border border-teal-200 text-[10.5px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer group/btn"
                         >
-                          <MessageSquare className="w-3.5 h-3.5 text-teal-400 group-hover/btn:scale-110 transition-transform" />
+                          <MessageSquare className="w-3 h-3 text-teal-600 group-hover/btn:scale-110 transition-transform" />
                           <span>{isEn ? 'Consult AI Doctor →' : 'Hỏi Bác sĩ AI về bệnh này →'}</span>
                         </button>
 
-                        <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-text-dim group-hover:text-primary transition-colors">
-                          <ChevronRight className="w-4 h-4" />
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
                     </div>
@@ -897,13 +899,13 @@ export default function DiseaseView({ setActiveView }: { setActiveView: (view: a
 
               {/* Modal Body: 12 Specialty Grid */}
               <div className="p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {categoriesWithCounts.map(cat => {
+                {categoriesWithCounts.map((cat, catIdx) => {
                   const Icon = ICON_MAP[cat.iconName] || Activity;
                   const isSelected = activeCategory === cat.id;
 
                   return (
                     <button
-                      key={cat.id}
+                      key={`cat-modal-${cat.id}-${catIdx}`}
                       onClick={() => {
                         setActiveCategory(cat.id);
                         setShowCategoryModal(false);

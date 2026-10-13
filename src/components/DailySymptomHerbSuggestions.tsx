@@ -559,12 +559,12 @@ export default function DailySymptomHerbSuggestions() {
             Chọn nhanh hoặc điều chỉnh triệu chứng cảm nhận được:
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {COMMON_SYMPTOM_TAGS.map((tag) => {
+            {COMMON_SYMPTOM_TAGS.map((tag, tagIdx) => {
               const active = selectedSymptoms.some(s => s.toLowerCase().includes(tag.label.toLowerCase()) || tag.label.toLowerCase().includes(s.toLowerCase()));
               const Icon = tag.icon;
               return (
                 <button
-                  key={tag.label}
+                  key={`symptom-tag-${tag.label}-${tagIdx}`}
                   type="button"
                   onClick={() => toggleSymptom(tag.label)}
                   className={cn(
@@ -696,13 +696,13 @@ export default function DailySymptomHerbSuggestions() {
         </div>
 
         <div className="grid grid-cols-1 gap-5">
-          {matchedHerbs.map((herb) => {
+          {matchedHerbs.map((herb, herbIdx) => {
             const isSaved = savedHerbIds.includes(herb.id);
             const isCopied = copiedId === herb.id;
 
             return (
               <div
-                key={herb.id}
+                key={`matched-herb-${herb.id}-${herbIdx}`}
                 className="bg-bg/40 border border-white/10 hover:border-primary/30 rounded-3xl p-5 md:p-6 transition-all space-y-5 shadow-xl relative overflow-hidden"
               >
                 {/* Top Herb Banner */}
@@ -817,7 +817,7 @@ export default function DailySymptomHerbSuggestions() {
                     <p className="text-[9px] font-bold text-text-dim uppercase tracking-wider">Thành phần phối ngũ:</p>
                     <div className="flex flex-wrap gap-2">
                       {herb.ingredients.map((ing, i) => (
-                        <span key={i} className="text-[10px] bg-white/5 border border-white/10 text-white px-2.5 py-1 rounded-lg">
+                        <span key={`herb-ing-${herb.id}-${i}`} className="text-[10px] bg-white/5 border border-white/10 text-white px-2.5 py-1 rounded-lg">
                           {ing}
                         </span>
                       ))}
@@ -829,7 +829,7 @@ export default function DailySymptomHerbSuggestions() {
                     <p className="text-[9px] font-bold text-text-dim uppercase tracking-wider">Các bước thực hiện:</p>
                     <div className="space-y-1.5">
                       {herb.preparation.map((step, i) => (
-                        <div key={i} className="flex items-start gap-2.5 text-xs text-white/90 font-light">
+                        <div key={`herb-prep-${herb.id}-${i}`} className="flex items-start gap-2.5 text-xs text-white/90 font-light">
                           <span className="w-4 h-4 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center text-[9px] font-bold flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>

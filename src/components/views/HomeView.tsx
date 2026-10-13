@@ -16,18 +16,21 @@ import {
   Bell,
   Check,
   Scale,
-  FileDown
+  FileDown,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../contexts/LanguageContext';
 import VitalsEntryModal from '../VitalsEntryModal';
-import MedicationReminderModal, { getReminderCategoryInfo, ReminderCategory } from '../MedicationReminderModal';
+import MedicationReminderModal, { getReminderCategoryInfo, ReminderCategory, HealthReminder, DEFAULT_GUEST_REMINDERS } from '../MedicationReminderModal';
+import ConfirmDeleteReminderModal from '../ConfirmDeleteReminderModal';
 import BmiCalculatorCard from '../BmiCalculatorCard';
 import HealthTrendsChartCard from '../HealthTrendsChartCard';
 import HealthReportExportModal from '../HealthReportExportModal';
-import { collection, getDocs, limit, query, where, orderBy, setDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where, orderBy, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 import { reminderService } from '../../services/reminderService';
@@ -67,6 +70,12 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [showWaterToast, setShowWaterToast] = useState<boolean>(false);
+
+  // Reminder edit & delete state
+  const [reminderToDelete, setReminderToDelete] = useState<HealthReminder | null>(null);
+  const [isDeletingReminder, setIsDeletingReminder] = useState<boolean>(false);
+  const [reminderToEdit, setReminderToEdit] = useState<HealthReminder | null>(null);
+  const [deleteSuccessToast, setDeleteSuccessToast] = useState<string | null>(null);
 
   // Greeting with bilingual support
   const greetingData = useMemo(() => {
@@ -182,33 +191,13 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
     playWaterChime();
     setShowWaterToast(true);
 
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'granted') {
-        try {
-          new Notification('💧 Đến lúc uống nước giải độc!', {
-            body: 'Hãy tiếp thêm tinh chất nước tinh khiết để duy trì năng lượng và sức sống nhé!',
-            icon: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&q=80&w=128',
-            requireInteraction: true
-          });
-        } catch (err) {
-          console.error("Failed to trigger native notification:", err);
-        }
-      } else if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }
-  };
-
-  const testReminderNotification = async () => {
-    await reminderService.requestNotificationPermission();
-    reminderService.triggerTestWaterNotification();
-    triggerWaterReminder();
-  };
-
-  const testMedicationNotification = async () => {
-    await reminderService.requestNotificationPermission();
-    const activeMed = reminders.find(r => r.enabled);
-    reminderService.triggerTestMedicationNotification(activeMed ? activeMed.medName : 'Thuốc tiểu đường');
+    reminderService.showNotification(
+      '💧 Đến lúc uống nước giải độc!',
+      'Hãy tiếp thêm tinh chất nước tinh khiết để duy trì năng lượng và sức sống nhé!',
+      'water-alert',
+      'water',
+      { amount: 250 }
+    );
   };
 
   const handleUpdateWater = async (difference: number) => {
@@ -352,7 +341,6 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
   }, [waterReminderEnabled, waterReminderInterval]);
 
   const intervalOptions = [
-    { value: 0.25, label: 'TEST' },
     { value: 60, label: language === 'en' ? '1 hr' : '1 giờ' },
     { value: 120, label: language === 'en' ? '2 hrs' : '2 giờ' },
     { value: 180, label: language === 'en' ? '3 hrs' : '3 giờ' }
@@ -408,7 +396,17 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
   const [loadingReminders, setLoadingReminders] = useState(false);
 
   const fetchReminders = async () => {
-    if (!user) return;
+    if (!user) {
+      const localReminders = localStorage.getItem('guest_medication_reminders');
+      if (localReminders) {
+        try {
+          setReminders(JSON.parse(localReminders));
+          return;
+        } catch {}
+      }
+      setReminders(DEFAULT_GUEST_REMINDERS);
+      return;
+    }
     setLoadingReminders(true);
     try {
       const q = query(
@@ -417,7 +415,10 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       );
       const snap = await getDocs(q);
       const list: any[] = [];
+      const seenIds = new Set<string>();
       snap.forEach((docSnap) => {
+        if (seenIds.has(docSnap.id)) return;
+        seenIds.add(docSnap.id);
         const data = docSnap.data();
         let cat = data.category as ReminderCategory | undefined;
         if (!cat) {
@@ -445,12 +446,40 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
 
   useEffect(() => {
     fetchReminders();
+    const handleGuestUpdate = () => {
+      fetchReminders();
+    };
+    window.addEventListener('guest-reminders-updated', handleGuestUpdate);
+    return () => {
+      window.removeEventListener('guest-reminders-updated', handleGuestUpdate);
+    };
   }, [user]);
 
   const handleToggleReminder = async (item: any) => {
     try {
       const nextEnabled = !item.enabled;
       setReminders(prev => prev.map(r => r.id === item.id ? { ...r, enabled: nextEnabled } : r));
+
+      if (nextEnabled) {
+        const cat = item.category || getReminderCategoryInfo(item).id;
+        reminderService.syncReminderToNotificationCenter({
+          id: item.id,
+          medName: item.medName || (cat === 'medication' ? 'Uống thuốc' : 'Đo chỉ số sức khỏe'),
+          dosage: item.dosage || '',
+          time: item.time || '08:00',
+          notes: item.notes || '',
+          enabled: true,
+          category: cat
+        });
+      }
+
+      if (!user || item.id.startsWith('demo-') || item.id.startsWith('local-')) {
+        const updatedList = reminders.map(r => r.id === item.id ? { ...r, enabled: nextEnabled } : r);
+        localStorage.setItem('guest_medication_reminders', JSON.stringify(updatedList));
+        window.dispatchEvent(new CustomEvent('guest-reminders-updated'));
+        return;
+      }
+
       await setDoc(doc(db, 'medicationReminders', item.id), {
         enabled: nextEnabled,
         updatedAt: new Date()
@@ -461,6 +490,32 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
     }
   };
 
+  const handleConfirmDeleteReminder = async () => {
+    if (!reminderToDelete) return;
+    try {
+      setIsDeletingReminder(true);
+      const targetId = reminderToDelete.id;
+      reminderService.removeReminderNotifications(targetId);
+      setReminders(prev => prev.filter(r => r.id !== targetId));
+
+      if (!user || targetId.startsWith('demo-') || targetId.startsWith('local-')) {
+        const updatedList = reminders.filter(r => r.id !== targetId);
+        localStorage.setItem('guest_medication_reminders', JSON.stringify(updatedList));
+        window.dispatchEvent(new CustomEvent('guest-reminders-updated'));
+      } else {
+        await deleteDoc(doc(db, 'medicationReminders', targetId));
+      }
+
+      setDeleteSuccessToast(t('reminder.delete_success'));
+      setTimeout(() => setDeleteSuccessToast(null), 4000);
+      setReminderToDelete(null);
+    } catch (error) {
+      console.error("Error deleting reminder:", error);
+    } finally {
+      setIsDeletingReminder(false);
+    }
+  };
+
 
   return (
     <div className="p-3 sm:p-5 space-y-3.5 sm:space-y-4">
@@ -468,6 +523,7 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       <AnimatePresence>
         {showWaterToast && (
           <motion.div
+            key="home-water-toast-alert"
             initial={{ opacity: 0, y: -50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.95 }}
@@ -515,11 +571,23 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
         onClose={() => setIsVitalsModalOpen(false)} 
       />
       <MedicationReminderModal
+        key="home-medication-reminder-modal"
         isOpen={isMedicationModalOpen}
+        initialEditingReminder={reminderToEdit}
+        initialViewMode={reminderToEdit ? 'edit' : undefined}
         onClose={() => {
           setIsMedicationModalOpen(false);
+          setReminderToEdit(null);
           fetchReminders();
         }}
+      />
+      <ConfirmDeleteReminderModal
+        key="home-confirm-delete-reminder-modal"
+        isOpen={!!reminderToDelete}
+        onClose={() => setReminderToDelete(null)}
+        onConfirm={handleConfirmDeleteReminder}
+        reminder={reminderToDelete}
+        isDeleting={isDeletingReminder}
       />
       <HealthReportExportModal
         isOpen={isReportModalOpen}
@@ -692,7 +760,11 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
           <button
             id="toggle-water-reminder-switch"
             type="button"
-            onClick={() => setWaterReminderEnabled(!waterReminderEnabled)}
+            onClick={() => {
+              const nextVal = !waterReminderEnabled;
+              setWaterReminderEnabled(nextVal);
+              reminderService.updateWaterConfig(nextVal, waterReminderInterval);
+            }}
             className={cn(
               "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-teal-500/30",
               waterReminderEnabled ? "bg-teal-600" : "bg-slate-200"
@@ -717,16 +789,11 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                 {t('home.reminder_interval')}
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {intervalOptions.map((opt) => (
+                {intervalOptions.map((opt, optIdx) => (
                   <button
-                    key={opt.value}
+                    key={`water-interval-${opt.value}-${optIdx}`}
                     type="button"
-                    onClick={() => {
-                      setWaterReminderInterval(opt.value);
-                      if (opt.value === 0.25) {
-                        testReminderNotification();
-                      }
-                    }}
+                    onClick={() => setWaterReminderInterval(opt.value)}
                     className={cn(
                       "px-2.5 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider border cursor-pointer transition-all active:scale-95",
                       waterReminderInterval === opt.value
@@ -764,38 +831,32 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
       <section id="home-medication-reminders-section">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
           {/* Card Header with Title, Count Badge and Action Button */}
-          <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900">
-              {t('home.med_title')}
-            </h3>
+          <div className="bg-teal-100/70 border-b border-teal-200/90 px-4 sm:px-5 py-3 sm:py-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-serif text-base sm:text-lg font-bold text-slate-900 min-w-0">
+                {t('home.med_title')}
+              </h3>
 
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              <span className="bg-white/95 border border-teal-200 text-teal-800 text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap">
+              <span className="inline-block bg-white/95 border border-teal-200 text-teal-800 text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs whitespace-nowrap flex-shrink-0">
                 {reminders.filter(r => r.enabled).length} {t('home.active_count')}
               </span>
-              <button
-                type="button"
-                onClick={testMedicationNotification}
-                className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/90 hover:bg-white border border-teal-200 px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all shadow-xs cursor-pointer whitespace-nowrap active:scale-95"
-                title={language === 'en' ? "Test mobile notification" : "Thử thông báo trên thanh trạng thái"}
-              >
-                <Bell className="w-3.5 h-3.5 text-teal-700 animate-pulse" />
-                <span>{language === 'en' ? "Test Notification" : "Thử thông báo"}</span>
-              </button>
+            </div>
+
+            <div className="flex items-center justify-end pt-0.5">
               <button
                 type="button"
                 onClick={() => setIsMedicationModalOpen(true)}
-                className="text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/90 hover:bg-white border border-teal-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer whitespace-nowrap"
+                className="text-[11px] font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-600 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all shadow-xs cursor-pointer whitespace-nowrap active:scale-95 text-force-white ml-auto"
+                title={language === 'en' ? 'Add reminder' : 'Thêm lịch nhắc'}
               >
-                <PlusCircle className="w-3.5 h-3.5 text-teal-700" />
-                <span>{t('home.customize')}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-teal-700" />
+                <PlusCircle className="w-3.5 h-3.5 text-white" />
+                <span className="text-white text-force-white">{language === 'en' ? 'Add reminder' : 'Thêm lịch nhắc'}</span>
+                <ChevronRight className="w-3 h-3 text-white" />
               </button>
             </div>
           </div>
 
           <div className="p-4 sm:p-5 space-y-3 sm:space-y-3.5">
-
           {/* Reminder List & States */}
           <div className="space-y-2.5">
             {loadingReminders ? (
@@ -837,14 +898,14 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                     if (!isMedA && isMedB) return 1;
                     return a.time.localeCompare(b.time);
                   })
-                  .map((reminder) => {
+                  .map((reminder, idx) => {
                     const catConfig = getReminderCategoryInfo(reminder);
                     const IconComp = catConfig.icon;
                     const isMetric = catConfig.id !== 'medication';
 
                     return (
                       <div 
-                        key={reminder.id}
+                        key={`${reminder.id || 'reminder'}-${idx}`}
                         className={cn(
                           "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border transition-all duration-200 gap-2.5 group",
                           reminder.enabled 
@@ -852,7 +913,14 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                             : "bg-slate-50/30 border-slate-200/50 opacity-60"
                         )}
                       >
-                        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div 
+                          onClick={() => {
+                            setReminderToEdit(reminder);
+                            setIsMedicationModalOpen(true);
+                          }}
+                          className="flex items-start sm:items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          title={language === 'en' ? 'Click to edit reminder' : 'Bấm để chỉnh sửa lịch nhắc này'}
+                        >
                           {/* Time indicator */}
                           <div className={cn(
                             "w-10 h-10 rounded-xl flex flex-col items-center justify-center border font-mono shadow-xs flex-shrink-0",
@@ -903,37 +971,71 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
                             <button
                               type="button"
                               onClick={() => setIsVitalsModalOpen(true)}
-                              className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                               title={language === 'en' ? 'Log vital measurement' : 'Ghi nhận số đo sinh hiệu ngay'}
                             >
-                              <Activity className="w-3.5 h-3.5 text-teal-600" />
+                              <Activity className="w-3.5 h-3.5 text-blue-600" />
                               <span className="hidden sm:inline">{t('home.log_metric')}</span>
                             </button>
                           )}
 
-                          {/* Toggle button */}
+                          {/* Toggle switch (On-Off) */}
                           <button
+                            type="button"
+                            role="switch"
+                            aria-checked={reminder.enabled}
                             id={`toggle-reminder-${reminder.id}`}
                             onClick={() => handleToggleReminder(reminder)}
                             className={cn(
-                              "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer",
+                              "flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer select-none",
                               reminder.enabled 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" 
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100" 
                                 : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
                             )}
-                            title={reminder.enabled ? (language === 'en' ? 'Disable this reminder' : 'Tắt nhắc nhở này') : (language === 'en' ? 'Enable this reminder' : 'Bật lại nhắc nhở này')}
+                            title={reminder.enabled ? (language === 'en' ? 'Click to turn off reminder' : 'Gạt để tắt lịch nhắc') : (language === 'en' ? 'Click to turn on reminder' : 'Gạt để bật lịch nhắc')}
                           >
-                            {reminder.enabled ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>{t('home.reminder_on')}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Bell className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{t('home.reminder_off')}</span>
-                              </>
-                            )}
+                            <span className={cn(
+                              "text-xs font-bold min-w-[24px] text-center",
+                              reminder.enabled ? "text-emerald-700" : "text-slate-400"
+                            )}>
+                              {reminder.enabled ? t('home.reminder_on') : t('home.reminder_off')}
+                            </span>
+                            <span
+                              className={cn(
+                                "relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ease-in-out p-0.5",
+                                reminder.enabled ? "bg-emerald-500" : "bg-slate-300"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out",
+                                  reminder.enabled ? "translate-x-4" : "translate-x-0"
+                                )}
+                              />
+                            </span>
+                          </button>
+
+                          {/* Edit button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReminderToEdit(reminder);
+                              setIsMedicationModalOpen(true);
+                            }}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 transition-all cursor-pointer shrink-0"
+                            title={language === 'en' ? 'Edit reminder' : 'Chỉnh sửa lịch nhắc'}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete button with Confirm popup */}
+                          <button
+                            type="button"
+                            onClick={() => setReminderToDelete(reminder)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-all cursor-pointer shrink-0"
+                            title={language === 'en' ? 'Delete reminder' : 'Xóa lịch nhắc này'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -945,6 +1047,14 @@ export default function HomeView({ setActiveView }: HomeViewProps) {
         </div>
       </div>
     </section>
+
+    {/* Delete success notification toast */}
+    {deleteSuccessToast && (
+      <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-2">
+        <Trash2 className="w-4 h-4 text-rose-400" />
+        <span>{deleteSuccessToast}</span>
+      </div>
+    )}
     </div>
   );
 }

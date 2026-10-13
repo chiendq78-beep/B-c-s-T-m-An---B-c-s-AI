@@ -122,28 +122,26 @@ export default function AuthForm({ onClose, onSuccess }: AuthFormProps) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (forceRedirect = false) => {
     setErrorMsg(null);
     setLoadingGoogle(true);
-    setGoogleStatusText("Đang kết nối tài khoản Google...");
+    setGoogleStatusText(forceRedirect ? "Đang chuyển trang sang Google..." : "Đang kết nối tài khoản Google...");
 
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(forceRedirect);
       if (onSuccess) onSuccess();
       if (onClose) onClose();
     } catch (err: any) {
       console.error("Google sign in error:", err);
-      let msg = "Đăng nhập bằng Google không thành công.";
+      let msg = err.message || "Đăng nhập bằng Google không thành công.";
       if (err.code === 'auth/popup-blocked') {
-        msg = "Cửa sổ đăng nhập Google bị chặn trên trình duyệt di động. Vui lòng cho phép mở cửa sổ bật lên (pop-up) trong cài đặt trình duyệt.";
+        msg = "Cửa sổ đăng nhập Google bị chặn trên trình duyệt di động / PWA. Bạn có thể bấm 'Chuyển trang trực tiếp (Redirect)' bên dưới hoặc đăng nhập/tạo tài khoản bằng Email ở phía trên.";
       } else if (err.code === 'auth/unauthorized-domain') {
         msg = "Tên miền hiện tại cần được cấp quyền trong Firebase Auth (Authorized Domains).";
       } else if (err.code === 'auth/popup-closed-by-user') {
         msg = "Bạn đã hủy thao tác đăng nhập Google.";
       } else if (err.code === 'auth/network-request-failed') {
         msg = "Lỗi kết nối mạng. Vui lòng kiểm tra Wifi/4G.";
-      } else if (err.message) {
-        msg = err.message;
       }
       setErrorMsg(msg);
     } finally {
@@ -329,11 +327,11 @@ export default function AuthForm({ onClose, onSuccess }: AuthFormProps) {
           </div>
 
           {/* Official Google Sign-In & Instant Direct Login */}
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <button
               type="button"
               disabled={loading || loadingGoogle}
-              onClick={handleGoogleSignIn}
+              onClick={() => handleGoogleSignIn(false)}
               className="w-full h-11 sm:h-12 flex items-center justify-center gap-3 bg-white border border-[#dadce0] hover:border-[#bdc1c6] hover:bg-[#f8fafd] active:bg-[#f1f3f4] text-[#3c4043] text-sm font-medium rounded-xl shadow-xs hover:shadow-sm transition-all cursor-pointer active:scale-[0.99] disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#4285f4]/30"
               aria-label="Đăng nhập bằng Google"
             >
